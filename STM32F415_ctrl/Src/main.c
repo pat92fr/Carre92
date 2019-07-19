@@ -202,7 +202,7 @@ int main(void)
 	  {
 		  pwm_manual_dir = RC2_duty_cycle;
 	  }
-	  if(HAL_Serial_Available(&com))
+	  while(HAL_Serial_Available(&com))
 	  {
 		  char c = HAL_Serial_GetChar(&com);
 		  if(c=='\n' || c=='\r')
@@ -234,7 +234,7 @@ int main(void)
 		  }
 	  }
 	  __HAL_TIM_SET_COMPARE(&htim8,TIM_CHANNEL_1,pwm_manual_thr);
-	  if( (com_last_time+1000 > current_time) && (pwm_manual_dir < 1600 && pwm_manual_dir > 1400) )
+	  if( (com_last_time+1000 > current_time) && (pwm_manual_dir < 1580 && pwm_manual_dir > 1420) )
 	  {
 		  __HAL_TIM_SET_COMPARE(&htim8,TIM_CHANNEL_2,pwm_auto_dir);
 		  __HAL_TIM_SET_COMPARE(&htim8,TIM_CHANNEL_3,pwm_auto_dir);
@@ -250,6 +250,8 @@ int main(void)
 	  __HAL_TIM_SET_COMPARE(&htim1,TIM_CHANNEL_2,1500);
 	  __HAL_TIM_SET_COMPARE(&htim1,TIM_CHANNEL_3,1500);
 	  __HAL_TIM_SET_COMPARE(&htim1,TIM_CHANNEL_4,1500);
+	  //
+	  HAL_Delay(10);
   }
   /* USER CODE END 3 */
 }
@@ -407,7 +409,7 @@ static void MX_TIM3_Init(void)
   htim3.Instance = TIM3;
   htim3.Init.Prescaler = 83;
   htim3.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim3.Init.Period = 0xFFFF;
+  htim3.Init.Period = 0xffff;
   htim3.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim3.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
   if (HAL_TIM_Base_Init(&htim3) != HAL_OK)
@@ -567,7 +569,7 @@ static void MX_TIM9_Init(void)
   htim9.Instance = TIM9;
   htim9.Init.Prescaler = 167;
   htim9.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim9.Init.Period = 0xFFFF;
+  htim9.Init.Period = 0xffff;
   htim9.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim9.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
   if (HAL_TIM_Base_Init(&htim9) != HAL_OK)
