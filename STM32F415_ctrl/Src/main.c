@@ -129,6 +129,7 @@ int main(void)
     /* USER CODE BEGIN 3 */
 	  static char  line[16];
 	  static uint32_t position = 0;
+	  static uint32_t pwm = 1500;
 	  if(HAL_Serial_Available(&com))
 	  {
 		  char c = HAL_Serial_GetChar(&com);
@@ -142,11 +143,12 @@ int main(void)
 			  line[position-1]=0;
 			  int data = 7;
 			  data = atoi(line);
-			  __HAL_TIM_SET_COMPARE(&htim1,TIM_CHANNEL_1,data*1000/16+1000);
-			  __HAL_TIM_SET_COMPARE(&htim8,TIM_CHANNEL_1,data*1000/16+1000);
-			  __HAL_TIM_SET_COMPARE(&htim8,TIM_CHANNEL_2,data*1000/16+1000);
-			  __HAL_TIM_SET_COMPARE(&htim8,TIM_CHANNEL_3,data*1000/16+1000);
-			  __HAL_TIM_SET_COMPARE(&htim8,TIM_CHANNEL_4,data*1000/16+1000);
+			  pwm = 0.9*pwm + 0.1*(2000-data*1000/16);
+			  __HAL_TIM_SET_COMPARE(&htim1,TIM_CHANNEL_1,pwm);
+			  __HAL_TIM_SET_COMPARE(&htim8,TIM_CHANNEL_1,pwm);
+			  __HAL_TIM_SET_COMPARE(&htim8,TIM_CHANNEL_2,pwm);
+			  __HAL_TIM_SET_COMPARE(&htim8,TIM_CHANNEL_3,pwm);
+			  __HAL_TIM_SET_COMPARE(&htim8,TIM_CHANNEL_4,pwm);
 			  position = 0;
 		  }
 	  }
