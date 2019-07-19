@@ -67,12 +67,20 @@ DMA_HandleTypeDef hdma_usart3_tx;
 
 /* USER CODE BEGIN PV */
 HAL_Serial_Handler com;
-uint32_t RC1_last_time = 0;
-uint32_t RC1_period = 0;
-uint32_t RC1_duty_cycle = 0;
-uint32_t RC2_last_time = 0;
-uint32_t RC2_period = 0;
-uint32_t RC2_duty_cycle = 0;
+static uint32_t RC1_last_time = 0;
+static uint32_t RC1_period = 0;
+static uint32_t RC1_duty_cycle = 0;
+static uint32_t RC2_last_time = 0;
+static uint32_t RC2_period = 0;
+static uint32_t RC2_duty_cycle = 0;
+static char com_line[32];
+static uint32_t com_position = 0;
+static uint32_t com_last_time = 0;
+
+static uint32_t pwm_manual_thr = 1500;
+static uint32_t pwm_manual_dir = 1500;
+static uint32_t pwm_auto_dir = 1500;
+
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -186,51 +194,62 @@ int main(void)
 
     /* USER CODE BEGIN 3 */
 	  uint32_t current_time = HAL_GetTick();
-	  uint32_t pwm_thr = 1500;
-	  uint32_t pwm_dir = 1500;
-	  if(RC1_last_time<current_time+1000)
+	  if(RC1_last_time+1000>current_time)
 	  {
-		  pwm_thr = RC1_duty_cycle;
+		  pwm_manual_thr = RC1_duty_cycle;
 	  }
-	  if(RC2_last_time<current_time+1000)
+	  if(RC2_last_time+1000>current_time)
 	  {
-		  pwm_dir = RC2_duty_cycle;
+		  pwm_manual_dir = RC2_duty_cycle;
 	  }
-	  __HAL_TIM_SET_COMPARE(&htim8,TIM_CHANNEL_1,pwm_thr);
-	  __HAL_TIM_SET_COMPARE(&htim8,TIM_CHANNEL_2,pwm_dir);
-	  __HAL_TIM_SET_COMPARE(&htim8,TIM_CHANNEL_3,pwm_dir);
+	  if(HAL_Serial_Available(&com))
+	  {
+		  char c = HAL_Serial_GetChar(&com);
+		  if(c=='\n' || c=='\r')
+		  {
+			  if(com_position!=0)
+			  {
+				  com_line[com_position]=0; // eol
+				  uint32_t data = 16; // middle value 0..15
+				  data = atoi(com_line);
+				  if(data<16)
+				  {
+					  pwm_auto_dir = (2000.0-(float)data*1000.0/15.0);
+					  com_last_time = current_time;
+				  }
+				  else
+				  {
+					  pwm_auto_dir = 1500;
+				  }
+				  com_position = 0;
+			  }
+		  }
+		  else
+		  {
+			  com_line[com_position]=c;
+			  if(com_position<31)
+			  {
+				  ++com_position;
+			  }
+		  }
+	  }
+	  __HAL_TIM_SET_COMPARE(&htim8,TIM_CHANNEL_1,pwm_manual_thr);
+	  if( (com_last_time+1000 > current_time) && (pwm_manual_dir < 1600 && pwm_manual_dir > 1400) )
+	  {
+		  __HAL_TIM_SET_COMPARE(&htim8,TIM_CHANNEL_2,pwm_auto_dir);
+		  __HAL_TIM_SET_COMPARE(&htim8,TIM_CHANNEL_3,pwm_auto_dir);
+	  }
+	  else
+	  {
+		  __HAL_TIM_SET_COMPARE(&htim8,TIM_CHANNEL_2,pwm_manual_dir);
+		  __HAL_TIM_SET_COMPARE(&htim8,TIM_CHANNEL_3,pwm_manual_dir);
+	  }
+	  // default servo position
 	  __HAL_TIM_SET_COMPARE(&htim8,TIM_CHANNEL_4,1500);
 	  __HAL_TIM_SET_COMPARE(&htim1,TIM_CHANNEL_1,1500);
 	  __HAL_TIM_SET_COMPARE(&htim1,TIM_CHANNEL_2,1500);
 	  __HAL_TIM_SET_COMPARE(&htim1,TIM_CHANNEL_3,1500);
 	  __HAL_TIM_SET_COMPARE(&htim1,TIM_CHANNEL_4,1500);
-
-//	  static char  line[16];
-//	  static uint32_t position = 0;
-//	  static uint32_t pwm = 1500;
-//	  if(HAL_Serial_Available(&com))
-//	  {
-//		  char c = HAL_Serial_GetChar(&com);
-//		  line[position]=c;
-//		  if(position<15)
-//		  {
-//			  position++;
-//		  }
-//		  if(c=='\n')
-//		  {
-//			  line[position-1]=0;
-//			  int data = 7;
-//			  data = atoi(line);
-//			  pwm = 0.9*pwm + 0.1*(2000-data*1000/16);
-//			  __HAL_TIM_SET_COMPARE(&htim1,TIM_CHANNEL_1,pwm);
-//			  __HAL_TIM_SET_COMPARE(&htim8,TIM_CHANNEL_1,pwm);
-//			  __HAL_TIM_SET_COMPARE(&htim8,TIM_CHANNEL_2,pwm);
-//			  __HAL_TIM_SET_COMPARE(&htim8,TIM_CHANNEL_3,pwm);
-//			  __HAL_TIM_SET_COMPARE(&htim8,TIM_CHANNEL_4,pwm);
-//			  position = 0;
-//		  }
-//	  }
-
   }
   /* USER CODE END 3 */
 }
