@@ -82,6 +82,7 @@ DMA_HandleTypeDef hdma_usart3_tx;
 
 /* USER CODE BEGIN PV */
 static HAL_Serial_Handler ai_com;
+static HAL_Serial_Handler bt_com;
 static uint32_t RC1_last_time = 0;
 static uint32_t RC1_period = 0;
 static uint32_t RC1_duty_cycle = 0;
@@ -100,7 +101,7 @@ static uint32_t pwm_auto_dir = 1500;
 enum {MAIN_STATE_IDLE_AUTO,MAIN_STATE_MANUAL_OVERRIDE};
 static uint32_t main_state = MAIN_STATE_MANUAL_OVERRIDE;
 static uint32_t main_state_last = 0;
-#define MANUAL_OVERRIDE_TIMEOUT 1000 //ms
+#define MANUAL_OVERRIDE_TIMEOUT 2000 //ms
 enum {RC_STATE_NONE,RC_STATE_OK};
 static uint32_t rc_state = RC_STATE_NONE;
 #define RC_TIMEOUT 500 //ms
@@ -214,6 +215,7 @@ int main(void)
   HAL_TIM_IC_Start_IT(&htim9,TIM_CHANNEL_1);
   HAL_TIM_IC_Start_IT(&htim9,TIM_CHANNEL_2);
   HAL_Serial_Init(&huart3,&ai_com); // Start com port
+  HAL_Serial_Init(&huart5,&bt_com); // Start com port
   HAL_GPIO_WritePin(LED0_GPIO_Port,LED0_Pin,GPIO_PIN_RESET); // Init LEDs
   HAL_GPIO_WritePin(LED1_GPIO_Port,LED1_Pin,GPIO_PIN_RESET);
   HAL_GPIO_WritePin(LED2_GPIO_Port,LED2_Pin,GPIO_PIN_RESET);
@@ -227,6 +229,7 @@ int main(void)
   HAL_GPIO_WritePin(LED3_GPIO_Port,LED3_Pin,GPIO_PIN_SET);
   HAL_GPIO_WritePin(LED4_GPIO_Port,LED4_Pin,GPIO_PIN_SET);
   HAL_GPIO_WritePin(LED5_GPIO_Port,LED5_Pin,GPIO_PIN_SET);
+  HAL_Serial_Print(&bt_com,"Hello world\r\n");
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -334,7 +337,7 @@ int main(void)
 			__HAL_TIM_SET_COMPARE(&htim1,TIM_CHANNEL_3,1500);
 			__HAL_TIM_SET_COMPARE(&htim1,TIM_CHANNEL_4,1500);
 			HAL_GPIO_WritePin(LED1_GPIO_Port,LED1_Pin,GPIO_PIN_SET);
-			if( (pwm_manual_dir > 1650) || (pwm_manual_dir < 1350)) // RC DIR not in default/middle position
+			if( (pwm_manual_dir > 1550) || (pwm_manual_dir < 1450)) // RC DIR not in default/middle position
 			{
 				main_state = MAIN_STATE_MANUAL_OVERRIDE;
 				main_state_last = current_time;
@@ -352,7 +355,7 @@ int main(void)
 			__HAL_TIM_SET_COMPARE(&htim1,TIM_CHANNEL_3,1500);
 			__HAL_TIM_SET_COMPARE(&htim1,TIM_CHANNEL_4,1500);
 			HAL_GPIO_WritePin(LED1_GPIO_Port,LED1_Pin,GPIO_PIN_RESET);
-			if( (pwm_manual_dir > 1650) || (pwm_manual_dir < 1350)) // RC DIR not in default/middle position
+			if( (pwm_manual_dir > 1550) || (pwm_manual_dir < 1450)) // RC DIR not in default/middle position
 			{
 				main_state_last = current_time;
 			}
@@ -363,7 +366,8 @@ int main(void)
 		}
 		break;
 	}
-	HAL_Delay(5);
+	HAL_Serial_Print(&bt_com,"MT:%d MD:%d AT:%d AD:%d\r\n",pwm_manual_thr,pwm_manual_dir,pwm_auto_thr,pwm_auto_dir);
+	HAL_Delay(10);
   }
   /* USER CODE END 3 */
 }
@@ -541,7 +545,7 @@ static void MX_TIM3_Init(void)
   sSlaveConfig.InputTrigger = TIM_TS_TI1FP1;
   sSlaveConfig.TriggerPolarity = TIM_INPUTCHANNELPOLARITY_RISING;
   sSlaveConfig.TriggerPrescaler = TIM_ICPSC_DIV1;
-  sSlaveConfig.TriggerFilter = 0;
+  sSlaveConfig.TriggerFilter = 3;
   if (HAL_TIM_SlaveConfigSynchro(&htim3, &sSlaveConfig) != HAL_OK)
   {
     Error_Handler();
@@ -549,7 +553,7 @@ static void MX_TIM3_Init(void)
   sConfigIC.ICPolarity = TIM_INPUTCHANNELPOLARITY_RISING;
   sConfigIC.ICSelection = TIM_ICSELECTION_DIRECTTI;
   sConfigIC.ICPrescaler = TIM_ICPSC_DIV1;
-  sConfigIC.ICFilter = 0;
+  sConfigIC.ICFilter = 3;
   if (HAL_TIM_IC_ConfigChannel(&htim3, &sConfigIC, TIM_CHANNEL_1) != HAL_OK)
   {
     Error_Handler();
@@ -701,7 +705,7 @@ static void MX_TIM9_Init(void)
   sSlaveConfig.InputTrigger = TIM_TS_TI1FP1;
   sSlaveConfig.TriggerPolarity = TIM_INPUTCHANNELPOLARITY_RISING;
   sSlaveConfig.TriggerPrescaler = TIM_ICPSC_DIV1;
-  sSlaveConfig.TriggerFilter = 0;
+  sSlaveConfig.TriggerFilter = 3;
   if (HAL_TIM_SlaveConfigSynchro(&htim9, &sSlaveConfig) != HAL_OK)
   {
     Error_Handler();
@@ -709,7 +713,7 @@ static void MX_TIM9_Init(void)
   sConfigIC.ICPolarity = TIM_INPUTCHANNELPOLARITY_RISING;
   sConfigIC.ICSelection = TIM_ICSELECTION_DIRECTTI;
   sConfigIC.ICPrescaler = TIM_ICPSC_DIV1;
-  sConfigIC.ICFilter = 0;
+  sConfigIC.ICFilter = 3;
   if (HAL_TIM_IC_ConfigChannel(&htim9, &sConfigIC, TIM_CHANNEL_1) != HAL_OK)
   {
     Error_Handler();

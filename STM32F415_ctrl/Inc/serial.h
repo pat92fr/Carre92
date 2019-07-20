@@ -18,7 +18,7 @@
 */
 
 #define size_of_tx_pool 32
-#define size_of_tx_buffer 1600
+#define size_of_tx_buffer 256
 #define size_of_rx_circular_buffer 2048
 
 /*
