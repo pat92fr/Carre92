@@ -20,6 +20,8 @@
 
 // WIRING INPUT
 // SERIAL3 = RX from NVIDIA AI (UART3)
+// SERIAL4 = free (UART4)
+// SERIAL5 = free (UART5)
 // RC1 = THR from RX (TIM9 CH1 PWM input capture)
 // RC2 = DIR from RX (TIM3 CH1 PWM input capture)
 
@@ -27,6 +29,14 @@
 // SERVO5 = THR (TIM8 CH1)
 // SERVO6 = DIR (TIM8 CH2)
 // SERVO7 = DIR (TIM8 CH3)
+
+// MMI
+// LED0
+// LED1
+// LED2
+// LED3
+// LED4
+// LED5 = RC state
 
 /* USER CODE END Header */
 
@@ -37,7 +47,6 @@
 /* USER CODE BEGIN Includes */
 #include "serial.h"
 #include <stdlib.h>     /* atoi */
-
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -61,12 +70,18 @@ TIM_HandleTypeDef htim3;
 TIM_HandleTypeDef htim8;
 TIM_HandleTypeDef htim9;
 
+UART_HandleTypeDef huart4;
+UART_HandleTypeDef huart5;
 UART_HandleTypeDef huart3;
+DMA_HandleTypeDef hdma_uart4_rx;
+DMA_HandleTypeDef hdma_uart4_tx;
+DMA_HandleTypeDef hdma_uart5_rx;
+DMA_HandleTypeDef hdma_uart5_tx;
 DMA_HandleTypeDef hdma_usart3_rx;
 DMA_HandleTypeDef hdma_usart3_tx;
 
 /* USER CODE BEGIN PV */
-HAL_Serial_Handler com;
+static HAL_Serial_Handler ai_com;
 static uint32_t RC1_last_time = 0;
 static uint32_t RC1_period = 0;
 static uint32_t RC1_duty_cycle = 0;
@@ -76,11 +91,22 @@ static uint32_t RC2_duty_cycle = 0;
 static char com_line[32];
 static uint32_t com_position = 0;
 static uint32_t com_last_time = 0;
-
 static uint32_t pwm_manual_thr = 1500;
 static uint32_t pwm_manual_dir = 1500;
+static uint32_t pwm_ai_thr = 1500;
+static uint32_t pwm_ai_dir = 1500;
+static uint32_t pwm_auto_thr = 1500;
 static uint32_t pwm_auto_dir = 1500;
-
+enum {MAIN_STATE_IDLE_AUTO,MAIN_STATE_MANUAL_OVERRIDE};
+static uint32_t main_state = MAIN_STATE_MANUAL_OVERRIDE;
+static uint32_t main_state_last = 0;
+#define MANUAL_OVERRIDE_TIMEOUT 1000 //ms
+enum {RC_STATE_NONE,RC_STATE_OK};
+static uint32_t rc_state = RC_STATE_NONE;
+#define RC_TIMEOUT 500 //ms
+enum {AI_STATE_NONE,AI_STATE_OK};
+static uint32_t ai_state = AI_STATE_NONE;
+#define AI_TIMEOUT 100 //ms
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -92,27 +118,29 @@ static void MX_TIM8_Init(void);
 static void MX_USART3_UART_Init(void);
 static void MX_TIM3_Init(void);
 static void MX_TIM9_Init(void);
+static void MX_UART4_Init(void);
+static void MX_UART5_Init(void);
 /* USER CODE BEGIN PFP */
-void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim)
+void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim) // Callback for PWM input catpure
 {
-	if(htim==&htim3)
+	if(htim==&htim3) // RC2 = DIR from RX
 	{
 		if (htim->Channel == HAL_TIM_ACTIVE_CHANNEL_1)
 		{
 			RC2_period = HAL_TIM_ReadCapturedValue(htim, TIM_CHANNEL_1);
-			RC2_last_time = HAL_GetTick();
+			RC2_last_time = HAL_GetTick(); // timestamp last pulse
 		}
 		else if (htim->Channel == HAL_TIM_ACTIVE_CHANNEL_2)
 		{
 			RC2_duty_cycle = HAL_TIM_ReadCapturedValue(htim, TIM_CHANNEL_2);
 		}
 	}
-	else if(htim==&htim9)
+	else if(htim==&htim9) // RC1 = THR from RX
 	{
 		if (htim->Channel == HAL_TIM_ACTIVE_CHANNEL_1)
 		{
 			RC1_period = HAL_TIM_ReadCapturedValue(htim, TIM_CHANNEL_1);
-			RC1_last_time = HAL_GetTick();
+			RC1_last_time = HAL_GetTick(); // timestamp last pulse
 		}
 		else if (htim->Channel == HAL_TIM_ACTIVE_CHANNEL_2)
 		{
@@ -162,8 +190,10 @@ int main(void)
   MX_USART3_UART_Init();
   MX_TIM3_Init();
   MX_TIM9_Init();
+  MX_UART4_Init();
+  MX_UART5_Init();
   /* USER CODE BEGIN 2 */
-  HAL_TIM_PWM_Start(&htim1,TIM_CHANNEL_1);
+  HAL_TIM_PWM_Start(&htim1,TIM_CHANNEL_1); // Start PWM outputs
   HAL_TIM_PWM_Start(&htim1,TIM_CHANNEL_2);
   HAL_TIM_PWM_Start(&htim1,TIM_CHANNEL_3);
   HAL_TIM_PWM_Start(&htim1,TIM_CHANNEL_4);
@@ -171,7 +201,7 @@ int main(void)
   HAL_TIM_PWM_Start(&htim8,TIM_CHANNEL_2);
   HAL_TIM_PWM_Start(&htim8,TIM_CHANNEL_3);
   HAL_TIM_PWM_Start(&htim8,TIM_CHANNEL_4);
-  __HAL_TIM_SET_COMPARE(&htim1,TIM_CHANNEL_1,1500);
+  __HAL_TIM_SET_COMPARE(&htim1,TIM_CHANNEL_1,1500); // Set PWM outputs (middle position)
   __HAL_TIM_SET_COMPARE(&htim1,TIM_CHANNEL_2,1500);
   __HAL_TIM_SET_COMPARE(&htim1,TIM_CHANNEL_3,1500);
   __HAL_TIM_SET_COMPARE(&htim1,TIM_CHANNEL_4,1500);
@@ -179,11 +209,24 @@ int main(void)
   __HAL_TIM_SET_COMPARE(&htim8,TIM_CHANNEL_2,1500);
   __HAL_TIM_SET_COMPARE(&htim8,TIM_CHANNEL_3,1500);
   __HAL_TIM_SET_COMPARE(&htim8,TIM_CHANNEL_4,1500);
-  HAL_TIM_IC_Start_IT(&htim3,TIM_CHANNEL_1);
+  HAL_TIM_IC_Start_IT(&htim3,TIM_CHANNEL_1); // Start PWM inputs (capture)
   HAL_TIM_IC_Start_IT(&htim3,TIM_CHANNEL_2);
   HAL_TIM_IC_Start_IT(&htim9,TIM_CHANNEL_1);
   HAL_TIM_IC_Start_IT(&htim9,TIM_CHANNEL_2);
-  HAL_Serial_Init(&huart3,&com);
+  HAL_Serial_Init(&huart3,&ai_com); // Start com port
+  HAL_GPIO_WritePin(LED0_GPIO_Port,LED0_Pin,GPIO_PIN_RESET); // Init LEDs
+  HAL_GPIO_WritePin(LED1_GPIO_Port,LED1_Pin,GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(LED2_GPIO_Port,LED2_Pin,GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(LED3_GPIO_Port,LED3_Pin,GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(LED4_GPIO_Port,LED4_Pin,GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(LED5_GPIO_Port,LED5_Pin,GPIO_PIN_RESET);
+  HAL_Delay(500);
+  HAL_GPIO_WritePin(LED0_GPIO_Port,LED0_Pin,GPIO_PIN_SET); // Init LEDs
+  HAL_GPIO_WritePin(LED1_GPIO_Port,LED1_Pin,GPIO_PIN_SET);
+  HAL_GPIO_WritePin(LED2_GPIO_Port,LED2_Pin,GPIO_PIN_SET);
+  HAL_GPIO_WritePin(LED3_GPIO_Port,LED3_Pin,GPIO_PIN_SET);
+  HAL_GPIO_WritePin(LED4_GPIO_Port,LED4_Pin,GPIO_PIN_SET);
+  HAL_GPIO_WritePin(LED5_GPIO_Port,LED5_Pin,GPIO_PIN_SET);
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -193,65 +236,134 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-	  uint32_t current_time = HAL_GetTick();
-	  if(RC1_last_time+1000>current_time)
-	  {
-		  pwm_manual_thr = RC1_duty_cycle;
-	  }
-	  if(RC2_last_time+1000>current_time)
-	  {
-		  pwm_manual_dir = RC2_duty_cycle;
-	  }
-	  while(HAL_Serial_Available(&com))
-	  {
-		  char c = HAL_Serial_GetChar(&com);
-		  if(c=='\n' || c=='\r')
-		  {
-			  if(com_position!=0)
-			  {
-				  com_line[com_position]=0; // eol
-				  uint32_t data = 16; // middle value 0..15
-				  data = atoi(com_line);
-				  if(data<16)
-				  {
-					  pwm_auto_dir = (2000.0-(float)data*1000.0/15.0);
-					  com_last_time = current_time;
-				  }
-				  else
-				  {
-					  pwm_auto_dir = 1500;
-				  }
-				  com_position = 0;
-			  }
-		  }
-		  else
-		  {
-			  com_line[com_position]=c;
-			  if(com_position<31)
-			  {
-				  ++com_position;
-			  }
-		  }
-	  }
-	  __HAL_TIM_SET_COMPARE(&htim8,TIM_CHANNEL_1,pwm_manual_thr);
-	  if( (com_last_time+1000 > current_time) && (pwm_manual_dir < 1580 && pwm_manual_dir > 1420) )
-	  {
-		  __HAL_TIM_SET_COMPARE(&htim8,TIM_CHANNEL_2,pwm_auto_dir);
-		  __HAL_TIM_SET_COMPARE(&htim8,TIM_CHANNEL_3,pwm_auto_dir);
-	  }
-	  else
-	  {
-		  __HAL_TIM_SET_COMPARE(&htim8,TIM_CHANNEL_2,pwm_manual_dir);
-		  __HAL_TIM_SET_COMPARE(&htim8,TIM_CHANNEL_3,pwm_manual_dir);
-	  }
-	  // default servo position
-	  __HAL_TIM_SET_COMPARE(&htim8,TIM_CHANNEL_4,1500);
-	  __HAL_TIM_SET_COMPARE(&htim1,TIM_CHANNEL_1,1500);
-	  __HAL_TIM_SET_COMPARE(&htim1,TIM_CHANNEL_2,1500);
-	  __HAL_TIM_SET_COMPARE(&htim1,TIM_CHANNEL_3,1500);
-	  __HAL_TIM_SET_COMPARE(&htim1,TIM_CHANNEL_4,1500);
-	  //
-	  HAL_Delay(10);
+	uint32_t current_time = HAL_GetTick();
+	switch(rc_state) // RC state machine
+	{
+	case RC_STATE_NONE: // No RC
+		{
+			HAL_GPIO_WritePin(LED5_GPIO_Port,LED5_Pin,GPIO_PIN_SET);
+			pwm_manual_thr = 1500;
+			pwm_manual_dir = 1500;
+		    if((RC1_last_time+RC_TIMEOUT>current_time) && (RC2_last_time+RC_TIMEOUT>current_time))
+		    {
+		    	rc_state = RC_STATE_OK;
+		    }
+		}
+		break;
+	case RC_STATE_OK:
+		{
+			HAL_GPIO_WritePin(LED5_GPIO_Port,LED5_Pin,GPIO_PIN_RESET);
+			pwm_manual_thr = RC1_duty_cycle;
+			pwm_manual_dir = RC2_duty_cycle;
+		    if((RC1_last_time+RC_TIMEOUT<current_time) || (RC2_last_time+RC_TIMEOUT<current_time))
+		    {
+		    	rc_state = RC_STATE_NONE;
+		    }
+		}
+		break;
+	}
+    while(HAL_Serial_Available(&ai_com)) // Process ai_com port
+	{
+    	char c = HAL_Serial_GetChar(&ai_com);
+		if(c=='\n' || c=='\r') // eol detection
+		{
+			if(com_position!=0) // not empty recv buffer
+			{
+				com_line[com_position]=0; // force eol
+				uint32_t data = 16; // default not line position value from AI
+				data = atoi(com_line); // decode value
+				if(data<16)
+				{
+					pwm_ai_thr = 1500;
+					pwm_ai_dir = (2000.0-(float)data*1000.0/15.0);
+					com_last_time = current_time;
+				}
+				else
+				{
+					pwm_ai_thr = 1500;
+					pwm_ai_dir = 1500;
+				}
+				com_position = 0; // reset recv buffer
+			}
+		}
+		else // new char
+		{
+			com_line[com_position]=c;
+			if(com_position<31) // handle end of recv buffer
+			{
+				++com_position;
+			}
+		}
+	}
+	switch(ai_state) // AI state machine
+	{
+	case AI_STATE_NONE: // No RC
+		{
+			HAL_GPIO_WritePin(LED4_GPIO_Port,LED4_Pin,GPIO_PIN_SET);
+			pwm_ai_thr = 1500;
+			pwm_ai_dir = 1500;
+		    if(com_last_time+AI_TIMEOUT>current_time)
+		    {
+		    	ai_state = AI_STATE_OK;
+		    }
+		}
+		break;
+	case AI_STATE_OK:
+		{
+			HAL_GPIO_WritePin(LED4_GPIO_Port,LED4_Pin,GPIO_PIN_RESET);
+			// values from ai_com process
+		    if(com_last_time+AI_TIMEOUT<current_time)
+		    {
+		    	ai_state = AI_STATE_NONE;
+		    }
+		}
+		break;
+	}
+	pwm_auto_thr = pwm_ai_thr; // no other source of automatic control, then auto controller use AI
+	pwm_auto_dir = pwm_ai_dir;
+	switch(main_state) // MAIN state machine
+	{
+	case MAIN_STATE_IDLE_AUTO:
+		{
+			__HAL_TIM_SET_COMPARE(&htim8,TIM_CHANNEL_1,pwm_manual_thr); // RC always control THR at the moment
+			__HAL_TIM_SET_COMPARE(&htim8,TIM_CHANNEL_2,pwm_auto_dir); // AI control DIR
+			__HAL_TIM_SET_COMPARE(&htim8,TIM_CHANNEL_3,pwm_auto_dir); // AI control DIR
+			__HAL_TIM_SET_COMPARE(&htim8,TIM_CHANNEL_4,1500);// default servo position
+			__HAL_TIM_SET_COMPARE(&htim1,TIM_CHANNEL_1,1500);
+			__HAL_TIM_SET_COMPARE(&htim1,TIM_CHANNEL_2,1500);
+			__HAL_TIM_SET_COMPARE(&htim1,TIM_CHANNEL_3,1500);
+			__HAL_TIM_SET_COMPARE(&htim1,TIM_CHANNEL_4,1500);
+			HAL_GPIO_WritePin(LED1_GPIO_Port,LED1_Pin,GPIO_PIN_SET);
+			if( (pwm_manual_dir > 1650) || (pwm_manual_dir < 1350)) // RC DIR not in default/middle position
+			{
+				main_state = MAIN_STATE_MANUAL_OVERRIDE;
+				main_state_last = current_time;
+			}
+		}
+		break;
+	case MAIN_STATE_MANUAL_OVERRIDE:
+		{
+			__HAL_TIM_SET_COMPARE(&htim8,TIM_CHANNEL_1,pwm_manual_thr); // RC always control THR at the moment
+			__HAL_TIM_SET_COMPARE(&htim8,TIM_CHANNEL_2,pwm_manual_dir); // RC control DIR
+			__HAL_TIM_SET_COMPARE(&htim8,TIM_CHANNEL_3,pwm_manual_dir); // RC control DIR
+			__HAL_TIM_SET_COMPARE(&htim8,TIM_CHANNEL_4,1500);// default servo position
+			__HAL_TIM_SET_COMPARE(&htim1,TIM_CHANNEL_1,1500);
+			__HAL_TIM_SET_COMPARE(&htim1,TIM_CHANNEL_2,1500);
+			__HAL_TIM_SET_COMPARE(&htim1,TIM_CHANNEL_3,1500);
+			__HAL_TIM_SET_COMPARE(&htim1,TIM_CHANNEL_4,1500);
+			HAL_GPIO_WritePin(LED1_GPIO_Port,LED1_Pin,GPIO_PIN_RESET);
+			if( (pwm_manual_dir > 1650) || (pwm_manual_dir < 1350)) // RC DIR not in default/middle position
+			{
+				main_state_last = current_time;
+			}
+			else if(main_state_last+MANUAL_OVERRIDE_TIMEOUT<current_time)
+			{
+				main_state = MAIN_STATE_IDLE_AUTO;
+			}
+		}
+		break;
+	}
+	HAL_Delay(5);
   }
   /* USER CODE END 3 */
 }
@@ -615,6 +727,72 @@ static void MX_TIM9_Init(void)
 }
 
 /**
+  * @brief UART4 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_UART4_Init(void)
+{
+
+  /* USER CODE BEGIN UART4_Init 0 */
+
+  /* USER CODE END UART4_Init 0 */
+
+  /* USER CODE BEGIN UART4_Init 1 */
+
+  /* USER CODE END UART4_Init 1 */
+  huart4.Instance = UART4;
+  huart4.Init.BaudRate = 115200;
+  huart4.Init.WordLength = UART_WORDLENGTH_8B;
+  huart4.Init.StopBits = UART_STOPBITS_1;
+  huart4.Init.Parity = UART_PARITY_NONE;
+  huart4.Init.Mode = UART_MODE_TX_RX;
+  huart4.Init.HwFlowCtl = UART_HWCONTROL_NONE;
+  huart4.Init.OverSampling = UART_OVERSAMPLING_16;
+  if (HAL_UART_Init(&huart4) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN UART4_Init 2 */
+
+  /* USER CODE END UART4_Init 2 */
+
+}
+
+/**
+  * @brief UART5 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_UART5_Init(void)
+{
+
+  /* USER CODE BEGIN UART5_Init 0 */
+
+  /* USER CODE END UART5_Init 0 */
+
+  /* USER CODE BEGIN UART5_Init 1 */
+
+  /* USER CODE END UART5_Init 1 */
+  huart5.Instance = UART5;
+  huart5.Init.BaudRate = 115200;
+  huart5.Init.WordLength = UART_WORDLENGTH_8B;
+  huart5.Init.StopBits = UART_STOPBITS_1;
+  huart5.Init.Parity = UART_PARITY_NONE;
+  huart5.Init.Mode = UART_MODE_TX_RX;
+  huart5.Init.HwFlowCtl = UART_HWCONTROL_NONE;
+  huart5.Init.OverSampling = UART_OVERSAMPLING_16;
+  if (HAL_UART_Init(&huart5) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN UART5_Init 2 */
+
+  /* USER CODE END UART5_Init 2 */
+
+}
+
+/**
   * @brief USART3 Initialization Function
   * @param None
   * @retval None
@@ -656,12 +834,24 @@ static void MX_DMA_Init(void)
   __HAL_RCC_DMA1_CLK_ENABLE();
 
   /* DMA interrupt init */
+  /* DMA1_Stream0_IRQn interrupt configuration */
+  HAL_NVIC_SetPriority(DMA1_Stream0_IRQn, 0, 0);
+  HAL_NVIC_EnableIRQ(DMA1_Stream0_IRQn);
   /* DMA1_Stream1_IRQn interrupt configuration */
   HAL_NVIC_SetPriority(DMA1_Stream1_IRQn, 0, 0);
   HAL_NVIC_EnableIRQ(DMA1_Stream1_IRQn);
+  /* DMA1_Stream2_IRQn interrupt configuration */
+  HAL_NVIC_SetPriority(DMA1_Stream2_IRQn, 0, 0);
+  HAL_NVIC_EnableIRQ(DMA1_Stream2_IRQn);
   /* DMA1_Stream3_IRQn interrupt configuration */
   HAL_NVIC_SetPriority(DMA1_Stream3_IRQn, 0, 0);
   HAL_NVIC_EnableIRQ(DMA1_Stream3_IRQn);
+  /* DMA1_Stream4_IRQn interrupt configuration */
+  HAL_NVIC_SetPriority(DMA1_Stream4_IRQn, 0, 0);
+  HAL_NVIC_EnableIRQ(DMA1_Stream4_IRQn);
+  /* DMA1_Stream7_IRQn interrupt configuration */
+  HAL_NVIC_SetPriority(DMA1_Stream7_IRQn, 0, 0);
+  HAL_NVIC_EnableIRQ(DMA1_Stream7_IRQn);
 
 }
 
@@ -675,12 +865,34 @@ static void MX_GPIO_Init(void)
   GPIO_InitTypeDef GPIO_InitStruct = {0};
 
   /* GPIO Ports Clock Enable */
+  __HAL_RCC_GPIOC_CLK_ENABLE();
+  __HAL_RCC_GPIOH_CLK_ENABLE();
   __HAL_RCC_GPIOA_CLK_ENABLE();
   __HAL_RCC_GPIOB_CLK_ENABLE();
-  __HAL_RCC_GPIOC_CLK_ENABLE();
+  __HAL_RCC_GPIOD_CLK_ENABLE();
+
+  /*Configure GPIO pin Output Level */
+  HAL_GPIO_WritePin(LED5_GPIO_Port, LED5_Pin, GPIO_PIN_RESET);
+
+  /*Configure GPIO pin Output Level */
+  HAL_GPIO_WritePin(GPIOH, LED4_Pin|LED3_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(GPIOB, LED2_Pin|LED0_Pin|LED1_Pin, GPIO_PIN_RESET);
+
+  /*Configure GPIO pin : LED5_Pin */
+  GPIO_InitStruct.Pin = LED5_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_OD;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  HAL_GPIO_Init(LED5_GPIO_Port, &GPIO_InitStruct);
+
+  /*Configure GPIO pins : LED4_Pin LED3_Pin */
+  GPIO_InitStruct.Pin = LED4_Pin|LED3_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_OD;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  HAL_GPIO_Init(GPIOH, &GPIO_InitStruct);
 
   /*Configure GPIO pins : LED2_Pin LED0_Pin LED1_Pin */
   GPIO_InitStruct.Pin = LED2_Pin|LED0_Pin|LED1_Pin;
