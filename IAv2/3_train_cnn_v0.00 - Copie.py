@@ -22,12 +22,12 @@ param_units_hidden_1 = 32
 param_units_hidden_2 = 8
 
 # hyperparameters
-##Epoch 35/35
-## - 9s - loss: 0.2584 - categorical_accuracy: 0.9426 - val_loss: 0.4981 - val_categorical_accuracy: 0.8435
+##Epoch 5000/5000
+## - 2s - loss: 0.0498 - mean_squared_error: 0.0340 - val_loss: 0.0249 - val_mean_squared_error: 0.0113
 ##train 
-##categorical_accuracy: 0.994
+##mean_squared_error: 0.007
 ##test 
-##categorical_accuracy: 0.844
+##mean_squared_error: 0.011
 hyp_epoch = 5000 #30
 hyp_bs = 128 #128
 hyp_lr = 0.00001 #0.001
