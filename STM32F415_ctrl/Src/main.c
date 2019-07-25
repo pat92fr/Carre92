@@ -273,12 +273,12 @@ int main(void)
 			if(com_position!=0) // not empty recv buffer
 			{
 				com_line[com_position]=0; // force eol
-				uint32_t data = 16; // default not line position value from AI
+				uint32_t data = 128; // default not line position value from AI
 				data = atoi(com_line); // decode value
-				if(data<16)
+				if(data<255 && data>=0)
 				{
 					pwm_ai_thr = 1500;
-					pwm_ai_dir = (2000.0-(float)data*1000.0/15.0);
+					pwm_ai_dir = (2000.0-(float)data*1000.0/255.0);
 					com_last_time = current_time;
 				}
 				else
