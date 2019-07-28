@@ -26,12 +26,19 @@ Le dataset sera créé dans le répertoire "dataset_720/"
 Quelques infos complémentaires
 Les images du dataset sont nommées à partir du hash (8 permiers caractères) du nom de l'image de fond.
 Si une image dans le répertorie "dataset_720/" a un nom commençant par le même haché que celui d'une
-image de fond, celle-ci sera ignorée.
+image de fond, celle-ci sera ignorée au chargement.
+
 Le séquencement de la génération est :
 - angles
   - décalage horizontal de la ligne
     - images de fond
       - éclaircissement ou assombrissement
         - ajout des ombres et limières
-  
+
+Si on arrête le script avant la fin, il faut tout recommencer...
+
+Pour paralléliser les calculs, on peut mettre quelques images de fond 
+dans le répertoire, lancer le script, attendre qu'il ait chargé les images
+effacer les images de fond, et recommencer avec d'autres images de fond.
+
 
