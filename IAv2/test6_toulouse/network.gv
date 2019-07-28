@@ -1,0 +1,54 @@
+digraph g {
+	graph [nodesep=1 ranksep=2 splines=false]
+	edge [arrowhead=none color="#707070"]
+	subgraph cluster_input {
+		node [fillcolor="#e74c3c:#3498db" fontcolor=white shape=square style=filled]
+		color=white label="Artificial Neural network - Model Visualization
+
+
+
+Input Layer"
+		1 [label="Image
+ 32 x 160 pixels
+RGB" fontcolor=white]
+	}
+	conv_2 -> 2
+	1 -> conv_2
+	subgraph cluster_1 {
+		color="#5faad0" style=filled
+		conv_2 [label="Convolutional Layer
+Kernel Size: 3x3
+Filters: 16" shape=square]
+		2 [label="16
+Feature Maps" shape=square]
+	}
+	conv_3 -> 3
+	2 -> conv_3
+	subgraph cluster_2 {
+		color="#5faad0" style=filled
+		conv_3 [label="Convolutional Layer
+Kernel Size: 3x3
+Filters: 16" shape=square]
+		3 [label="16
+Feature Maps" shape=square]
+	}
+	conv_4 -> 4
+	3 -> conv_4
+	subgraph cluster_3 {
+		color="#5faad0" style=filled
+		conv_4 [label="Convolutional Layer
+Kernel Size: 3x3
+Filters: 16" shape=square]
+		4 [label="16
+Feature Maps" shape=square]
+	}
+	4 -> 5
+	subgraph cluster_4 {
+		color=white
+		5 [label="Max Pooling
+Pool Size: 2x2" fillcolor="#8e44ad" fontcolor=white style=filled]
+	}
+	subgraph cluster_output {
+	}
+	arrowShape=none
+}
