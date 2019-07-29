@@ -5,6 +5,9 @@ import skimage
 import random
 import hashlib
 
+datasetDir="dataset_720"
+imgfondDir="Photos fond"
+
 class Camera:
   champX=46.8
   sizeX=1280
@@ -109,16 +112,22 @@ class DataSet:
     self.infotext=[]
   def AddImageFond(self, imgpath):
     name=hashlib.sha256(imgpath.encode('utf-8')).hexdigest()[0:8]
+    if not os.path.isdir(datasetDir):
+      os.mkdir(datasetDir)
     # dataset deja fait pour cette image ?
-    ds=os.listdir("dataset_720")
-    for f in ds:
-      if f.startswith(name):
+    subdirs=[]
+    for root, dir, file in os.walk(datasetDir):
+      if root == datasetDir:
+        subdirs.append(dir)
+    if name in subdirs:
         print("Image déjà traitée : "+imgpath)
         return
-    img=skimage.io.imread(imgpath)
-    img2=skimage.transform.resize(img, [self.camera.sizeY, self.camera.sizeX])
-    self.imagesFond[name]=img2
-    print("Image ajoutée : "+name+" "+imgpath)
+    else:
+      os.mkdir(datasetDir+"/"+name)
+      img=skimage.io.imread(imgpath)
+      img2=skimage.transform.resize(img, [self.camera.sizeY, self.camera.sizeX])
+      self.imagesFond[name]=img2
+      print("Image ajoutée : "+name+" "+imgpath)
   def GenereOmbresEtLumières(self, n):
     for i in range(0,n):
       points=np.zeros((self.camera.sizeY, self.camera.sizeX, 3))
@@ -156,6 +165,12 @@ class DataSet:
     # On verifie qu'il y a des images de fond
     if not self.imagesFond:
       return
+    # Création des sous-répertoires du dataset
+    for k in self.imagesFond.keys():
+      for angle in range(self.minAngle, self.maxAngle+self.stepAngle, self.stepAngle):
+        destdirname="{}/{}/{}_a{:+04d}".format(datasetDir, k, k, angle)
+        if not os.path.isdir(destdirname):
+          os.mkdir(destdirname)
     # calcul de la distance à la caméra pour les bandes basses et hautes
     ecartBandeBas=(0.5-self.bandeHauteurBas)*2
     thetaBas=np.rad2deg(math.asin(math.sin(np.deg2rad(self.camera.champY/2.))*ecartBandeBas))
@@ -237,10 +252,12 @@ class DataSet:
                   img5=self.AddLumiere(l, img4, 0.4)
                   img6=self.AddOmbres(o, img5, 0.3)
                   name=k+"_a{:+04d}_pai{:+04.0f}_pri{:+04.0f}_pab{:+04.0f}_prb{:+04.0f}_pam{:+04.0f}_prm{:+04.0f}_{:04d}.jpeg".format(angle, posMin, largeurRelat, xBandeBasse, largeurRelatBas*100., xBandeMilieu, largeurRelatMilieu*100, i)
-                  skimage.io.imsave("dataset_720/"+name, skimage.util.img_as_ubyte(img6))
+                  destdirname="{}/{}/{}_a{:+04d}".format(datasetDir, k, k, angle)
+                  filename=destdirname+"/"+name
+                  skimage.io.imsave(filename, skimage.util.img_as_ubyte(img6))
                   print(name)
-                  f=open("dataset_720/dataSet_infos"+k+".txt", "a")
-                  print(name+";{:+04.0f};{:+04.0f}".format(largeurRelatBas*100.,largeurRelatMilieu*100), file=f)
+                  f=open(datasetDir+"/"+k+"_dataSet_infos.txt", "a")
+                  print(filename+";{:+04.0f};{:+04.0f}".format(largeurRelatBas*100.,largeurRelatMilieu*100), file=f)
                   f.close()
                   i=i+1
   
@@ -266,7 +283,7 @@ print(" pt fuite = {:.0f} cm".format(camera.distPtFuite))
 random.seed(0)
 dataSet=DataSet(camera)
 
-for root, dirs, files in os.walk("Photos fond"):
+for root, dirs, files in os.walk(imgfondDir):
   for fname in files:
     print(root+"/"+fname)
     dataSet.AddImageFond(root+"/"+fname)
