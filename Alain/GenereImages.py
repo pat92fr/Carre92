@@ -4,9 +4,27 @@ import numpy as np
 import skimage
 import random
 import hashlib
+import platform
+import multiprocessing
+import subprocess
 
 datasetDir="dataset_720"
 imgfondDir="Photos fond"
+
+def GenereImagePerturbee(params):
+  img, cutoff, ombre, lumiere, k, angle, posMin, largeurRelat, xBandeBasse, largeurRelatBas, xBandeMilieu, largeurRelatMilieu, i=params
+  alphaLum=0.4
+  alphaOmb=0.3
+  img6=img+(1-img)*lumiere*alphaLum-ombre*alphaOmb
+  name=k+"_a{:+04d}_pai{:+04.0f}_pri{:+04.0f}_pab{:+04.0f}_prb{:+04.0f}_pam{:+04.0f}_prm{:+04.0f}_{:04d}.jpeg".format(angle, posMin, largeurRelat, xBandeBasse, largeurRelatBas*100., xBandeMilieu, largeurRelatMilieu*100., i)
+  destdirname="{}/{}_a{:+04d}".format(datasetDir, k, angle)
+  filename=destdirname+"/"+name
+  skimage.io.imsave(filename, skimage.util.img_as_ubyte(img6))
+  f=open(datasetDir+"/"+k+"_dataSet_infos.txt", "a")
+  print(filename+";{:+04.0f};{:+04.0f}".format(largeurRelatBas*100.,largeurRelatMilieu*100), file=f)
+  f.close()
+  print(name)
+
 
 class Camera:
   champX=46.8
@@ -92,14 +110,14 @@ class Camera:
 class DataSet:
   # LargeurRel = position x réelle relative à la demi-largeur bas image
   minLargeurRel=-200
-  maxLargeurRel=200 
+  maxLargeurRel=200
   stepLargeurRel=20
   # angle = orientation de la ligne par rapport à l'axe de vue
   stepAngle=5  
-  minAngle=-45 
-  maxAngle=45  
-  colorBlack=(64,64,64)
-  colorWhite=(192,192,192)
+  minAngle=-45
+  maxAngle=45
+  colorBlack=(64/255,64/255,64/255)
+  colorWhite=(192/255,192/255,192/255)
   bandeHauteurBas=0.28
   bandeHauteurHaut=0.65
   def __init__(self, camera):
@@ -110,24 +128,25 @@ class DataSet:
     self.imagesOmbres=[ombrevide]
     self.imagesLumières=[ombrevide]
     self.infotext=[]
+    # analyse du CPU
+    if platform.uname()[0] == 'Windows':
+      self.nbOfCPU=int(subprocess.check_output(['wmic', 'cpu', 'get', 'numberoflogicalprocessors']).split()[1])
+    else:
+      self.nbOfCPU=1
+
   def AddImageFond(self, imgpath):
     name=hashlib.sha256(imgpath.encode('utf-8')).hexdigest()[0:8]
-    if not os.path.isdir(datasetDir):
-      os.mkdir(datasetDir)
+    imgname=name+".jpeg"
     # dataset deja fait pour cette image ?
-    subdirs=[]
-    for root, dir, file in os.walk(datasetDir):
-      if root == datasetDir:
-        subdirs.append(dir)
-    if name in subdirs:
+    for file in os.listdir(datasetDir):
+      if imgname == file:
         print("Image déjà traitée : "+imgpath)
         return
-    else:
-      os.mkdir(datasetDir+"/"+name)
-      img=skimage.io.imread(imgpath)
-      img2=skimage.transform.resize(img, [self.camera.sizeY, self.camera.sizeX])
-      self.imagesFond[name]=img2
-      print("Image ajoutée : "+name+" "+imgpath)
+    img=skimage.io.imread(imgpath)
+    img2=skimage.transform.resize(img, [self.camera.sizeY, self.camera.sizeX])
+    self.imagesFond[name]=img2
+    skimage.io.imsave(datasetDir+"/"+name+".jpeg", img2)
+    print("Image ajoutée : "+name+" "+imgpath)
   def GenereOmbresEtLumières(self, n):
     for i in range(0,n):
       points=np.zeros((self.camera.sizeY, self.camera.sizeX, 3))
@@ -166,11 +185,13 @@ class DataSet:
     if not self.imagesFond:
       return
     # Création des sous-répertoires du dataset
+    # et de l'image de référence
     for k in self.imagesFond.keys():
       for angle in range(self.minAngle, self.maxAngle+self.stepAngle, self.stepAngle):
-        destdirname="{}/{}_a{:+04d}".format(datasetDir, k, k, angle)
+        destdirname="{}/{}_a{:+04d}".format(datasetDir, k, angle)
         if not os.path.isdir(destdirname):
           os.mkdir(destdirname)
+
     # calcul de la distance à la caméra pour les bandes basses et hautes
     ecartBandeBas=(0.5-self.bandeHauteurBas)*2
     thetaBas=np.rad2deg(math.asin(math.sin(np.deg2rad(self.camera.champY/2.))*ecartBandeBas))
@@ -226,11 +247,9 @@ class DataSet:
         if rrW.size > 0 : # bande blanche visible sur l'image
           for k in self.imagesFond.keys():
             img=np.copy(self.imagesFond[k])
-            img2=img*255
-            img2[ccW, rrW]=self.colorWhite
-            img2[ccBL, rrBL]=self.colorBlack
-            img2[ccBR, rrBR]=self.colorBlack
-            img3=img2.astype(np.uint8)
+            img[ccW, rrW]=self.colorWhite
+            img[ccBL, rrBL]=self.colorBlack
+            img[ccBR, rrBR]=self.colorBlack
             # Metadonnées :
             # a angle de la ligne
             # pai position réelle de la ligne au bas de l'image
@@ -245,50 +264,53 @@ class DataSet:
             i=0
             # contraste
             for cutoff in np.arange(0.3,0.75,0.05):
-              img4=skimage.util.img_as_float(skimage.exposure.adjust_sigmoid(img3, cutoff, 10))
-              # ombres et lumières
+              img4=skimage.exposure.adjust_sigmoid(img, cutoff, 10)
+              # name="_"+k+"_a{:+04d}_pai{:+04.0f}_pri{:+04.0f}_pab{:+04.0f}_prb{:+04.0f}_pam{:+04.0f}_prm{:+04.0f}_{:04d}.jpeg".format(angle, posMin, largeurRelat, xBandeBasse, largeurRelatBas*100., xBandeMilieu, largeurRelatMilieu*100., i)
+              # destdirname="{}/{}_a{:+04d}".format(datasetDir, k, angle)
+              # filename=destdirname+"/"+name
+              # print("filename")
+              # skimage.io.imsave(filename, skimage.util.img_as_ubyte(img4))
+              imageParams=[]
               for l in self.imagesLumières:
                 for o in self.imagesOmbres:
-                  img5=self.AddLumiere(l, img4, 0.4)
-                  img6=self.AddOmbres(o, img5, 0.3)
-                  name=k+"_a{:+04d}_pai{:+04.0f}_pri{:+04.0f}_pab{:+04.0f}_prb{:+04.0f}_pam{:+04.0f}_prm{:+04.0f}_{:04d}.jpeg".format(angle, posMin, largeurRelat, xBandeBasse, largeurRelatBas*100., xBandeMilieu, largeurRelatMilieu*100, i)
-                  destdirname="{}/{}_a{:+04d}".format(datasetDir, k, k, angle)
-                  filename=destdirname+"/"+name
-                  skimage.io.imsave(filename, skimage.util.img_as_ubyte(img6))
-                  print(name)
-                  f=open(datasetDir+"/"+k+"_dataSet_infos.txt", "a")
-                  print(filename+";{:+04.0f};{:+04.0f}".format(largeurRelatBas*100.,largeurRelatMilieu*100), file=f)
-                  f.close()
+                  imageParams.append([img4, cutoff, o, l, k, angle, posMin, largeurRelat, xBandeBasse, largeurRelatBas, xBandeMilieu, largeurRelatMilieu, i])
                   i=i+1
-  
+              p = multiprocessing.Pool(self.nbOfCPU)
+              p.map(GenereImagePerturbee, imageParams)
+              p.close()
+              p.join()
 
-# initialisation de la camera : 
-# hauteur
-# point à droite à i hauteur
-# point en bs à droite
-camera=Camera(20., [50., 80], [22.39, 33.23])
-print(" champ X = {:.0f}°".format(camera.champX))
-print(" champ Y = {:.0f}°".format(camera.champY))
-print("  Hauteur = {:.0f} cm".format(camera.hauteur))
-print(" D milieu = {:.0f} cm".format(camera.distanceMilieu))
-print("Larg. mil = {:.0f} cm".format(camera.demilargeurMilieu))
-print("   azimut = {:.2f}°".format(camera.azimut))
-print("D minimum = {:.0f} cm".format(camera.distanceProche))
-print("Pos horiz = {:.0f}".format(camera.positionHorizon))
-print("Larg. min = {:.0f} cm".format(camera.demilargeurProche))
-print("   focale = {:.0f}".format(camera.focale))
-print(" pt fuite = {:.0f} cm".format(camera.distPtFuite))
+if __name__ == '__main__':
+  # initialisation de la camera : 
+  # hauteur
+  # point à droite à i hauteur
+  # point en bs à droite
+  camera=Camera(20., [50., 80], [22.39, 33.23])
+  print(" champ X = {:.0f}°".format(camera.champX))
+  print(" champ Y = {:.0f}°".format(camera.champY))
+  print("  Hauteur = {:.0f} cm".format(camera.hauteur))
+  print(" D milieu = {:.0f} cm".format(camera.distanceMilieu))
+  print("Larg. mil = {:.0f} cm".format(camera.demilargeurMilieu))
+  print("   azimut = {:.2f}°".format(camera.azimut))
+  print("D minimum = {:.0f} cm".format(camera.distanceProche))
+  print("Pos horiz = {:.0f}".format(camera.positionHorizon))
+  print("Larg. min = {:.0f} cm".format(camera.demilargeurProche))
+  print("   focale = {:.0f}".format(camera.focale))
+  print(" pt fuite = {:.0f} cm".format(camera.distPtFuite))
 
 
-random.seed(0)
-dataSet=DataSet(camera)
+  if not os.path.isdir(datasetDir):
+    os.mkdir(datasetDir)
 
-for root, dirs, files in os.walk(imgfondDir):
-  for fname in files:
-    print(root+"/"+fname)
-    dataSet.AddImageFond(root+"/"+fname)
+  random.seed(0)
+  dataSet=DataSet(camera)
 
-# Génération des masques pour les ombres et lumières
-dataSet.GenereOmbresEtLumières(4)
-# Génération du dataset
-dataSet.AddLignes()
+  for root, dirs, files in os.walk(imgfondDir):
+    for fname in files:
+      print(root+"/"+fname)
+      dataSet.AddImageFond(root+"/"+fname)
+
+  # Génération des masques pour les ombres et lumières
+  dataSet.GenereOmbresEtLumières(4)
+  # Génération du dataset
+  dataSet.AddLignes()
