@@ -168,7 +168,7 @@ class DataSet:
     # Création des sous-répertoires du dataset
     for k in self.imagesFond.keys():
       for angle in range(self.minAngle, self.maxAngle+self.stepAngle, self.stepAngle):
-        destdirname="{}/{}/{}_a{:+04d}".format(datasetDir, k, k, angle)
+        destdirname="{}/{}_a{:+04d}".format(datasetDir, k, k, angle)
         if not os.path.isdir(destdirname):
           os.mkdir(destdirname)
     # calcul de la distance à la caméra pour les bandes basses et hautes
@@ -252,7 +252,7 @@ class DataSet:
                   img5=self.AddLumiere(l, img4, 0.4)
                   img6=self.AddOmbres(o, img5, 0.3)
                   name=k+"_a{:+04d}_pai{:+04.0f}_pri{:+04.0f}_pab{:+04.0f}_prb{:+04.0f}_pam{:+04.0f}_prm{:+04.0f}_{:04d}.jpeg".format(angle, posMin, largeurRelat, xBandeBasse, largeurRelatBas*100., xBandeMilieu, largeurRelatMilieu*100, i)
-                  destdirname="{}/{}/{}_a{:+04d}".format(datasetDir, k, k, angle)
+                  destdirname="{}/{}_a{:+04d}".format(datasetDir, k, k, angle)
                   filename=destdirname+"/"+name
                   skimage.io.imsave(filename, skimage.util.img_as_ubyte(img6))
                   print(name)
