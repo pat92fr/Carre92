@@ -17,7 +17,7 @@ def GenereImagePerturbee(params):
   alphaOmb=0.3
   img6=img+(1-img)*lumiere*alphaLum-ombre*alphaOmb
   name=k+"_a{:+04d}_pai{:+04.0f}_pri{:+04.0f}_pab{:+04.0f}_prb{:+04.0f}_pam{:+04.0f}_prm{:+04.0f}_{:04d}.jpeg".format(angle, posMin, largeurRelat, xBandeBasse, largeurRelatBas*100., xBandeMilieu, largeurRelatMilieu*100., i)
-  destdirname=datasetDir #"{}/{}_a{:+04d}".format(datasetDir, k, angle) # cible avec rep
+  destdirname="{}/{}_a{:+04d}".format(datasetDir, k, angle)
   filename=destdirname+"/"+name
   skimage.io.imsave(filename, skimage.util.img_as_ubyte(img6))
   f=open(datasetDir+"/"+k+"_dataSet_infos.txt", "a")
@@ -108,18 +108,18 @@ class Camera:
     return [int(res[0]), int(res[1])]
     
 class DataSet:
-  # LargeurRel = position x réelle relative à la demi-largeur bas image (%)
-  minLargeurRel=-120
-  maxLargeurRel=120
-  stepLargeurRel=4
+  # LargeurRel = position x réelle relative à la demi-largeur bas image
+  minLargeurRel=-200
+  maxLargeurRel=200
+  stepLargeurRel=20
   # angle = orientation de la ligne par rapport à l'axe de vue
-  stepAngle=10  
-  minAngle=-20
-  maxAngle=20
-  colorBlack=(64/255,64/255,64/255) # couleur ligne
+  stepAngle=5  
+  minAngle=-45
+  maxAngle=45
+  colorBlack=(64/255,64/255,64/255)
   colorWhite=(192/255,192/255,192/255)
-  bandeHauteurBas=0.28 # 28% du bas ==> PRB
-  bandeHauteurHaut=0.65 # 65% du bas ==> PRM
+  bandeHauteurBas=0.28
+  bandeHauteurHaut=0.65
   def __init__(self, camera):
     self.images={}
     self.imagesFond={}
@@ -248,8 +248,8 @@ class DataSet:
           for k in self.imagesFond.keys():
             img=np.copy(self.imagesFond[k])
             img[ccW, rrW]=self.colorWhite
-            img[ccBL, rrBL]=self.colorBlack # option
-            img[ccBR, rrBR]=self.colorBlack # option
+            img[ccBL, rrBL]=self.colorBlack
+            img[ccBR, rrBR]=self.colorBlack
             # Metadonnées :
             # a angle de la ligne
             # pai position réelle de la ligne au bas de l'image
@@ -263,7 +263,7 @@ class DataSet:
             print("Bande Mil : réel={:+03.0f} relatif={:03.0f}".format(xBandeMilieu, largeurRelatMilieu*100.))
             i=0
             # contraste
-            for cutoff in [0.5]: #np.arange(0.5): #0.3,0.75,0.05):
+            for cutoff in np.arange(0.3,0.75,0.05):
               img4=skimage.exposure.adjust_sigmoid(img, cutoff, 10)
               # name="_"+k+"_a{:+04d}_pai{:+04.0f}_pri{:+04.0f}_pab{:+04.0f}_prb{:+04.0f}_pam{:+04.0f}_prm{:+04.0f}_{:04d}.jpeg".format(angle, posMin, largeurRelat, xBandeBasse, largeurRelatBas*100., xBandeMilieu, largeurRelatMilieu*100., i)
               # destdirname="{}/{}_a{:+04d}".format(datasetDir, k, angle)
@@ -275,7 +275,6 @@ class DataSet:
                 for o in self.imagesOmbres:
                   imageParams.append([img4, cutoff, o, l, k, angle, posMin, largeurRelat, xBandeBasse, largeurRelatBas, xBandeMilieu, largeurRelatMilieu, i])
                   i=i+1
-              #imageParams.append([img4, cutoff, o, l, k, angle, posMin, largeurRelat, xBandeBasse, largeurRelatBas, xBandeMilieu, largeurRelatMilieu, i])
               p = multiprocessing.Pool(self.nbOfCPU)
               p.map(GenereImagePerturbee, imageParams)
               p.close()
@@ -312,6 +311,6 @@ if __name__ == '__main__':
       dataSet.AddImageFond(root+"/"+fname)
 
   # Génération des masques pour les ombres et lumières
-  dataSet.GenereOmbresEtLumières(0) #(4) # nb images lumières
+  dataSet.GenereOmbresEtLumières(4)
   # Génération du dataset
   dataSet.AddLignes()
