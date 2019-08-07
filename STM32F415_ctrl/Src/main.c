@@ -98,8 +98,8 @@ static uint32_t pwm_ai_thr = 1500;
 static uint32_t pwm_ai_dir = 1500;
 static uint32_t pwm_auto_thr = 1500;
 static uint32_t pwm_auto_dir = 1500;
-enum {MAIN_STATE_IDLE_AUTO,MAIN_STATE_MANUAL_OVERRIDE};
-static uint32_t main_state = MAIN_STATE_MANUAL_OVERRIDE;
+enum {MAIN_STATE_MANUAL, MAIN_STATE_AUTO_REQUEST, MAIN_STATE_AUTO_STARTUP, MAIN_STATE_AUTO };
+static uint32_t main_state = MAIN_STATE_MANUAL;
 static uint32_t main_state_last = 0;
 #define MANUAL_OVERRIDE_TIMEOUT 2000 //ms
 enum {RC_STATE_NONE,RC_STATE_OK};
@@ -326,26 +326,9 @@ int main(void)
 	pwm_auto_dir = pwm_ai_dir;
 	switch(main_state) // MAIN state machine
 	{
-	case MAIN_STATE_IDLE_AUTO:
+	case MAIN_STATE_MANUAL:
 		{
-			__HAL_TIM_SET_COMPARE(&htim8,TIM_CHANNEL_1,pwm_manual_thr); // RC always control THR at the moment
-			__HAL_TIM_SET_COMPARE(&htim8,TIM_CHANNEL_2,pwm_auto_dir); // AI control DIR
-			__HAL_TIM_SET_COMPARE(&htim8,TIM_CHANNEL_3,pwm_auto_dir); // AI control DIR
-			__HAL_TIM_SET_COMPARE(&htim8,TIM_CHANNEL_4,1500);// default servo position
-			__HAL_TIM_SET_COMPARE(&htim1,TIM_CHANNEL_1,1500);
-			__HAL_TIM_SET_COMPARE(&htim1,TIM_CHANNEL_2,1500);
-			__HAL_TIM_SET_COMPARE(&htim1,TIM_CHANNEL_3,1500);
-			__HAL_TIM_SET_COMPARE(&htim1,TIM_CHANNEL_4,1500);
-			HAL_GPIO_WritePin(LED1_GPIO_Port,LED1_Pin,GPIO_PIN_SET);
-			if( (pwm_manual_dir > 1550) || (pwm_manual_dir < 1450)) // RC DIR not in default/middle position
-			{
-				main_state = MAIN_STATE_MANUAL_OVERRIDE;
-				main_state_last = current_time;
-			}
-		}
-		break;
-	case MAIN_STATE_MANUAL_OVERRIDE:
-		{
+			// RC control servo
 			__HAL_TIM_SET_COMPARE(&htim8,TIM_CHANNEL_1,pwm_manual_thr); // RC always control THR at the moment
 			__HAL_TIM_SET_COMPARE(&htim8,TIM_CHANNEL_2,pwm_manual_dir); // RC control DIR
 			__HAL_TIM_SET_COMPARE(&htim8,TIM_CHANNEL_3,pwm_manual_dir); // RC control DIR
@@ -355,18 +338,79 @@ int main(void)
 			__HAL_TIM_SET_COMPARE(&htim1,TIM_CHANNEL_3,1500);
 			__HAL_TIM_SET_COMPARE(&htim1,TIM_CHANNEL_4,1500);
 			HAL_GPIO_WritePin(LED1_GPIO_Port,LED1_Pin,GPIO_PIN_RESET);
-			if( (pwm_manual_dir > 1550) || (pwm_manual_dir < 1450)) // RC DIR not in default/middle position
+
+			if( (pwm_manual_dir > 1850) && (pwm_manual_thr > 1450) && (pwm_manual_thr < 1550) ) // activation condition
 			{
 				main_state_last = current_time;
+				main_state = MAIN_STATE_AUTO_REQUEST;
 			}
-			else if(main_state_last+MANUAL_OVERRIDE_TIMEOUT<current_time)
+		}
+		break;
+	case MAIN_STATE_AUTO_REQUEST:
+		{
+			// RC control servo
+			__HAL_TIM_SET_COMPARE(&htim8,TIM_CHANNEL_1,pwm_manual_thr); // RC always control THR at the moment
+			__HAL_TIM_SET_COMPARE(&htim8,TIM_CHANNEL_2,pwm_manual_dir); // RC control DIR
+			__HAL_TIM_SET_COMPARE(&htim8,TIM_CHANNEL_3,pwm_manual_dir); // RC control DIR
+			__HAL_TIM_SET_COMPARE(&htim8,TIM_CHANNEL_4,1500);// default servo position
+			__HAL_TIM_SET_COMPARE(&htim1,TIM_CHANNEL_1,1500);
+			__HAL_TIM_SET_COMPARE(&htim1,TIM_CHANNEL_2,1500);
+			__HAL_TIM_SET_COMPARE(&htim1,TIM_CHANNEL_3,1500);
+			__HAL_TIM_SET_COMPARE(&htim1,TIM_CHANNEL_4,1500);
+			HAL_GPIO_WritePin(LED1_GPIO_Port,LED1_Pin,GPIO_PIN_RESET);
+
+			if( (pwm_manual_dir > 1850) && (pwm_manual_thr > 1450) && (pwm_manual_thr < 1550) ) // activation condition
 			{
-				main_state = MAIN_STATE_IDLE_AUTO;
+				if(main_state_last+MANUAL_OVERRIDE_TIMEOUT<current_time)
+				{
+					main_state = MAIN_STATE_AUTO_STARTUP;
+				}
+			}
+			else
+			{
+				main_state = MAIN_STATE_MANUAL;
+			}
+		}
+		break;
+	case MAIN_STATE_AUTO_STARTUP:
+		{
+			// RC control servo
+			__HAL_TIM_SET_COMPARE(&htim8,TIM_CHANNEL_1,pwm_manual_thr); // RC always control THR at the moment
+			__HAL_TIM_SET_COMPARE(&htim8,TIM_CHANNEL_2,pwm_manual_dir); // RC control DIR
+			__HAL_TIM_SET_COMPARE(&htim8,TIM_CHANNEL_3,pwm_manual_dir); // RC control DIR
+			__HAL_TIM_SET_COMPARE(&htim8,TIM_CHANNEL_4,1500);// default servo position
+			__HAL_TIM_SET_COMPARE(&htim1,TIM_CHANNEL_1,1500);
+			__HAL_TIM_SET_COMPARE(&htim1,TIM_CHANNEL_2,1500);
+			__HAL_TIM_SET_COMPARE(&htim1,TIM_CHANNEL_3,1500);
+			__HAL_TIM_SET_COMPARE(&htim1,TIM_CHANNEL_4,1500);
+			HAL_GPIO_WritePin(LED1_GPIO_Port,LED1_Pin,GPIO_PIN_SET);
+
+			if( (pwm_manual_dir > 1450) && (pwm_manual_dir < 1550) && (pwm_manual_thr > 1450) && (pwm_manual_thr < 1550) ) // activation condition
+			{
+					main_state = MAIN_STATE_AUTO;
+			}
+		}
+		break;
+	case MAIN_STATE_AUTO:
+		{
+			// AI control servo
+			__HAL_TIM_SET_COMPARE(&htim8,TIM_CHANNEL_1,pwm_manual_thr); // RC always control THR at the moment
+			__HAL_TIM_SET_COMPARE(&htim8,TIM_CHANNEL_2,pwm_auto_dir); // AI control DIR
+			__HAL_TIM_SET_COMPARE(&htim8,TIM_CHANNEL_3,pwm_auto_dir); // AI control DIR
+			__HAL_TIM_SET_COMPARE(&htim8,TIM_CHANNEL_4,1500);// default servo position
+			__HAL_TIM_SET_COMPARE(&htim1,TIM_CHANNEL_1,1500);
+			__HAL_TIM_SET_COMPARE(&htim1,TIM_CHANNEL_2,1500);
+			__HAL_TIM_SET_COMPARE(&htim1,TIM_CHANNEL_3,1500);
+			__HAL_TIM_SET_COMPARE(&htim1,TIM_CHANNEL_4,1500);
+			HAL_GPIO_WritePin(LED1_GPIO_Port,LED1_Pin,GPIO_PIN_SET);
+			if( (pwm_manual_dir > 1550) || (pwm_manual_dir < 1450) ) // || (pwm_manual_thr < 1450) || (pwm_manual_thr > 1550) ) // RC DIR not in default/middle position
+			{
+				main_state = MAIN_STATE_MANUAL;
 			}
 		}
 		break;
 	}
-	HAL_Serial_Print(&bt_com,"MT:%d MD:%d AT:%d AD:%d\r\n",pwm_manual_thr,pwm_manual_dir,pwm_auto_thr,pwm_auto_dir);
+	HAL_Serial_Print(&bt_com,"Mode: %d MT:%d MD:%d AT:%d AD:%d\r\n",main_state,pwm_manual_thr,pwm_manual_dir,pwm_auto_thr,pwm_auto_dir);
 	HAL_Delay(10);
   }
   /* USER CODE END 3 */
