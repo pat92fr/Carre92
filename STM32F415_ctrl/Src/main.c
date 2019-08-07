@@ -403,7 +403,7 @@ int main(void)
 			__HAL_TIM_SET_COMPARE(&htim1,TIM_CHANNEL_3,1500);
 			__HAL_TIM_SET_COMPARE(&htim1,TIM_CHANNEL_4,1500);
 			HAL_GPIO_WritePin(LED1_GPIO_Port,LED1_Pin,GPIO_PIN_SET);
-			if( (pwm_manual_dir > 1550) || (pwm_manual_dir < 1450) ) // || (pwm_manual_thr < 1450) || (pwm_manual_thr > 1550) ) // RC DIR not in default/middle position
+			if( (pwm_manual_dir > 1650) || (pwm_manual_dir < 1350) || (pwm_manual_thr < 1350) ) //|| (pwm_manual_thr > 1650) ) // || (pwm_manual_thr < 1450) || (pwm_manual_thr > 1550) ) // RC DIR not in default/middle position
 			{
 				main_state = MAIN_STATE_MANUAL;
 			}
