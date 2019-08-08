@@ -32,4 +32,6 @@ for i in range(0, nbAGenerer):
   yc=random.randint(margin,h_source_size-h_target_size-margin)
   cropImage=resizeImage[yc:yc+h_target_size, xc:xc+w_target_size]
   skimage.io.imsave("out/"+baseFileName+"rot{:03d}.jpeg".format(i), cropImage)
+  rotImage2=skimage.transform.rotate(cropImage, 180)
+  skimage.io.imsave("out/"+baseFileName+"flp{:03d}.jpeg".format(i), rotImage2)
   
