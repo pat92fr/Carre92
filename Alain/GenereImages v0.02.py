@@ -21,7 +21,8 @@ def GenereImagePerturbee(params):
   destdirname=datasetDir #"{}/{}_a{:+04d}".format(datasetDir, k, angle) # cible avec rep
   filename=destdirname+"/"+name
   skimage.io.imsave(filename, skimage.util.img_as_ubyte(img6))
-  f=open(datasetDir+"/"+k+"_dataSet_infos.txt", "a")
+  #f=open(datasetDir+"/"+k+"_dataSet_infos.txt", "a")
+  f=open(datasetDir+"/"+"dataSet_infos.txt", "a")
   print(filename+";{:+04.0f};{:+04.0f}".format(largeurRelatBas*100.,largeurRelatMilieu*100), file=f)
   f.close()
   print(name)
@@ -176,8 +177,9 @@ class DataSet:
   def AddLignes(self):
     """ Ajoute des lignes sur les images de fond
     """
-    #
+    # shuffle background pictures
     picture_count = 0
+    random.shuffle(self.back_ground_picture_list)
     # calcul de la distance à la caméra pour les bandes basses et hautes
     ecartBandeBas=(0.5-self.bandeHauteurBas)*2
     thetaBas=np.rad2deg(math.asin(math.sin(np.deg2rad(self.camera.champY/2.))*ecartBandeBas))
