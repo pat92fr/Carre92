@@ -32,4 +32,4 @@ for i in range(0, nbAGenerer):
   yc=random.randint(int(size/2),yImage-size-int(size/2))
   rotImage=skimage.transform.rotate(baseImage, angle)
   img=rotImage[yc:yc+ySize, xc:xc+xSize]
-  skimage.io.imsave("rot{:03d}.jpeg".format(i), img)
+  skimage.io.imsave("out/"+baseFileName+"rot{:03d}.jpeg".format(i), img)
