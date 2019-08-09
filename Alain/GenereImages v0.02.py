@@ -113,11 +113,11 @@ class DataSet:
   # LargeurRel = position x réelle relative à la demi-largeur bas image (%)
   minLargeurRel=-100
   maxLargeurRel=100
-  stepLargeurRel=5
+  stepLargeurRel=2
   # angle = orientation de la ligne par rapport à l'axe de vue
-  stepAngle=10  
-  minAngle=-20
-  maxAngle=20
+  stepAngle=5  
+  minAngle=-25
+  maxAngle=25
   colorBlack=(64,64,64) # couleur ligne
   colorWhite=(210,210,210)
   bandeHauteurBas=0.17 # 17% du bas ==> PRB
