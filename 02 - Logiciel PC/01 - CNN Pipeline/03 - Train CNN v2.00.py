@@ -22,13 +22,13 @@ from keras.utils.vis_utils import model_to_dot
 width = 160 # 1280 / 8
 height = 32 #
 inmage_shape = (height, width,1)
-param_units_hidden_1 = 512 #128 ***
-param_units_hidden_2 = 128 #128
-param_units_hidden_3 = 32 #128
+param_units_hidden_1 = 32 #128 ***
+param_units_hidden_2 = 16 #128
+param_units_hidden_3 = 8 #128
 param_units_hidden_4 = 8 #128
 
 # hyperparameters
-hyp_epoch = 20 #300
+hyp_epoch = 300 #300
 hyp_bs = 128 #128
 hyp_lr = 0.0001 #0.00005
 hyp_lr_decay = 0.0 #0.0
@@ -50,13 +50,22 @@ X_shuffled, Y_shuffled = shuffle(X, Y)
 # create model
 model = Sequential()
 
-# CONV 20epochs 0.0039
+# CONV 30epochs 0.0083 300 0.0020
 #32x160
-model.add(Conv2D(24, kernel_size=(5, 5), strides=(1, 1), dilation_rate = (1,1), border_mode='valid', activation='relu', input_shape=inmage_shape))
-model.add(MaxPooling2D(pool_size=(2, 2)))
-model.add(Conv2D(32, kernel_size=(5, 5), strides=(1, 1), dilation_rate = (1,1), border_mode='valid', activation='relu', input_shape=inmage_shape))
-model.add(MaxPooling2D(pool_size=(2, 2)))
-model.add(Conv2D(4, kernel_size=(1, 1), strides=(1, 1), dilation_rate = (1,1), border_mode='valid', activation='relu', input_shape=inmage_shape))
+model.add(Conv2D(16, kernel_size=(5, 5), strides=(2, 2), dilation_rate = (1,1), border_mode='valid', activation='relu', input_shape=inmage_shape))
+model.add(Conv2D(16, kernel_size=(5, 5), strides=(1, 1), dilation_rate = (1,1), border_mode='valid', activation='relu', input_shape=inmage_shape))
+model.add(Conv2D(16, kernel_size=(3, 3), strides=(1, 1), dilation_rate = (1,1), border_mode='valid', activation='relu', input_shape=inmage_shape))
+model.add(Conv2D(16, kernel_size=(3, 3), strides=(1, 1), dilation_rate = (1,1), border_mode='valid', activation='relu', input_shape=inmage_shape))
+model.add(Conv2D(16, kernel_size=(3, 3), strides=(1, 1), dilation_rate = (1,1), border_mode='valid', activation='relu', input_shape=inmage_shape))
+
+# CONV 20epochs 
+#32x160
+##model.add(Conv2D(16, kernel_size=(5, 5), strides=(2, 2), dilation_rate = (1,1), border_mode='valid', activation='relu', input_shape=inmage_shape))
+##model.add(Conv2D(16, kernel_size=(3, 3), strides=(1, 1), dilation_rate = (1,1), border_mode='valid', activation='relu', input_shape=inmage_shape))
+##model.add(Conv2D(16, kernel_size=(3, 3), strides=(1, 1), dilation_rate = (1,1), border_mode='valid', activation='relu', input_shape=inmage_shape))
+##model.add(Conv2D(16, kernel_size=(3, 3), strides=(1, 1), dilation_rate = (1,1), border_mode='valid', activation='relu', input_shape=inmage_shape))
+
+#model.add(Conv2D(4, kernel_size=(1, 1), strides=(1, 1), dilation_rate = (1,1), border_mode='valid', activation='relu', input_shape=inmage_shape))
 
 # CONV 100epochs 0.0025
 #32x160
@@ -256,9 +265,9 @@ model.add(Dropout(hyp_weight_dropout_2))
 model.add(Dense(param_units_hidden_3,activity_regularizer=l2(hyp_l2_regularization)))
 model.add(Activation("relu"))
 
-model.add(Dropout(hyp_weight_dropout_2))
-model.add(Dense(param_units_hidden_4,activity_regularizer=l2(hyp_l2_regularization)))
-model.add(Activation("relu"))
+##model.add(Dropout(hyp_weight_dropout_2))
+##model.add(Dense(param_units_hidden_4,activity_regularizer=l2(hyp_l2_regularization)))
+##model.add(Activation("relu"))
 
 model.add(Dropout(hyp_weight_dropout_2))
 model.add(Dense(1,activity_regularizer=l2(hyp_l2_regularization))) # 1 output
