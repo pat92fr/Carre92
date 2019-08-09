@@ -5,8 +5,8 @@ import random
 from skimage.util import img_as_ubyte
 
 # parameters
-input_dir = "input\\"
-output_dir = "output\\"
+input_dir = "00 - Background Photos\\"
+output_dir = "01 - Background Pictures\\"
 random_seed = 666
 number_of_pictures = 350
 
