@@ -111,17 +111,17 @@ class Camera:
     
 class DataSet:
   # LargeurRel = position x réelle relative à la demi-largeur bas image (%)
-  minLargeurRel=-100
-  maxLargeurRel=100
+  minLargeurRel=-96
+  maxLargeurRel=96
   stepLargeurRel=2
   # angle = orientation de la ligne par rapport à l'axe de vue
-  stepAngle=5  
-  minAngle=-25
-  maxAngle=25
+  stepAngle=4  
+  minAngle=-20
+  maxAngle=20
   colorBlack=(64,64,64) # couleur ligne
-  colorWhite=(210,210,210)
+  colorWhite=(220,220,220)
   bandeHauteurBas=0.17 # 17% du bas ==> PRB
-  bandeHauteurHaut=0.50 # 50% du bas ==> PRM
+  bandeHauteurHaut=0.70 # 50% du bas ==> PRM
   def __init__(self, camera):
     self.images={}
     self.back_ground_picture_list = []
@@ -181,11 +181,11 @@ class DataSet:
     picture_count = 0
     random.shuffle(self.back_ground_picture_list)
     # calcul de la distance à la caméra pour les bandes basses et hautes
-    ecartBandeBas=(0.5-self.bandeHauteurBas)*2
+    ecartBandeBas=(0.5-self.bandeHauteurBas)
     thetaBas=np.rad2deg(math.asin(math.sin(np.deg2rad(self.camera.champY/2.))*ecartBandeBas))
     distanceBandeBas=self.camera.hauteur/math.tan(np.deg2rad(-self.camera.azimut+thetaBas))
     [x, yBandeBasse]=self.camera.Projection(0, distanceBandeBas)
-    ecartBandeMilieu=(0.5-self.bandeHauteurHaut)*2
+    ecartBandeMilieu=(0.5-self.bandeHauteurHaut)
     thetaMilieu=np.rad2deg(math.asin(math.sin(np.deg2rad(self.camera.champY/2.))*ecartBandeMilieu))
     distanceBandeMilieu=self.camera.hauteur/math.tan(np.deg2rad(-self.camera.azimut+thetaMilieu))
     [x, yBandeMilieu]=self.camera.Projection(0, distanceBandeMilieu)
@@ -240,7 +240,8 @@ class DataSet:
           picture_count += 1 # inc
           if(picture_count>=self.back_ground_picture_count):
             print("No more background picture available!!!")
-          img[ccW, rrW]=self.colorWhite
+            
+          img[ccW, rrW]=np.add( np.multiply(img[ccW, rrW],0.05), np.multiply(self.colorWhite,0.95)) # blend
           ###img[ccBL, rrBL]=self.colorBlack # option
           ###img[ccBR, rrBR]=self.colorBlack # option
           # Metadonnées :
@@ -303,7 +304,7 @@ if __name__ == '__main__':
   # build background pictures list
   for root, dirs, files in os.walk(imgfondDir):
     for fname in files:
-      print(root+"/"+fname)
+      ##print(root+"/"+fname)
       dataSet.AddImageFond(root+"/"+fname)
 
   # Génération des masques pour les ombres et lumières
