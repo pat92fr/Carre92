@@ -28,7 +28,7 @@ param_units_hidden_3 = 32 #128
 param_units_hidden_4 = 8 #128
 
 # hyperparameters
-hyp_epoch = 100 #300
+hyp_epoch = 20 #300
 hyp_bs = 128 #128
 hyp_lr = 0.0001 #0.00005
 hyp_lr_decay = 0.0 #0.0
@@ -39,8 +39,8 @@ hyp_weight_dropout_2 = 0.20 #0.20
 random.seed(datetime.now())
 
 # load dataset
-X = np.transpose(np.loadtxt("X.txt", dtype=float))
-Y = np.transpose(np.loadtxt('Y.txt', dtype=float))
+X = np.transpose(np.loadtxt("03 - Dataset\\X.txt", dtype=float))
+Y = np.transpose(np.loadtxt('03 - Dataset\\Y.txt', dtype=float))
 m = X.shape[0]
 print(str(m))
 X = X.reshape(m,height,width,1)
@@ -50,7 +50,7 @@ X_shuffled, Y_shuffled = shuffle(X, Y)
 # create model
 model = Sequential()
 
-# CONV 100epochs 0.0025
+# CONV 20epochs 0.0039
 #32x160
 model.add(Conv2D(24, kernel_size=(5, 5), strides=(1, 1), dilation_rate = (1,1), border_mode='valid', activation='relu', input_shape=inmage_shape))
 model.add(MaxPooling2D(pool_size=(2, 2)))
@@ -295,12 +295,12 @@ plt.show()
 ##plt.show()
 
 # save model and architecture to single file
-model.save("model.h5")
+model.save("04 - CNN\\model.h5")
 print("Saved model to disk")
 
 # summarize model.
-plot_model(model, to_file="model.png")
+plot_model(model, to_file="04 - CNN\\model.png")
 SVG(model_to_dot(model).create(prog='dot', format='svg'))
 model_json = model.to_json()
-with open("model.json", "w") as json_file:
+with open("04 - CNN\\model.json", "w") as json_file:
     json_file.write(model_json)

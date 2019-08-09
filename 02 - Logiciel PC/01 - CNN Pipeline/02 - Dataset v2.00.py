@@ -12,7 +12,7 @@ def image2vector(image):
     v -- a vector of shape (length*height*depth, 1)
     """
     size = image.shape[0] * image.shape[1] #* image.shape[2]
-    v = image.reshape(size, 1)
+    v = image.reshape(size) #, 1)
     return v
 
 # input parameters
@@ -75,35 +75,36 @@ for example in dataset:
     middle_frame_image_flipped_ver = cv2.flip(middle_frame_image,0)
     middle_frame_image_flipped_hor = cv2.flip(middle_frame_image,1)
     # fill X,Y
-    X[:,i] = np.transpose(image2vector(lower_frame_image))/255
-    Y[0:i] = line_position_low
+    X[:,i] = image2vector(lower_frame_image)/255.0
+    Y[0,i] = line_position_low
     i += 1
-    X[:,i] = np.transpose(image2vector(lower_frame_image_flipped_ver))/255
-    Y[0:i] = line_position_low
+    X[:,i] = image2vector(lower_frame_image_flipped_ver)/255
+    Y[0,i] = line_position_low
     i += 1    
-    X[:,i] = np.transpose(image2vector(lower_frame_image_flipped_hor))/255
-    Y[0:i] = -line_position_low
+    X[:,i] = image2vector(lower_frame_image_flipped_hor)/255
+    Y[0,i] = -line_position_low
     i += 1    
-    X[:,i] = np.transpose(image2vector(middle_frame_image))/255
-    Y[0:i] = line_position_middle
+    X[:,i] = image2vector(middle_frame_image)/255
+    Y[0,i] = line_position_middle
     i += 1
-    X[:,i] = np.transpose(image2vector(middle_frame_image_flipped_ver))/255
-    Y[0:i] = line_position_middle
+    X[:,i] = image2vector(middle_frame_image_flipped_ver)/255
+    Y[0,i] = line_position_middle
     i += 1    
-    X[:,i] = np.transpose(image2vector(middle_frame_image_flipped_hor))/255
-    Y[0:i] = -line_position_middle
+    X[:,i] = image2vector(middle_frame_image_flipped_hor)/255
+    Y[0,i] = -line_position_middle
     i += 1
     #debug
-    plt.clf()
-    x = X[:,i-1]
-    x = x.reshape( (frame_size[1], frame_size[0]) )
-    plt.imshow( x, cmap = 'gray' )
-    plt.axvline(x=(Y[0,i-1]+1.0)/2.0*frame_size[0],linewidth=3)
+    ###plt.clf()
+    ###x = X[:,i-6] 
+    ###x = x.reshape( (frame_size[1], frame_size[0]) )
+    ###plt.imshow( x, cmap = 'gray' )
+    ###plt.axvline(x=(Y[0,i-6]+1.0)/2.0*frame_size[0],linewidth=3)
     ###plt.pause(0.002)
-    plt.pause(1.000)
+    ###print(str(Y[0,i-6]))
+    ###plt.pause(1.000)
 
-print(str(i)+"/"+str(m))
+print("Dataset augmented and built, m: " + str(i)+"/"+str(m))
 np.savetxt(output_dir+"\\"+"X.txt",X,fmt="%f")
 np.savetxt(output_dir+"\\"+"Y.txt",Y,fmt="%f")
-
+print("Dataset saved.")
     
