@@ -13,8 +13,8 @@ class miniClient:
         self.y_byte = 0
         self.ia_started = False
         self.s = 0 
-        self.ip = '10.0.10.49'  # The server's hostname or IP address : Test jetson
-        #self.ip = '10.42.0.1'  # The server's hostname or IP address : REAL BUGGY ! 
+        #self.ip = '10.0.10.49'  # The server's hostname or IP address : Test jetson
+        self.ip = '10.42.0.1'  # The server's hostname or IP address : REAL BUGGY ! 
 
  
 
