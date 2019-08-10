@@ -19,15 +19,8 @@ intermediate_size = (160,90) # divided by 8
 frame_size = (160,32) # divided by 8
 
 def image2vector(image):
-    """
-    Argument:
-    image -- a numpy array of shape (length, height, depth)
-    
-    Returns:
-    v -- a vector of shape (length*height*depth, 1)
-    """
-    size = image.shape[0] * image.shape[1] #* image.shape[2]
-    v = image.reshape(size) #, 1)
+    size = image.shape[0] * image.shape[1]
+    v = image.reshape(size)
     return v
 
 def apply_shadow(input_frame):
@@ -36,7 +29,7 @@ def apply_shadow(input_frame):
     shadow_image = cv2.imread(shadow_pictures_list[shadow_picture_count],cv2.IMREAD_COLOR)
     shadow_image_gray = cv2.cvtColor(shadow_image, cv2.COLOR_RGB2GRAY)
     shadow_picture_count += 1
-    output_frame_shadowed = cv2.addWeighted(input_frame, 0.7, shadow_image_gray, 0.4, 0.1)
+    output_frame_shadowed = cv2.addWeighted(input_frame, 0.6, shadow_image_gray, 0.4, 1.1)
     return output_frame_shadowed
 
 # read input text file "picture_fullpathname";"x";"y"\n[...]
@@ -54,17 +47,17 @@ for l in lines:
     dataset.append(example)
 print("Dataset file parsed, m: "+str(len(dataset)))
 
-# init data set
-m = len(dataset)* 10 ##data augmentation factor (2 frame + 4 flips + 4 shadows)
-X = np.zeros((frame_size[0]*frame_size[1]*1,m))
-Y = np.zeros((1,m))
-
-# load shadow pictures
+# load shadow pictures list
 shadow_pictures_list = []
 for root, dirs, files in os.walk(input_shadow_dir):
     for fname in files:
       shadow_pictures_list.append(input_shadow_dir+"/"+fname)
 random.shuffle(shadow_pictures_list)
+
+# init data set
+m = len(dataset)* 12 ##data augmentation factor (2 frame + 4 flips + 6 shadows)
+X = np.zeros((frame_size[0]*frame_size[1]*1,m))
+Y = np.zeros((1,m))
 
 # load pictures and build data set (X,Y)
 i = 0
@@ -95,13 +88,17 @@ for example in dataset:
     # data augmentation : flip H and V
     lower_frame_image_flipped_ver = cv2.flip(lower_frame_image,0)
     lower_frame_image_flipped_hor = cv2.flip(lower_frame_image,1)
+    lower_frame_image_flipped_hor_ver = cv2.flip(lower_frame_image,-1)
     middle_frame_image_flipped_ver = cv2.flip(middle_frame_image,0)
     middle_frame_image_flipped_hor = cv2.flip(middle_frame_image,1)
+    middle_frame_image_flipped_hor_ver = cv2.flip(middle_frame_image,-1)
     # data augmentation : shadows
     lower_frame_image_shadowed = apply_shadow(lower_frame_image)
     lower_frame_image_flipped_hor_shadowed = apply_shadow(lower_frame_image_flipped_hor)
+    lower_frame_image_flipped_hor_ver_shadowed = apply_shadow(lower_frame_image_flipped_hor_ver)
     middle_frame_image_shadowed = apply_shadow(middle_frame_image)
     middle_frame_image_flipped_hor_shadowed = apply_shadow(middle_frame_image_flipped_hor)
+    middle_frame_image_flipped_hor_ver_shadowed = apply_shadow(middle_frame_image_flipped_hor_ver)
     # fill X,Y
     X[:,i] = image2vector(lower_frame_image)/255.0
     Y[0,i] = line_position_low
@@ -133,15 +130,22 @@ for example in dataset:
     X[:,i] = image2vector(middle_frame_image_flipped_hor_shadowed)/255
     Y[0,i] = -line_position_middle
     i += 1    
+    X[:,i] = image2vector(middle_frame_image_flipped_hor_ver_shadowed)/255
+    Y[0,i] = -line_position_middle
+    i += 1
+    X[:,i] = image2vector(middle_frame_image_flipped_hor_ver_shadowed)/255
+    Y[0,i] = -line_position_middle
+    i += 1
     #debug
-    plt.clf()
-    x = X[:,i-2] 
-    x = x.reshape( (frame_size[1], frame_size[0]) )
-    plt.imshow( x, cmap = 'gray' )
-    plt.axvline(x=(Y[0,i-2]+1.0)/2.0*frame_size[0],linewidth=3)
-    plt.pause(0.200)
-    ###plt.pause(0.002)
-    ###print(str(Y[0,i-6]))
+    if False:
+        plt.clf()
+        x = X[:,i-2] 
+        x = x.reshape( (frame_size[1], frame_size[0]) )
+        plt.imshow( x, cmap = 'gray' )
+        plt.axvline(x=(Y[0,i-2]+1.0)/2.0*frame_size[0],linewidth=3)
+        ###plt.pause(0.200)
+        plt.pause(0.001)
+        ###print(str(Y[0,i-6]))
     
 
 print("Dataset augmented and built, m: " + str(i)+"/"+str(m))

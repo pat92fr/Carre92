@@ -9,7 +9,7 @@ from skimage.color import rgb2gray
 input_dir = "00 - Shadow Photos\\"
 output_dir = "01 - Shadow Pictures\\"
 random_seed = 999
-number_of_pictures = 500
+number_of_pictures = 600
 
 # constants
 margin = 10

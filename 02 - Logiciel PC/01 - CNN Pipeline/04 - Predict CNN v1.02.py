@@ -35,7 +35,7 @@ print("Loaded model from disk")
 # summarize model.
 model.summary()
 # internal vizualisation
-layer_count = 5
+layer_count = 7
 layer_outputs = [layer.output for layer in model.layers[:layer_count]] # Extracts the outputs of the top 4 layers
 activation_model = models.Model(inputs=model.input, outputs=layer_outputs) # Creates a model that will return these outputs, given the model input
 layer_names = []
@@ -47,9 +47,9 @@ images_per_row = 1
 width = 160 # 1280 / 8
 height = 90 # 720 / 8
 crop_height = 32 # power of 2
-height_start_1 = 10 # low offset from bottom
+height_start_1 = 0 # low offset from bottom
 height_end_1 = height_start_1+crop_height # high offset from bottom
-height_start_2 = 42
+height_start_2 = height_end_1
 height_end_2 = height_start_2+crop_height
 
 # load images
