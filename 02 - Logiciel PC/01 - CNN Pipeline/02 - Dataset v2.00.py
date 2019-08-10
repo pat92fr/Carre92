@@ -1,6 +1,8 @@
 import numpy as np
+import random
 import math
 import cv2
+import os
 import matplotlib.pyplot as plt
 
 def image2vector(image):
@@ -18,9 +20,13 @@ def image2vector(image):
 # input parameters
 input_dir = "02 - Track Line Pictures"
 input_filename = "dataSet_infos.txt"
-output_dir = "03 - Dataset"
+input_shadow_dir = "01 - Shadow Pictures"
+random.seed(765)
 
 #output parameters
+output_dir = "03 - Dataset"
+
+# constant
 intermediate_size = (160,90) # divided by 8 
 frame_size = (160,32) # divided by 8 
 
@@ -44,8 +50,16 @@ m = len(dataset)* 6 ##data augmentation factor
 X = np.zeros((frame_size[0]*frame_size[1]*1,m))
 Y = np.zeros((1,m))
 
+# load shadow pictures
+shadow_pictures_list = []
+for root, dirs, files in os.walk(input_shadow_dir):
+    for fname in files:
+      shadow_pictures_list.append(input_shadow_dir+"/"+fname)
+random.shuffle(shadow_pictures_list)
+
 # load pictures and build data set (X,Y)
 i = 0
+shadow_picture_count = 0
 for example in dataset:
     # read 1280x720x3 image jpeg
     image = cv2.imread(example[0],cv2.IMREAD_COLOR)
@@ -74,6 +88,16 @@ for example in dataset:
     lower_frame_image_flipped_hor = cv2.flip(lower_frame_image,1)
     middle_frame_image_flipped_ver = cv2.flip(middle_frame_image,0)
     middle_frame_image_flipped_hor = cv2.flip(middle_frame_image,1)
+    # data augmentation : shadows
+    shadow_image = cv2.imread(shadow_pictures_list[shadow_picture_count],cv2.IMREAD_COLOR)
+    shadow_image_gray = cv2.cvtColor(shadow_image, cv2.COLOR_RGB2GRAY)
+    shadow_picture_count += 1
+    lower_frame_image_shadowed = cv2.addWeighted(lower_frame_image, 0.7, shadow_image_gray, 0.4, 0.1)
+    #
+    shadow_image = cv2.imread(shadow_pictures_list[shadow_picture_count],cv2.IMREAD_COLOR)
+    shadow_image_gray = cv2.cvtColor(shadow_image, cv2.COLOR_RGB2GRAY)
+    shadow_picture_count += 1
+    middle_frame_image_shadowed = cv2.addWeighted(middle_frame_image, 0.7, shadow_image_gray, 0.4, 0.1)
     # fill X,Y
     X[:,i] = image2vector(lower_frame_image)/255.0
     Y[0,i] = line_position_low
@@ -93,15 +117,21 @@ for example in dataset:
     X[:,i] = image2vector(middle_frame_image_flipped_hor)/255
     Y[0,i] = -line_position_middle
     i += 1
+    X[:,i] = image2vector(lower_frame_image_shadowed)/255
+    Y[0,i] = line_position_low
+    i += 1
+    X[:,i] = image2vector(middle_frame_image_shadowed)/255
+    Y[0,i] = line_position_middle
+    i += 1
     #debug
     ###plt.clf()
-    ###x = X[:,i-6] 
+    ###x = X[:,i-1] 
     ###x = x.reshape( (frame_size[1], frame_size[0]) )
     ###plt.imshow( x, cmap = 'gray' )
-    ###plt.axvline(x=(Y[0,i-6]+1.0)/2.0*frame_size[0],linewidth=3)
+    ###plt.axvline(x=(Y[0,i-1]+1.0)/2.0*frame_size[0],linewidth=3)
     ###plt.pause(0.002)
     ###print(str(Y[0,i-6]))
-    ###plt.pause(1.000)
+    ###plt.pause(0.200)
 
 print("Dataset augmented and built, m: " + str(i)+"/"+str(m))
 np.savetxt(output_dir+"\\"+"X.txt",X,fmt="%f")
