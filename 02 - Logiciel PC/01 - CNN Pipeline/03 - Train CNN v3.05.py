@@ -130,10 +130,44 @@ def load_track_line_picture(filename):
     return low_frame,middle_frame
 
 def augment_track_line_picture(batch_x,batch_y):
-    #random flip, gamma, shadow, dust, blur, speed blur
-    ## never pass trhu original pictures
+    global shadow_pictures_list
+    ## never pass trhu original pictures, train and validate CNN on augmented pictures
+    for (x,y) in zip(batch_x,batch_y):
+        # reshaphe for picture processing
+        x = x.reshape(32,160)
+        # random flip orignial picture
+        flip = random.randint(0, 3)
+        if flip == 1:
+            #flip vertically
+            x = cv2.flip(x,0)
+        elif flip == 2:
+            #flip horizontaly
+            x = cv2.flip(x,1)
+            y = -y
+        elif flip == 3:
+            # flip both h and v
+            x = cv2.flip(x,-1)
+            y = -y
+        # randow pick a shadow picture and apply to example
+        shadow_picture_filename = random.choice(shadow_pictures_list)
+        shadow_image = cv2.imread(shadow_picture_filename,cv2.IMREAD_COLOR)
+        shadow_image_gray = cv2.cvtColor(shadow_image, cv2.COLOR_RGB2GRAY)
+        alpha = random.uniform(0.5,0.8)
+        beta = 1.0-alpha
+        gamma = random.uniform(-0.4,0.4)
+        x = cv2.addWeighted(x, alpha, shadow_image_gray/255.0, beta, 1.0+gamma)
+        # TODO : random motion blur, dust, 
+        if False:
+            plt.clf()
+            plt.imshow( x, cmap = 'gray' )
+            plt.axvline(x=(y+1.0)/2.0*160,linewidth=2)
+            plt.pause(0.01)
+        # reshape for conv2D
+        x = x.reshape(32,160,1)
+    # output
     return batch_x, batch_y
-    
+
+# keras data generator (batch)
 class data_generator(keras.utils.Sequence):
     def __init__(self, x_set, y_set, batch_size):
         self.x, self.y = x_set, y_set
@@ -145,16 +179,13 @@ class data_generator(keras.utils.Sequence):
     def __getitem__(self, idx):
         batch_x = self.x[idx * self.batch_size:(idx + 1) * self.batch_size]
         batch_y = self.y[idx * self.batch_size:(idx + 1) * self.batch_size]
-        # read your data here using the batch lists, batch_x and batch_y
-        #x = [load_track_line_picture(xi) for xi in batch_x] 
-        # data augmentation
+        # data augmentation (original track line picture ==> augmented pictures
         batch_x, batch_y = augment_track_line_picture(batch_x,batch_y)
         return np.array(batch_x), np.array(batch_y)
 
     def on_epoch_end(self):
         'Updates dataset after each epoch'
         self.x,self.y = shuffle(self.x,self.y)
-
 
 ## MAIN ########################################################################
 
@@ -212,16 +243,9 @@ tensorboard = TensorBoard(log_dir=output_dir+"/{}".format(time.time()), batch_si
 filepath="weights-improvement-{epoch:03d}-{val_mean_squared_error:.4f}.hdf5"
 mc = ModelCheckpoint(output_dir+"/"+filepath, monitor='val_mean_squared_error', mode='min', save_best_only=True) #, verbose=1)
 # early stopping
-es = EarlyStopping(monitor='val_mean_squared_error', mode='min', min_delta=0.0003, verbose=1, patience=20)
+es = EarlyStopping(monitor='val_mean_squared_error', mode='min', min_delta=0.0003, verbose=1, patience=30)
 # fit the model
-history = model.fit_generator(
-    epochs=hyp_epoch,
-    generator=training_generator,
-    validation_data=validation_generator,
-    workers=8,
-    callbacks=[tensorboard, mc, es],
-    verbose=2
-    )
+history = model.fit_generator(epochs=hyp_epoch,generator=training_generator,validation_data=validation_generator,workers=8,callbacks=[tensorboard, mc, es],verbose=2)
 # save model and architecture to single file
 model.save(output_dir+"/"+"model.h5")
 print("Saved model to disk")
@@ -230,6 +254,7 @@ print("Saved model to disk")
 # plot history
 plt.plot(history.history['mean_squared_error'], label='train')
 plt.plot(history.history['val_mean_squared_error'], label='test')
+plt.yscale("log")
 plt.ylabel('mean_squared_error')
 plt.xlabel('epoch')
 plt.legend(['train', 'test'], loc='upper right')
