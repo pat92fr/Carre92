@@ -51,7 +51,7 @@ param_units_hidden= [64,64,64,0]
 
 # hyperparameters
 hyp_batch_size = 128 
-hyp_epoch = 10
+hyp_epoch = 1000
 hyp_lr = 0.0001 #0.00005
 hyp_lr_decay = 0.0
 hyp_l2_regularization = 0.0001 
@@ -130,7 +130,7 @@ def load_track_line_picture(x):
 def augment_track_line_picture(batch_x,batch_y):
     #random flip, gamma, shadow, dust, blur, speed blur
     ## never pass trhu original pictures
-    return batch_x, batch y
+    return batch_x, batch_y
     
 class data_generator(keras.utils.Sequence):
     def __init__(self, x_set, y_set, batch_size):
@@ -143,10 +143,10 @@ class data_generator(keras.utils.Sequence):
     def __getitem__(self, idx):
         batch_x = self.x[idx * self.batch_size:(idx + 1) * self.batch_size]
         batch_y = self.y[idx * self.batch_size:(idx + 1) * self.batch_size]
-
         # read your data here using the batch lists, batch_x and batch_y
         x = [load_track_line_picture(xi) for xi in batch_x] 
-## call augm here!
+        # data augmentation
+        x, batch_y = augment_track_line_picture(x,batch_y)
         return np.array(x), np.array(batch_y)
 
     def on_epoch_end(self):

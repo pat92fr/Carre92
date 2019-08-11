@@ -22,7 +22,7 @@ from keras.optimizers import Adam
 from keras.regularizers import l2
 from keras.utils import plot_model
 from keras.utils.vis_utils import model_to_dot
-from keras.callbacks import TensorBoard
+from keras.callbacks import TensorBoard, EarlyStopping, ModelCheckpoint
 from tensorflow.python.keras.utils import Sequence
 import h5py
 
@@ -51,7 +51,7 @@ param_units_hidden= [64,64,64,0]
 
 # hyperparameters
 hyp_batch_size = 128 
-hyp_epoch = 10
+hyp_epoch = 1000
 hyp_lr = 0.0001 #0.00005
 hyp_lr_decay = 0.0
 hyp_l2_regularization = 0.0001 
@@ -80,9 +80,11 @@ def build_track_line_picture_dataset():
     Y = []
     for l in lines:
         fields = l.split(';')
-        X.append((fields[0],'low'))
+        filename = fields[0]
+        low_frame, middle_frame = load_track_line_picture(filename)
+        X.append(low_frame)
         Y.append(float(int(fields[1])/100.0))
-        X.append((fields[0],'middle'))
+        X.append(middle_frame)
         Y.append(float(int(fields[2])/100.0))
     X,Y = shuffle(X,Y)
     print("Done.")
@@ -100,10 +102,9 @@ def build_shadow_picture_list():
     print("Shadow Pictures, size: "+str(len(L)))
     return L
 
-def load_track_line_picture(x):
-    ###print(str(x))
+def load_track_line_picture(filename):
     # read track line picture
-    image = cv2.imread(x[0],cv2.IMREAD_COLOR)
+    image = cv2.imread(filename,cv2.IMREAD_COLOR)
     assert(image.shape == (720,1280,3))
     # resize
     intermediate_size = (160,90) # divided by 8 
@@ -115,22 +116,23 @@ def load_track_line_picture(x):
     assert(image_bw.shape == (90,160))
     # cut frame
     frame_size = (32,160)
-    if x[1]=='low':
-        frame = image_bw[intermediate_size[1]-frame_size[0]:intermediate_size[1],0:frame_size[1]]
-    else:
-        frame = image_bw[intermediate_size[1]-2*frame_size[0]:intermediate_size[1]-frame_size[0],0:frame_size[1]]                
-    assert(frame.shape == frame_size)
+    low_frame = image_bw[intermediate_size[1]-frame_size[0]:intermediate_size[1],0:frame_size[1]]
+    middle_frame = image_bw[intermediate_size[1]-2*frame_size[0]:intermediate_size[1]-frame_size[0],0:frame_size[1]]                
+    assert(low_frame.shape == frame_size)
+    assert(middle_frame.shape == frame_size)
     # normalize
-    frame = frame/255.0
+    low_frame = low_frame/255.0
+    middle_frame = middle_frame/255.0
     # reshape for conv2D
-    frame = frame.reshape(32,160,1)
+    low_frame = low_frame.reshape(32,160,1)
+    middle_frame = middle_frame.reshape(32,160,1)
     # out
-    return frame
+    return low_frame,middle_frame
 
 def augment_track_line_picture(batch_x,batch_y):
     #random flip, gamma, shadow, dust, blur, speed blur
     ## never pass trhu original pictures
-    return batch_x, batch y
+    return batch_x, batch_y
     
 class data_generator(keras.utils.Sequence):
     def __init__(self, x_set, y_set, batch_size):
@@ -143,19 +145,17 @@ class data_generator(keras.utils.Sequence):
     def __getitem__(self, idx):
         batch_x = self.x[idx * self.batch_size:(idx + 1) * self.batch_size]
         batch_y = self.y[idx * self.batch_size:(idx + 1) * self.batch_size]
-
         # read your data here using the batch lists, batch_x and batch_y
-        x = [load_track_line_picture(xi) for xi in batch_x] 
-## call augm here!
-        return np.array(x), np.array(batch_y)
+        #x = [load_track_line_picture(xi) for xi in batch_x] 
+        # data augmentation
+        batch_x, batch_y = augment_track_line_picture(batch_x,batch_y)
+        return np.array(batch_x), np.array(batch_y)
 
     def on_epoch_end(self):
         'Updates dataset after each epoch'
         self.x,self.y = shuffle(self.x,self.y)
 
 
-
-    
 ## MAIN ########################################################################
 
 #init
@@ -207,16 +207,19 @@ model.summary()
 opt = Adam(lr=hyp_lr,decay=hyp_lr_decay)
 model.compile(loss='mean_squared_error', optimizer=opt, metrics=['mse'])
 # tensorboard
-###tensorboard = TensorBoard(log_dir=output_dir+"/{}".format(time.time()), batch_size=hyp_batch_size)
+tensorboard = TensorBoard(log_dir=output_dir+"/{}".format(time.time()), batch_size=hyp_batch_size)
+# checkpoint
+filepath="weights-improvement-{epoch:03d}-{val_mean_squared_error:.4f}.hdf5"
+mc = ModelCheckpoint(output_dir+"/"+filepath, monitor='val_mean_squared_error', mode='min', save_best_only=True) #, verbose=1)
+# early stopping
+es = EarlyStopping(monitor='val_mean_squared_error', mode='min', min_delta=0.0003, verbose=1, patience=20)
 # fit the model
 history = model.fit_generator(
     epochs=hyp_epoch,
-    #steps_per_epoch = 
     generator=training_generator,
     validation_data=validation_generator,
-    #use_multiprocessing=True,
     workers=8,
-    #callbacks=[tensorboard],
+    callbacks=[tensorboard, mc, es],
     verbose=2
     )
 # save model and architecture to single file
@@ -225,19 +228,11 @@ print("Saved model to disk")
 # list all data in history
 ###print(history.history.keys())
 # plot history
-#plt.semilogy(history.history['acc'], label='train')
-#plt.semilogy(history.history['val_acc'], label='test')
 plt.plot(history.history['mean_squared_error'], label='train')
 plt.plot(history.history['val_mean_squared_error'], label='test')
 plt.ylabel('mean_squared_error')
 plt.xlabel('epoch')
 plt.legend(['train', 'test'], loc='upper right')
 plt.show()
-# summarize model.
-plot_model(model, to_file=output_dir+"/model.png")
-SVG(model_to_dot(model).create(prog='dot', format='svg'))
-model_json = model.to_json()
-with open(output_dir+"/model.json", "w") as json_file:
-    json_file.write(model_json)
 
 
