@@ -1,0 +1,7 @@
+- enregistrer un batch complet pour vérification.
+
+- ajouter un fond clair (blanc)
+- tester batch norm
+- tester avec LR plus faible
+
+- tenue aux ombres moyenne : vérifier les photos prises dans l'appt vs images ombrées augmentées.
