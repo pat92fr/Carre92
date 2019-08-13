@@ -1,7 +1,7 @@
-- enregistrer un batch complet pour vérification.
+- reduire drop out dans FC (0.2 => 0.1)
+- deux couches de neurones et plus nombreux
+- color shifting augmentation
 
 - ajouter un fond clair (blanc)
 - tester batch norm
 - tester avec LR plus faible
-
-- tenue aux ombres moyenne : vérifier les photos prises dans l'appt vs images ombrées augmentées.
