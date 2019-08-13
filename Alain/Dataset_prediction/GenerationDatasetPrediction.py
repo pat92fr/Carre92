@@ -14,12 +14,12 @@ AngleStep=1.
 # en % de la demi-largeur d'image
 PosMin=-100.
 PosMax=+100.
-PosStep=10.
+PosStep=1.
 
 # Vitesse de la camera
 # equivalent au pas en y
 SpeedMin=1.
-SpeedMax=10.
+SpeedMax=20.
 SpeedStep=1
 
 # variance des perturbations aléatoires
