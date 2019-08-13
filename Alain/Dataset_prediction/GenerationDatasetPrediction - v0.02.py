@@ -40,6 +40,7 @@ for angle in np.arange(AngleMin, AngleMax+AngleStep, AngleStep) :
           for i in range(0, SampleSet+1):
             sortie=sortie+"{:.2f};".format(valeurs[i])
           sortie=sortie+"{:03d};{:03d};".format(int(angle), int(pos))
+          sortie=sortie+"{:d};{:d};{:.1f}".format(d, int(rCourbure), angleParStep)
           print(sortie, file=f)
           # plt.axis((0,SampleSet, -150, 150))
           # plt.plot(range(0, SampleSet+1), valeurs)
