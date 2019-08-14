@@ -39,12 +39,12 @@ train_valid_dataset_radio = 0.05
 output_dir = "01 - ANN"
 
 # parameters
-param_units_hidden= [256,256,256,0]
+param_units_hidden= [256,128,0,0]
 
 # hyperparameters
 hyp_batch_size = 128 
 hyp_epoch = 3000
-hyp_lr = 0.00005 #0.0002
+hyp_lr = 0.00002 #0.0002
 hyp_lr_decay = 0.0
 hyp_l2_regularization = 0.0001 #0.0001 
 hyp_weight_dropout_2 = 0.10
