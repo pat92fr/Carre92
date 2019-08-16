@@ -85,7 +85,6 @@ DMA_HandleTypeDef hdma_usart3_tx;
 
 /* USER CODE BEGIN PV */
 static HAL_Serial_Handler ai_com;
-static HAL_Serial_Handler bt_com;
 static uint32_t RC1_last_time = 0;
 static uint32_t RC1_period = 0;
 static uint32_t RC1_duty_cycle = 0;
@@ -218,7 +217,6 @@ int main(void)
   HAL_TIM_IC_Start_IT(&htim9,TIM_CHANNEL_1);
   HAL_TIM_IC_Start_IT(&htim9,TIM_CHANNEL_2);
   HAL_Serial_Init(&huart3,&ai_com); // Start com port
-  //HAL_Serial_Init(&huart5,&bt_com); // Start com port
   HAL_GPIO_WritePin(LED0_GPIO_Port,LED0_Pin,GPIO_PIN_RESET); // Init LEDs
   HAL_GPIO_WritePin(LED1_GPIO_Port,LED1_Pin,GPIO_PIN_RESET);
   HAL_GPIO_WritePin(LED2_GPIO_Port,LED2_Pin,GPIO_PIN_RESET);
@@ -378,6 +376,10 @@ int main(void)
 			}
 		}
 	}
+
+
+
+
 	switch(ai_state) // AI state machine
 	{
 	case AI_STATE_NONE: // No RC
@@ -490,7 +492,6 @@ int main(void)
 		}
 		break;
 	}
-//	HAL_Serial_Print(&bt_com,"Mode: %d MT:%d MD:%d AT:%d AD:%d\r\n",main_state,pwm_manual_thr,pwm_manual_dir,pwm_auto_thr,pwm_auto_dir);
 	HAL_Delay(10);
   }
   /* USER CODE END 3 */
