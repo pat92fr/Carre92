@@ -1,0 +1,7 @@
+- reduire drop out dans FC (0.2 => 0.1)
+- deux couches de neurones et plus nombreux
+- color shifting augmentation
+
+- ajouter un fond clair (blanc)
+- tester batch norm
+- tester avec LR plus faible
