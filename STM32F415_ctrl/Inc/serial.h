@@ -47,7 +47,7 @@ typedef struct
 
 } HAL_Serial_Handler;
 
-#define HAL_Serial_Handler_Count 2
+#define HAL_Serial_Handler_Count 1
 
 /* HAL Functions ------------------------------------------------------------------*/
 

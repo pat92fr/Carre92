@@ -46,6 +46,9 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "serial.h"
+#include "tfminiplus.h"
+#include "stdio.h"
+#include "string.h"
 #include <stdlib.h>     /* atoi */
 /* USER CODE END Includes */
 
@@ -215,7 +218,7 @@ int main(void)
   HAL_TIM_IC_Start_IT(&htim9,TIM_CHANNEL_1);
   HAL_TIM_IC_Start_IT(&htim9,TIM_CHANNEL_2);
   HAL_Serial_Init(&huart3,&ai_com); // Start com port
-  HAL_Serial_Init(&huart5,&bt_com); // Start com port
+  //HAL_Serial_Init(&huart5,&bt_com); // Start com port
   HAL_GPIO_WritePin(LED0_GPIO_Port,LED0_Pin,GPIO_PIN_RESET); // Init LEDs
   HAL_GPIO_WritePin(LED1_GPIO_Port,LED1_Pin,GPIO_PIN_RESET);
   HAL_GPIO_WritePin(LED2_GPIO_Port,LED2_Pin,GPIO_PIN_RESET);
@@ -229,7 +232,10 @@ int main(void)
   HAL_GPIO_WritePin(LED3_GPIO_Port,LED3_Pin,GPIO_PIN_SET);
   HAL_GPIO_WritePin(LED4_GPIO_Port,LED4_Pin,GPIO_PIN_SET);
   HAL_GPIO_WritePin(LED5_GPIO_Port,LED5_Pin,GPIO_PIN_SET);
-  HAL_Serial_Print(&bt_com,"Hello world\r\n");
+  // Initialisation des Lidars
+  tfminiplus_init();
+
+  //HAL_Serial_Print(&bt_com,"Hello world\r\n");
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -273,20 +279,94 @@ int main(void)
 			if(com_position!=0) // not empty recv buffer
 			{
 				com_line[com_position]=0; // force eol
-				uint32_t data = 128; // default not line position value from AI
-				data = atoi(com_line); // decode value
-				if(data<255 && data>=0)
-				{
-					pwm_ai_thr = 1500;
-					pwm_ai_dir = (2000.0-(float)data*1000.0/255.0);
-					com_last_time = current_time;
-				}
-				else
-				{
-					pwm_ai_thr = 1500;
-					pwm_ai_dir = 1500;
-				}
+			    char *tab_args[50];
+			    int num_args;
+			    uint32_t data;
+
+		        num_args = 0;
+		        tab_args[num_args] = strtok(com_line, ";");
+		        while(tab_args[num_args] != NULL)
+		        {
+		            tab_args[++num_args] = strtok(NULL, ";");
+		        }
+
+				// On extrait le premier champ - direction
+		        if(num_args>=1)
+		        {
+					data = 128; // default not line position value from AI
+					data = atoi(tab_args[0]); // decode value
+					if(data<255 && data>=0)
+					{
+						pwm_ai_thr = 1500;
+						pwm_ai_dir = (1000.0+(float)data*1000.0/255.0);
+						com_last_time = current_time;
+					}
+					else
+					{
+						pwm_ai_thr = 1500;
+						pwm_ai_dir = 1500;
+					}
+		        }
+				// On extrait le deuxième champ - vitesse
+		        if(num_args>=2)
+		        {
+					data = 128; // default not speed value from AI
+					data = atoi(tab_args[1]); // decode value
+					if(data<255 && data>=0)
+					{
+						pwm_ai_thr = (2000.0-(float)data*1000.0/255.0);
+						com_last_time = current_time;
+					}
+					else
+					{
+						pwm_ai_thr = 1500;
+					}
+		        }
+				// On extrait le troisième champ - mode
+		        if(num_args>=3)
+		        {
+					data = 128; // default not speed value from AI
+					data = atoi(tab_args[2]); // decode value
+					// Je ne sais plus quoi faire de cette valeur
+		        }
 				com_position = 0; // reset recv buffer
+			}
+
+			// Envoi à l'AI en retour de distance Lidar Gauche, distance Lidar Droit, vitesse mesurée
+			int distance_gauche, distance_droit, vitesse_mesuree;
+			int strength_gauche, strength_droit;
+			int temp_gauche, temp_droit;
+			int convert_dir, convert_thr;
+
+			tfminiplus_getLastAcquisition(MINILIDAR_GAUCHE, &distance_gauche, &strength_gauche, &temp_gauche);
+			tfminiplus_getLastAcquisition(MINILIDAR_DROIT, &distance_droit, &strength_droit, &temp_droit);
+			vitesse_mesuree = 0;
+
+			if(main_state == MAIN_STATE_AUTO)
+			{
+				// (2000.0-(float)data*1000.0/255.0);
+				// 0 -> 2000 et 255 -> 1000
+				if(pwm_auto_dir<=1000) pwm_auto_dir = 1000;
+				if(pwm_auto_dir>=2000) pwm_auto_dir = 2000;
+				if(pwm_manual_thr<=1000) pwm_manual_thr = 1000;
+				if(pwm_manual_thr>=2000) pwm_manual_thr = 2000;
+
+				convert_dir = (2000.0 - (float)pwm_auto_dir) * 255.0 / 1000.0;
+				convert_thr = (2000.0 - (float)pwm_manual_thr) * 255.0 / 1000.0;
+
+				HAL_Serial_Print(&ai_com, "%d;%d;%d;%d;%d;%d\r\n", distance_gauche, distance_droit, vitesse_mesuree, convert_thr, convert_dir, 1);
+			}
+			else
+			{
+				if(pwm_manual_dir<=1000) pwm_manual_dir = 1000;
+				if(pwm_manual_dir>=2000) pwm_manual_dir = 2000;
+				if(pwm_manual_thr<=1000) pwm_manual_thr = 1000;
+				if(pwm_manual_thr>=2000) pwm_manual_thr = 2000;
+
+				convert_dir = (2000.0 - (float)pwm_manual_dir) * 255.0 / 1000.0;
+				convert_thr = (2000.0 - (float)pwm_manual_thr) * 255.0 / 1000.0;
+
+				HAL_Serial_Print(&ai_com, "%d;%d;%d;%d;%d;%d\r\n", distance_gauche, distance_droit, vitesse_mesuree, convert_thr, convert_dir, 0);
 			}
 		}
 		else // new char
@@ -410,7 +490,7 @@ int main(void)
 		}
 		break;
 	}
-	HAL_Serial_Print(&bt_com,"Mode: %d MT:%d MD:%d AT:%d AD:%d\r\n",main_state,pwm_manual_thr,pwm_manual_dir,pwm_auto_thr,pwm_auto_dir);
+//	HAL_Serial_Print(&bt_com,"Mode: %d MT:%d MD:%d AT:%d AD:%d\r\n",main_state,pwm_manual_thr,pwm_manual_dir,pwm_auto_thr,pwm_auto_dir);
 	HAL_Delay(10);
   }
   /* USER CODE END 3 */
