@@ -15,9 +15,10 @@ class miniClient:
         self.s = 0 
         #self.ip = '10.0.10.49'  # The server's hostname or IP address : Test jetson
         #self.ip = '10.42.0.1'  # The server's hostname or IP address : REAL BUGGY ! 
-        self.ip = '192.168.1.18'  # The server's hostname or IP address : Test jetson
- 
-
+        #self.ip = '192.168.1.18'  # The server's hostname or IP address : Test jetson
+        #self.ip = '192.168.1.5'  # The server's hostname or IP address : Test jetson
+        self.ip = '10.42.0.1'  # The server's hostname or IP address : REAL BUGGY ! 
+        
     def run_win_cmd(self, cmd):
         result = []
         process = subprocess.Popen(cmd,
@@ -74,7 +75,7 @@ class miniClient:
                     print("starting IA")
                     self.s.send(b'i')
 
-                if keys == s's':
+                if keys == b's':
                     print("screenshot")
                     self.s.send(b's')
 
