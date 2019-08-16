@@ -1,0 +1,53 @@
+### Désactivation interface graphique
+Pour désactiver le démarrage gdm :
+  sudo systemctl set-default multi-user.target
+Attention : clavier en qwerty !
+Pour le réactiver :
+  sudo systemctl set-default graphical.target
+Pour lancer une interface graphique avec un démarrage en mode texte
+  sudo systemctl start gdm3.service
+Le clavier revient en azerty
+
+### Désactivation IPV6
+Ajouter les lignes suivantes au fichier /etc/sysctl.conf
+  net.ipv6.conf.all.disable_ipv6 = 1
+  net.ipv6.conf.default.disable_ipv6 = 1
+  net.ipv6.conf.lo.disable_ipv6 = 1
+
+### Désactivation des services non utilisés
+Pour désactiver le démarrage automatique d'un service,
+faire
+  sudo update-rc <service> disable
+Les services qui peuvent être désactivés sont
+  alsa-utils 
+  anacron
+  apparmor
+  apport
+  avahi daemon
+  bluetooth
+  cron
+  dns-clean
+  docker
+  gdm3
+  gpsd
+  haveged
+  isc-dhcp-server
+  kerneloops
+  nfs-common
+  plymouth
+  plymouth-log
+  ppps-dns
+Attention, plymouth est nécessaire pour l'interface graphique, sinon les 
+menus gnome n'apparaissent pas.
+  
+### Lancement automatique d'un script au démarrage
+Modifier le script Buggy_autostart.sh pour exécuter les scripts python
+et le placer dans /etc/init.d/
+Ajouter les droits d'exécution : 
+  sudo chmod a+x /etc/init.d/Buggy_autostart.sh
+lancer la commande
+  sudo update-rc.d Buggy_autostart.sh defaults
+Les services lancés au démarrage le sont dans l'ordre alphabétique
+des fichiers dans /etc/rcX.d (X=2, 3, 4 ou 5)
+Il semble que la commande update-rc.d crée un lien dont le nom est S01<nom service>
+Avec un service "Buggy*", il a de grande chances d'être le premier lancé !
