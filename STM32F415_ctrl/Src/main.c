@@ -19,24 +19,24 @@
 
 
 // WIRING INPUT
-// SERIAL3 = RX from NVIDIA AI (UART3)
-// SERIAL4 = free (UART4)
-// SERIAL5 = free (UART5)
+// SERIAL3 = LiD (UART3, RX only, DMA RX Normal, note : pin TX damaged)
+// SERIAL4 = TX&RX from NVIDIA AI (UART4, DMA RX Circular, DMA TX normal)
+// SERIAL5 = LiG (UART5, RX only, DMA RX Normal)
 // RC1 = THR from RX (TIM9 CH1 PWM input capture)
 // RC2 = DIR from RX (TIM3 CH1 PWM input capture)
 
 // WIRING OUTPUT
-// SERVO5 = THR (TIM8 CH1)
-// SERVO6 = DIR (TIM8 CH2)
-// SERVO7 = DIR (TIM8 CH3)
+// SERVO5 (HW=TIM8 CH1) = THR
+// SERVO6 (HW=TIM8 CH2) = DIR
+// SERVO7 (HW=TIM8 CH3) = DIR
 
 // MMI
-// LED0
-// LED1
-// LED2
-// LED3
-// LED4
-// LED5 = RC state
+// LED0 (HW=D2)
+// LED1 (HW=D1) = MANUAL/AUTO state
+// LED2 (HW=D3)
+// LED3 (HW=D4)
+// LED4 (HW=D5) = AI state
+// LED5 (HW=D6) = RC state
 
 /* USER CODE END Header */
 
@@ -216,7 +216,7 @@ int main(void)
   HAL_TIM_IC_Start_IT(&htim3,TIM_CHANNEL_2);
   HAL_TIM_IC_Start_IT(&htim9,TIM_CHANNEL_1);
   HAL_TIM_IC_Start_IT(&htim9,TIM_CHANNEL_2);
-  HAL_Serial_Init(&huart3,&ai_com); // Start com port
+  HAL_Serial_Init(&huart4,&ai_com); // Start com port
   HAL_GPIO_WritePin(LED0_GPIO_Port,LED0_Pin,GPIO_PIN_RESET); // Init LEDs
   HAL_GPIO_WritePin(LED1_GPIO_Port,LED1_Pin,GPIO_PIN_RESET);
   HAL_GPIO_WritePin(LED2_GPIO_Port,LED2_Pin,GPIO_PIN_RESET);
@@ -339,6 +339,9 @@ int main(void)
 			tfminiplus_getLastAcquisition(MINILIDAR_GAUCHE, &distance_gauche, &strength_gauche, &temp_gauche);
 			tfminiplus_getLastAcquisition(MINILIDAR_DROIT, &distance_droit, &strength_droit, &temp_droit);
 			vitesse_mesuree = 0;
+			/// Todo : add timestamp to LIDAR last acquisition
+			/// Todo : add timestamp to LIDAR last acquisition
+			/// Todo : add timestamp to LIDAR last acquisition
 
 			if(main_state == MAIN_STATE_AUTO)
 			{
@@ -376,10 +379,6 @@ int main(void)
 			}
 		}
 	}
-
-
-
-
 	switch(ai_state) // AI state machine
 	{
 	case AI_STATE_NONE: // No RC
@@ -404,6 +403,13 @@ int main(void)
 		}
 		break;
 	}
+	/// Todo : add LIDAR state machine : non LIDAR, no PID WALL following
+	/// Todo : add LIDAR state machine : non LIDAR, no PID WALL following
+	/// Todo : add LIDAR state machine : non LIDAR, no PID WALL following
+
+	/// Todo : add PID WALL following here
+	/// Todo : add PID WALL following here
+	/// Todo : add PID WALL following here
 	pwm_auto_thr = pwm_ai_thr; // no other source of automatic control, then auto controller use AI
 	pwm_auto_dir = pwm_ai_dir;
 	switch(main_state) // MAIN state machine
@@ -959,6 +965,7 @@ static void MX_USART3_UART_Init(void)
   */
 static void MX_DMA_Init(void) 
 {
+
   /* DMA controller clock enable */
   __HAL_RCC_DMA1_CLK_ENABLE();
 

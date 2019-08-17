@@ -8,7 +8,7 @@
 #include "stm32f4xx_hal.h"
 #include "tfminiplus.h"
 
-extern UART_HandleTypeDef huart4;
+extern UART_HandleTypeDef huart3;
 extern UART_HandleTypeDef huart5;
 
 // Timeout de 1000 ms
@@ -533,7 +533,7 @@ int tfminiplus_init()
 	// Initialisation d'un capteur. Il sera facile d'en initialiser un deuxième
 
 	// Initialisation des parametres
-	miniLidarDroit.pHuart = &huart4;
+	miniLidarDroit.pHuart = &huart3;
 	miniLidarDroit.distance = -1;
 	miniLidarDroit.strength = 0;
 	miniLidarDroit.temperature = 0;
