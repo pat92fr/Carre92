@@ -24,24 +24,24 @@ typedef struct
 	// La taille max d'une trame, dans tout le protocole, est de 8 octets
 	uint8_t serialBuffer[10];
 	// Dernière distance en cm
-	int distance;
+	int32_t distance;
 	// Intensité du rayon reçu
-	int strength;
+	int32_t strength;
 	// Temperature du sensor en centigrade
-	int temperature;
+	int32_t temperature;
 
 	// Format : 00.version.revision.edition
 	int32_t version;
 
 	// Frequence d'acquisition
-	int framerate;
+	int32_t framerate;
 	// Frequence de la liaison serie
-	int baudrate;
+	int32_t baudrate;
 	// Type de format de données
 	eLidarOutputFormat outputFormat;
 
 	// Semaphore pour attendre la réponse du lidar à une commande
-	int semaphore;
+	int32_t semaphore;
 
 } stMiniLidar;
 
@@ -51,7 +51,7 @@ stMiniLidar miniLidarGauche;
 
 // Dans la routine d'IRQ du DMA, on positionne le numéro du capteur rattaché au DMA
 // Remarque générale, plutot que de typer numCapteur en int, on pourrait mettre un enum
-void tfminiplusIrq(int a_numCapteur)
+void tfminiplusIrq(LIDAR_ID a_numCapteur)
 {
 	int distance, strength, temp;
 	uint32_t checksum, checksum_ref;
@@ -258,7 +258,7 @@ void tfminiplusIrq(int a_numCapteur)
 	}
 }
 
-int tfminiplus_getLastAcquisition(int a_numCapteur, int *a_pDistance, int *a_pStrength, int *a_pTemperature)
+int tfminiplus_getLastAcquisition(LIDAR_ID a_numCapteur, int32_t *a_pDistance, int32_t *a_pStrength, int32_t *a_pTemperature)
 {
 	int erreur;
 
@@ -314,7 +314,7 @@ int tfminiplus_getLastAcquisition(int a_numCapteur, int *a_pDistance, int *a_pSt
 	return erreur;
 }
 
-int tfminiplus_setOutputFormat(int a_numCapteur, eLidarOutputFormat *a_pFormat)
+int tfminiplus_setOutputFormat(LIDAR_ID a_numCapteur, eLidarOutputFormat *a_pFormat)
 {
 	int erreur;
 	int attente;
@@ -423,7 +423,7 @@ int tfminiplus_setOutputFormat(int a_numCapteur, eLidarOutputFormat *a_pFormat)
 	return erreur;
 }
 
-int tfminiplus_getFramerate(int a_numCapteur, int *a_pFramerate)
+int tfminiplus_getFramerate(LIDAR_ID a_numCapteur, int32_t *a_pFramerate)
 {
 	int erreur;
 
@@ -444,7 +444,7 @@ int tfminiplus_getFramerate(int a_numCapteur, int *a_pFramerate)
 	return erreur;
 }
 
-int tfminiplus_getBaudrate(int a_numCapteur, int *a_pBaudrate)
+int tfminiplus_getBaudrate(LIDAR_ID a_numCapteur, int32_t *a_pBaudrate)
 {
 	int erreur;
 
@@ -465,7 +465,7 @@ int tfminiplus_getBaudrate(int a_numCapteur, int *a_pBaudrate)
 	return erreur;
 }
 
-int tfminiplus_getVersion(int a_numCapteur, int *a_pVersion)
+int tfminiplus_getVersion(LIDAR_ID a_numCapteur, int32_t *a_pVersion)
 {
 	int erreur;
 	int attente;

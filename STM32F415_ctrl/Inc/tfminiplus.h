@@ -18,16 +18,18 @@ typedef enum
 } eLidarOutputFormat;
 
 // Les index sur les capteurs (à passer dans le champ a_numCapteur des fonctions)
-#define MINILIDAR_DROIT		1
-#define MINILIDAR_GAUCHE 	2
+typedef enum {
+	MINILIDAR_DROIT,
+	MINILIDAR_GAUCHE
+} LIDAR_ID;
 
 // Définition des fonctions d'interface
-int tfminiplus_getLastAcquisition(int a_numCapteur, int *a_pDistance, int *a_pStrength, int *a_pTemperature);
-int tfminiplus_setOutputFormat(int a_numCapteur, eLidarOutputFormat *a_pFormat);
-int tfminiplus_getFramerate(int a_numCapteur, int *a_pFramerate);
-int tfminiplus_getBaudrate(int a_numCapteur, int *a_pBaudrate);
-int tfminiplus_getVersion(int a_numCapteur, int *a_pVersion);
+int tfminiplus_getLastAcquisition(LIDAR_ID a_numCapteur, int32_t *a_pDistance, int32_t *a_pStrength, int32_t *a_pTemperature);
+int tfminiplus_setOutputFormat(LIDAR_ID a_numCapteur, eLidarOutputFormat *a_pFormat);
+int tfminiplus_getFramerate(LIDAR_ID a_numCapteur, int32_t *a_pFramerate);
+int tfminiplus_getBaudrate(LIDAR_ID a_numCapteur, int32_t *a_pBaudrate);
+int tfminiplus_getVersion(LIDAR_ID a_numCapteur, int32_t *a_pVersion);
 int tfminiplus_init();
-void tfminiplusIrq(int a_numCapteur);
+void tfminiplusIrq(LIDAR_ID a_numCapteur);
 
 #endif /* TFMINIPLUS_H_ */
