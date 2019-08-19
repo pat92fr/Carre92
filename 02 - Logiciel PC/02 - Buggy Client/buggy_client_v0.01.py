@@ -75,6 +75,10 @@ class miniClient:
                     print("starting IA")
                     self.s.send(b'i')
 
+                if keys == b'w':
+                    print("starting wall following")
+                    self.s.send(b'w')
+
                 if keys == b's':
                     print("screenshot")
                     self.s.send(b's')
