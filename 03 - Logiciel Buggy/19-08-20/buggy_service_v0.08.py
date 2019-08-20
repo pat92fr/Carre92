@@ -110,20 +110,23 @@ class buggyServer:
 
     def load_configuration_file(self):
 
-        self.pid_left_wall_avoiding_params['kp'] = 0.08
-        self.pid_left_wall_avoiding_params['kd'] = 0.00
-        
-        self.pid_right_wall_avoiding_params['kp'] = 0.08
-        self.pid_right_wall_avoiding_params['kd'] = 0.00
-        
-        self.pid_both_wall_following_params['kp'] = 0.03
-        self.pid_both_wall_following_params['kd'] = 0.00
-        
-        self.pid_left_wall_following_params['kp'] = 0.03
-        self.pid_left_wall_following_params['kd'] = 0.00
-
-        self.pid_right_wall_following_params['kp'] = 0.03
-        self.pid_right_wall_following_params['kd'] = 0.00
+        file = open('config.txt', 'r')
+        for line in file:
+            print(line)
+            fields = line.split(' ')
+            if fields[0] == "WALL_AVOIDING":
+                self.pid_left_wall_avoiding_params['kp'] = float(fields[1])
+                self.pid_left_wall_avoiding_params['kd'] = float(fields[2])
+                self.pid_right_wall_avoiding_params['kp'] = float(fields[1])
+                self.pid_right_wall_avoiding_params['kd'] = float(fields[2])
+            if fields[0] == "WALL_FOLLOWING":
+                self.pid_both_wall_following_params['kp'] = float(fields[1])
+                self.pid_both_wall_following_params['kd'] = float(fields[2])
+                self.pid_left_wall_following_params['kp'] = float(fields[1])
+                self.pid_left_wall_following_params['kd'] = float(fields[2])
+                self.pid_right_wall_following_params['kp'] = float(fields[1])
+                self.pid_right_wall_following_params['kd'] = float(fields[2])
+        file.close()
         
     def init_socket(self):
 
