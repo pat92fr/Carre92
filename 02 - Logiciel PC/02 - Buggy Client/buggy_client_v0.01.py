@@ -10,9 +10,11 @@ class miniClient:
 
     def __init__(self):
         self.fps = 0
-        self.y_byte = 0
+        self.lid = 0
+        self.lig = 0
         self.ia_started = False
-        self.s = 0 
+        self.s = 0
+        
         #self.ip = '10.0.10.49'  # The server's hostname or IP address : Test jetson
         #self.ip = '10.42.0.1'  # The server's hostname or IP address : REAL BUGGY ! 
         #self.ip = '192.168.1.18'  # The server's hostname or IP address : Test jetson
@@ -51,11 +53,11 @@ class miniClient:
 
             # recieve socket frame and send response                
             data = self.s.recv(1024)
-            self.fps = int.from_bytes(data[:2], byteorder='big')
-            self.y_byte = int.from_bytes(data[2:], byteorder='big')
+            self.fps = int.from_bytes(data[:2],  byteorder='big')
+            self.lig = int.from_bytes(data[2:4], byteorder='big')
+            self.lid = int.from_bytes(data[4:],  byteorder='big')
 
-
-            print("FPS : " + str(self.fps) + "     y_byte : " + str(self.y_byte))
+            print("FPS : " + str(self.fps) + " lig : " + str(self.lig) + " lid : " + str(self.lid))
 
             if msvcrt.kbhit():
 

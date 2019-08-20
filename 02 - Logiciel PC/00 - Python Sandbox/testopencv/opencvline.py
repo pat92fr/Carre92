@@ -1,11 +1,11 @@
 import cv2
 import numpy as np
 
-depth = 3
+depth = 10
 width = 640
 height_crop = 128
 height = 480
-cap = cv2.VideoCapture(0)
+cap = cv2.VideoCapture(1)
 buffer_image = np.zeros((10,height_crop,width),dtype='float')
 while True:
     # Read image 
@@ -33,7 +33,7 @@ while True:
     ###print(str(blur.shape))
      
     edges = cv2.Canny(blur, 50, 150)
-    lines = cv2.HoughLinesP(edges, 1, np.pi/180, 40, minLineLength=30, maxLineGap=10)
+    lines = cv2.HoughLinesP(edges, 5, np.pi/180, 40, minLineLength=30, maxLineGap=10)
     if lines is not None:
         for line in lines:
             x1, y1, x2, y2 = line[0]
