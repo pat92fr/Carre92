@@ -12,7 +12,7 @@
 
 /// Store hserial to handle HAL_UART_TxCpltCallback
 /// This table has to be filled in the application code
-HAL_Serial_Handler * hserial_table[HAL_Serial_Handler_Count] = {0,0};
+HAL_Serial_Handler * hserial_table[HAL_Serial_Handler_Count] = {0};
 uint32_t serial_counter = 0;
 
 void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart)

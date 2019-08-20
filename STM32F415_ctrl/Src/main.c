@@ -19,24 +19,24 @@
 
 
 // WIRING INPUT
-// SERIAL3 = RX from NVIDIA AI (UART3)
-// SERIAL4 = free (UART4)
-// SERIAL5 = free (UART5)
+// SERIAL3 = LiD (UART3, RX only, DMA RX Normal, note : pin TX damaged)
+// SERIAL4 = TX&RX from NVIDIA AI (UART4, DMA RX Circular, DMA TX normal)
+// SERIAL5 = LiG (UART5, RX only, DMA RX Normal)
 // RC1 = THR from RX (TIM9 CH1 PWM input capture)
 // RC2 = DIR from RX (TIM3 CH1 PWM input capture)
 
 // WIRING OUTPUT
-// SERVO5 = THR (TIM8 CH1)
-// SERVO6 = DIR (TIM8 CH2)
-// SERVO7 = DIR (TIM8 CH3)
+// SERVO5 (HW=TIM8 CH1) = THR
+// SERVO6 (HW=TIM8 CH2) = DIR
+// SERVO7 (HW=TIM8 CH3) = DIR
 
 // MMI
-// LED0
-// LED1
-// LED2
-// LED3
-// LED4
-// LED5 = RC state
+// LED0 (HW=D2)
+// LED1 (HW=D1) = MANUAL/AUTO state
+// LED2 (HW=D3)
+// LED3 (HW=D4)
+// LED4 (HW=D5) = AI state
+// LED5 (HW=D6) = RC state
 
 /* USER CODE END Header */
 
@@ -46,6 +46,9 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "serial.h"
+#include "tfminiplus.h"
+#include "stdio.h"
+#include "string.h"
 #include <stdlib.h>     /* atoi */
 /* USER CODE END Includes */
 
@@ -82,7 +85,6 @@ DMA_HandleTypeDef hdma_usart3_tx;
 
 /* USER CODE BEGIN PV */
 static HAL_Serial_Handler ai_com;
-static HAL_Serial_Handler bt_com;
 static uint32_t RC1_last_time = 0;
 static uint32_t RC1_period = 0;
 static uint32_t RC1_duty_cycle = 0;
@@ -108,6 +110,17 @@ static uint32_t rc_state = RC_STATE_NONE;
 enum {AI_STATE_NONE,AI_STATE_OK};
 static uint32_t ai_state = AI_STATE_NONE;
 #define AI_TIMEOUT 100 //ms
+enum {LIDAR_STATE_NONE,LIDAR_STATE_OK};
+static uint32_t lidar_state = LIDAR_STATE_NONE;
+#define LIDAR_TIMEOUT 100 //ms
+static uint32_t telemetry_stop_and_wait = 0; // stop = 0, query last value = 1
+static int32_t lidar_distance_gauche = -1; // cm
+static int32_t lidar_distance_droit = -1;
+static int32_t lidar_strength_gauche = -1;
+static int32_t lidar_strength_droit = -1;
+static int32_t lidar_temp_gauche = -1;
+static int32_t lidar_temp_droit = -1;
+static int32_t vitesse_mesuree = -1;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -148,6 +161,17 @@ void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim) // Callback for PWM inp
 			RC1_duty_cycle = HAL_TIM_ReadCapturedValue(htim, TIM_CHANNEL_2);
 		}
 	}
+}
+uint32_t int_to_pwm(uint32_t value)
+{
+	if(value>=255) value = 255;
+	return (uint32_t)( (float)value * 1000.0 / 255.0 + 1000.0 );
+}
+uint32_t pwm_to_int(uint32_t value)
+{
+	if(value<=1000) value = 1000;
+	if(value>=2000) value = 2000;
+	return (uint32_t)( ( (float)value - 1000.0) * 255.0 / 1000.0 );
 }
 /* USER CODE END PFP */
 
@@ -214,8 +238,7 @@ int main(void)
   HAL_TIM_IC_Start_IT(&htim3,TIM_CHANNEL_2);
   HAL_TIM_IC_Start_IT(&htim9,TIM_CHANNEL_1);
   HAL_TIM_IC_Start_IT(&htim9,TIM_CHANNEL_2);
-  HAL_Serial_Init(&huart3,&ai_com); // Start com port
-  HAL_Serial_Init(&huart5,&bt_com); // Start com port
+  HAL_Serial_Init(&huart4,&ai_com); // Start com port
   HAL_GPIO_WritePin(LED0_GPIO_Port,LED0_Pin,GPIO_PIN_RESET); // Init LEDs
   HAL_GPIO_WritePin(LED1_GPIO_Port,LED1_Pin,GPIO_PIN_RESET);
   HAL_GPIO_WritePin(LED2_GPIO_Port,LED2_Pin,GPIO_PIN_RESET);
@@ -229,7 +252,7 @@ int main(void)
   HAL_GPIO_WritePin(LED3_GPIO_Port,LED3_Pin,GPIO_PIN_SET);
   HAL_GPIO_WritePin(LED4_GPIO_Port,LED4_Pin,GPIO_PIN_SET);
   HAL_GPIO_WritePin(LED5_GPIO_Port,LED5_Pin,GPIO_PIN_SET);
-  HAL_Serial_Print(&bt_com,"Hello world\r\n");
+  tfminiplus_init();   // Initialisation des Lidars
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -273,19 +296,51 @@ int main(void)
 			if(com_position!=0) // not empty recv buffer
 			{
 				com_line[com_position]=0; // force eol
-				uint32_t data = 128; // default not line position value from AI
-				data = atoi(com_line); // decode value
-				if(data<255 && data>=0)
-				{
-					pwm_ai_thr = 1500;
-					pwm_ai_dir = (2000.0-(float)data*1000.0/255.0);
+			    char *tab_args[50];
+			    int num_args;
+			    int32_t data;
+
+		        num_args = 0;
+		        tab_args[num_args] = strtok(com_line, ";");
+		        while(tab_args[num_args] != NULL)
+		        {
+		            tab_args[++num_args] = strtok(NULL, ";");
+		        }
+		        // reset inputs data
+				pwm_ai_dir = 1500;
+				pwm_ai_thr = 1500;
+				// parse DIRECTION
+		        if(num_args>=1)
+		        {
+					data = 128; // default not line position value from AI
+					data = atoi(tab_args[0]); // decode value
+					if(data<=255 && data>=0)
+					{
+						pwm_ai_dir = int_to_pwm(data);
+					}
+		        }
+		        // parse THROTTLE
+		        if(num_args>=2)
+		        {
+					data = 128; // default not speed value from AI
+					data = atoi(tab_args[1]); // decode value
+					if(data<=255 && data>=0)
+					{
+						pwm_ai_thr = int_to_pwm(data);
+					}
+		        }
+		        // parse MODE
+		        if(num_args>=3)
+		        {
+					data = 128; // default not speed value from AI
+					data = atoi(tab_args[2]); // decode value
+					// TODO : use mode
+					// TODO : use mode
+					// TODO : use mode
+					// AI frame complete, update AI health state and send back telemetry frame
 					com_last_time = current_time;
-				}
-				else
-				{
-					pwm_ai_thr = 1500;
-					pwm_ai_dir = 1500;
-				}
+					telemetry_stop_and_wait = 1;
+		        }
 				com_position = 0; // reset recv buffer
 			}
 		}
@@ -322,8 +377,48 @@ int main(void)
 		}
 		break;
 	}
+	/// Todo : add timestamp to LIDAR last acquisition
+	/// Todo : add timestamp to LIDAR last acquisition
+	/// Todo : add timestamp to LIDAR last acquisition
+
+	/// Todo : add LIDAR health state machine : no LIDAR ==> no PID WALL following, AUTO mode inhibited
+	/// Todo : add LIDAR health state machine : no LIDAR ==> no PID WALL following, AUTO mode inhibited
+	/// Todo : add LIDAR health state machine : no LIDAR ==> no PID WALL following, AUTO mode inhibited
+
+	/// Todo : add PID WALL following here
+	/// Todo : add PID WALL following here
+	/// Todo : add PID WALL following here
+
 	pwm_auto_thr = pwm_ai_thr; // no other source of automatic control, then auto controller use AI
 	pwm_auto_dir = pwm_ai_dir;
+
+	if(telemetry_stop_and_wait==1) // TELEMETRY (simple stop & wait protocol)
+	{
+		telemetry_stop_and_wait=0; // reset stop and wait protocol
+		// query last lidar values
+		tfminiplus_getLastAcquisition(MINILIDAR_GAUCHE, &lidar_distance_gauche, &lidar_strength_gauche, &lidar_temp_gauche);
+		tfminiplus_getLastAcquisition(MINILIDAR_DROIT, &lidar_distance_droit, &lidar_strength_droit, &lidar_temp_droit);
+		// query other sensors
+		vitesse_mesuree = -1;
+		// build telemetry frame
+		uint32_t telemetry_manual_dir = pwm_to_int(pwm_manual_dir);
+		uint32_t telemetry_manual_thr = pwm_to_int(pwm_manual_thr);
+		uint32_t telemetry_auto_dir = pwm_to_int(pwm_auto_dir);
+		uint32_t telemetry_auto_thr = pwm_to_int(pwm_auto_thr);
+		int32_t telemetry_speed = vitesse_mesuree;
+		uint32_t telemetry_mode = main_state == MAIN_STATE_AUTO ? 1 : 0;
+		// send telemetry frame
+		HAL_Serial_Print(&ai_com, "%d;%d;%d;%d;%d;%d;%d;%d\r\n",
+				lidar_distance_gauche,
+				lidar_distance_droit,
+				telemetry_speed,
+				telemetry_manual_dir,
+				telemetry_manual_thr,
+				telemetry_auto_dir,
+				telemetry_auto_thr,
+				telemetry_mode
+			);
+	}
 	switch(main_state) // MAIN state machine
 	{
 	case MAIN_STATE_MANUAL:
@@ -410,8 +505,7 @@ int main(void)
 		}
 		break;
 	}
-	HAL_Serial_Print(&bt_com,"Mode: %d MT:%d MD:%d AT:%d AD:%d\r\n",main_state,pwm_manual_thr,pwm_manual_dir,pwm_auto_thr,pwm_auto_dir);
-	HAL_Delay(10);
+	HAL_Delay(1);
   }
   /* USER CODE END 3 */
 }
@@ -878,6 +972,7 @@ static void MX_USART3_UART_Init(void)
   */
 static void MX_DMA_Init(void) 
 {
+
   /* DMA controller clock enable */
   __HAL_RCC_DMA1_CLK_ENABLE();
 
