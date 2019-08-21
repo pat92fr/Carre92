@@ -46,6 +46,7 @@ class miniClient:
             
         done = False
         keys = 0x20
+        counter = 0
         while not done:
 
             #self.update_display(keys)
@@ -57,7 +58,9 @@ class miniClient:
             self.lig = int.from_bytes(data[2:4], byteorder='big')
             self.lid = int.from_bytes(data[4:],  byteorder='big')
 
-            print("FPS : " + str(self.fps) + " lig : " + str(self.lig) + " lid : " + str(self.lid))
+            if counter%10 == 0:
+                print("FPS : " + str(self.fps) + " lig : " + str(self.lig) + " lid : " + str(self.lid))
+            counter += 1
 
             if msvcrt.kbhit():
 
@@ -86,8 +89,9 @@ class miniClient:
                     self.s.send(b's')
 
                 if keys == b'a':
+                    self.s.send(b'a')
                     print("apply configuration (reload)")
-                    self.s.send(b'c')
+                    
 
                 if keys == b'q':
                     self.s.send(b'q')
