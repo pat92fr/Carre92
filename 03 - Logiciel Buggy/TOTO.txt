@@ -1,0 +1,4 @@
+- enregistrer toutes les données dans un log (code de nicolas)
+- JETSON controle la vitesse en mode automatique (reprise du code serveur et STM32)
+- JETSON est piloté par l'IHM cliente pour START et STOP d'un RUN, perte de la connexion cliente entraine un STOP
+ 
