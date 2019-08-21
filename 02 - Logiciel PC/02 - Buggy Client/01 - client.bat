@@ -1,3 +1,3 @@
-python buggy_client_v0.02.py
+python buggy_client_v0.03.py
 pause
 
