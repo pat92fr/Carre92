@@ -1,6 +1,2 @@
-- ajouter un jack pour l'arrêt d'urgence
 - ajouter potentiomètre pour le réglage de vitesse
-- ajouter LIDAR supplémentaire vertical
 - ajouter BEC 5V supplémentaire pour RX et Servo
-- cabler touche start
-- cabler touche Marche/Arrêt jetson
