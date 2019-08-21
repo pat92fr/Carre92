@@ -1,0 +1,22 @@
+Epoch 267/3000
+ - 33s - loss: 0.0201 - mean_squared_error: 0.0171 - val_loss: 0.0047 - val_mean_squared_error: 0.0019
+Epoch 268/3000
+ - 33s - loss: 0.0202 - mean_squared_error: 0.0172 - val_loss: 0.0048 - val_mean_squared_error: 0.0020
+Epoch 269/3000
+ - 33s - loss: 0.0202 - mean_squared_error: 0.0172 - val_loss: 0.0047 - val_mean_squared_error: 0.0019
+Epoch 270/3000
+ - 33s - loss: 0.0202 - mean_squared_error: 0.0172 - val_loss: 0.0047 - val_mean_squared_error: 0.0019
+Epoch 00270: early stopping
+Saved model to disk
+loss mean_squared_error: 0.0026120521163078975
+metric mean_squared_error: 0.001902535803624103
+0.4967251 0.537 error:0.04027488780021671
+-0.16479808 -0.18359999999999999 error:0.01880191907882689
+0.122509055 0.125 error:0.0024909451603889465
+-0.31387177 -0.3146 error:0.0007282289028167632
+0.6227071 0.6708 error:0.04809287147521968
+0.16871098 0.1589 error:0.009810976839065538
+-0.34566507 -0.344 error:0.0016650674343109406
+-0.118578196 -0.1313 error:0.012721804428100586
+-0.60355914 -0.6618 error:0.05824086360931402
+0.65736246 0.7184 error:0.06103753890991215
