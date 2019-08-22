@@ -119,6 +119,24 @@ def REC_STOP():
     if (n != len(msg)):
         print('Unable to send command.')
         return
+
+def RUN_START():
+    print('RUN_START')
+    msg = CMD_RUN_START
+    print('# Sending:' + msg)
+    n = client.send(msg.encode('utf-8'))
+    if (n != len(msg)):
+        print('Unable to send command.')
+        return
+    
+def RUN_STOP():
+    print('RUN_STOP')
+    msg = CMD_RUN_STOP
+    print('# Sending:' + msg)
+    n = client.send(msg.encode('utf-8'))
+    if (n != len(msg)):
+        print('Unable to send command.')
+        return
     
 # Check parameters
 parser = ArgumentParser()
@@ -225,6 +243,8 @@ Button(frame, text="IA        ", command=IA).grid(row=(nbParameters),        col
 Button(frame, text="REC start ", command=REC_START).grid(row=(nbParameters), column=7)
 Button(frame, text="REC stop  ", command=REC_STOP).grid(row=(nbParameters),  column=8)
 Button(frame, text="KILL      ", command=KILL).grid(row=(nbParameters),      column=9)
+Button(frame, text="RUN START ", command=RUN_START).grid(row=(nbParameters),      column=10)
+Button(frame, text="RUN STOP  ", command=RUN_STOP).grid(row=(nbParameters),      column=11)
 
 # Request the values
 frame.update_idletasks()
