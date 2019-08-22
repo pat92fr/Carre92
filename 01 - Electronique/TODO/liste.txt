@@ -1,0 +1,1 @@
+- ajouter 220 Ohms en serie sur les GPIO (RUN#2)
