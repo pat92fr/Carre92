@@ -98,6 +98,7 @@ static uint32_t pwm_manual_thr = 1500;
 static uint32_t pwm_manual_dir = 1500;
 static uint32_t pwm_ai_thr = 1500;
 static uint32_t pwm_ai_dir = 1500;
+static uint32_t ai_mode = 0; // 0:idle, 1:running
 static uint32_t pwm_auto_thr = 1500;
 static uint32_t pwm_auto_dir = 1500;
 enum {MAIN_STATE_MANUAL, MAIN_STATE_AUTO_REQUEST, MAIN_STATE_AUTO_STARTUP, MAIN_STATE_AUTO };
@@ -309,6 +310,7 @@ int main(void)
 		        // reset inputs data
 				pwm_ai_dir = 1500;
 				pwm_ai_thr = 1500;
+				ai_mode = 0;
 				// parse DIRECTION
 		        if(num_args>=1)
 		        {
@@ -334,9 +336,7 @@ int main(void)
 		        {
 					data = 128; // default not speed value from AI
 					data = atoi(tab_args[2]); // decode value
-					// TODO : use mode
-					// TODO : use mode
-					// TODO : use mode
+					ai_mode = data;
 					// AI frame complete, update AI health state and send back telemetry frame
 					com_last_time = current_time;
 					telemetry_stop_and_wait = 1;
@@ -489,7 +489,12 @@ int main(void)
 	case MAIN_STATE_AUTO:
 		{
 			// AI control servo
-			__HAL_TIM_SET_COMPARE(&htim8,TIM_CHANNEL_1,pwm_manual_thr); // RC always control THR at the moment
+			if(ai_mode==0)
+				__HAL_TIM_SET_COMPARE(&htim8,TIM_CHANNEL_1,pwm_manual_thr); // RC control THR when AUTO mode and IA halted
+			else if(ai_mode==1)
+				__HAL_TIM_SET_COMPARE(&htim8,TIM_CHANNEL_1,pwm_auto_thr); // AI control THR in AUTO mode and IA running
+			else // default manual
+				__HAL_TIM_SET_COMPARE(&htim8,TIM_CHANNEL_1,pwm_manual_thr);
 			__HAL_TIM_SET_COMPARE(&htim8,TIM_CHANNEL_2,pwm_auto_dir); // AI control DIR
 			__HAL_TIM_SET_COMPARE(&htim8,TIM_CHANNEL_3,pwm_auto_dir); // AI control DIR
 			__HAL_TIM_SET_COMPARE(&htim8,TIM_CHANNEL_4,1500);// default servo position
@@ -498,7 +503,7 @@ int main(void)
 			__HAL_TIM_SET_COMPARE(&htim1,TIM_CHANNEL_3,1500);
 			__HAL_TIM_SET_COMPARE(&htim1,TIM_CHANNEL_4,1500);
 			HAL_GPIO_WritePin(LED1_GPIO_Port,LED1_Pin,GPIO_PIN_SET);
-			if( (pwm_manual_dir > 1650) || (pwm_manual_dir < 1350) || (pwm_manual_thr < 1350) ) //|| (pwm_manual_thr > 1650) ) // || (pwm_manual_thr < 1450) || (pwm_manual_thr > 1550) ) // RC DIR not in default/middle position
+			if( (pwm_manual_dir > 1650) || (pwm_manual_dir < 1350) || (pwm_manual_thr < 1350) ) // go back to MANUAL mode when DIR stick touched, when THR stick on brake/backward position
 			{
 				main_state = MAIN_STATE_MANUAL;
 			}
