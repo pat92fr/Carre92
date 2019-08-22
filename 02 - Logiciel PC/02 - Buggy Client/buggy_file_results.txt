@@ -1,0 +1,6 @@
+param_kp=0.002
+param_ki=0.0003
+param_kd=0.1
+param_min_speed=146
+param_max_speed=150
+param_k_speed=0.01
