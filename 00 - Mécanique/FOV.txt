@@ -1,0 +1,8 @@
+Distance parechoc camera = 5cm
+Hauteur camera = 16cm
+
+FOV : Largeur en bas = 27cm
+FOV : Largeur au centre = 50cm
+
+Coin inférieur droit   :  distance latérale // axe central=13.5cm   	distance/éloignement=19cm parechoc
+Coint milieu droit     :  distance latérale // axe central = 25cm		distance/éloignement=46cm parechoc
