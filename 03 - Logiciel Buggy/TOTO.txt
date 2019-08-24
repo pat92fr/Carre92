@@ -1,4 +1,5 @@
-- enregistrer toutes les données dans un log (code de nicolas)
-- JETSON controle la vitesse en mode automatique (reprise du code serveur et STM32)
-- JETSON est piloté par l'IHM cliente pour START et STOP d'un RUN, perte de la connexion cliente entraine un STOP
+P1 - coder REC start/stop (fichier video en local jetson)
+P2 - remonter télémétrie équivalente au data logger (plusieurs subplots)
+P3 - connecter LIDAR vertical et détection de portique, remontée d'info à la jetson
+P3 - connecter bouton start et démarrage (run_start) dans jetson
  
