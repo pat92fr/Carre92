@@ -1,0 +1,14 @@
+1) editer /home/patrick/fan.sh
+sudo sh -c 'echo 255 > /sys/devices/pwm-fan/target_pwm'
+
+2) donner les droits au script
+chmod 777 fan.sh
+
+3) editer cron su
+sudo contrab -e
+
+	ajouter la ligne:
+	#reboot /home/patrick/fan.sh
+
+4) reboot
+
