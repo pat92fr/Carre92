@@ -1,0 +1,3 @@
+https://becominghuman.ai/self-driving-miniature-car-race-cb870a27b8da
+https://github.com/WolfgangSteiner/RoboCar/blob/master/ros/src/image_preprocessing/image_preprocessing.py
+
