@@ -1,5 +1,4 @@
-P1 - coder REC start/stop (fichier video en local jetson)
-P2 - remonter télémétrie équivalente au data logger (plusieurs subplots)
-P3 - connecter LIDAR vertical et détection de portique, remontée d'info à la jetson
+P1 - Mise à jour pour LIDAR vertical <=> Nicolas
+P2 - remonter télémétrie équivalente au data logger (plusieurs subplots) <=> FRancois
 P3 - connecter bouton start et démarrage (run_start) dans jetson
  
