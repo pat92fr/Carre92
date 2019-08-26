@@ -20,7 +20,8 @@ typedef enum
 // Les index sur les capteurs (à passer dans le champ a_numCapteur des fonctions)
 typedef enum {
 	MINILIDAR_DROIT,
-	MINILIDAR_GAUCHE
+	MINILIDAR_GAUCHE,
+	MINILIDAR_HAUT
 } LIDAR_ID;
 
 // Définition des fonctions d'interface
