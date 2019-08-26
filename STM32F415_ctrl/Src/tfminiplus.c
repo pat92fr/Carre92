@@ -10,7 +10,7 @@
 
 extern UART_HandleTypeDef huart3;
 extern UART_HandleTypeDef huart5;
-extern UART_HandleTypeDef huart1;
+extern UART_HandleTypeDef huart2;
 
 // Timeout de 1000 ms
 #define TIMEOUT 1000
@@ -630,7 +630,7 @@ int tfminiplus_init()
 	miniLidarGauche.framerate = 100;
 	miniLidarGauche.semaphore = 0;
 
-	miniLidarHaut.pHuart = &huart1;
+	miniLidarHaut.pHuart = &huart2;
 	miniLidarHaut.distance = -2;
 	miniLidarHaut.strength = 0;
 	miniLidarHaut.temperature = 0;

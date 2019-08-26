@@ -68,6 +68,8 @@ void Error_Handler(void);
 #define LED3_GPIO_Port GPIOH
 #define RX2_Pin GPIO_PIN_6
 #define RX2_GPIO_Port GPIOA
+#define START_BUTTON_Pin GPIO_PIN_4
+#define START_BUTTON_GPIO_Port GPIOC
 #define RX4_Pin GPIO_PIN_14
 #define RX4_GPIO_Port GPIOB
 #define LED2_Pin GPIO_PIN_3
