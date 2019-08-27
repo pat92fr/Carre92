@@ -1,4 +1,4 @@
-P1 - Mise à jour pour LIDAR vertical <=> Nicolas
-P2 - remonter télémétrie équivalente au data logger (plusieurs subplots) <=> FRancois
-P3 - connecter bouton start et démarrage (run_start) dans jetson
+P1 - remonter télémétrie équivalente au data logger (plusieurs subplots) <=> FRancois
+P2 - refonte FSM entre jetson et stm32 pour start manuel et stop automatique
+
  
