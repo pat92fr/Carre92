@@ -29,6 +29,9 @@ def main():
                         help="IP address or host", type=str, default='10.42.0.1')
     args = parser.parse_args()
 
+    # Create the file result
+    csvFile = open("./buggy_telemetry_" + time.strftime("%Y%m%d-%H%M%S") + ".csv","w+")
+    
     # Try the connection to the server
     ##################################
     client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -95,11 +98,14 @@ def main():
             data = client.recv(length)
             if len(data) != 0:
                 res = data.decode("utf-8").rstrip('\n').rstrip(' ').split(';')
-                
                 if len(res) != paramNumber:
                     print('#Error')
                     continue
-                
+
+                # Log to file
+                csvFile.write(data.decode("utf-8")+"\r\n")
+
+                # Log to ram
                 for i in range(1, paramNumber):
                     sample_list[i][nbSample] = float(res[i]) * sampleCtx[i]["factor"]
                 
@@ -128,9 +134,26 @@ def main():
                                 ctx = sampleCtx[c]["obj"]
                                 ctx.clear()
                             continue
+                                
+                        # Continu to log in file
+                        # Wait for length
+                        data = client.recv(4)
+                        if len(data) != 0:
+                            length = int(data.decode("utf-8").replace(' ',''))
+                            # Wait for the payload
+                            data = client.recv(length)
+                            if len(data) != 0:
+                                res = data.decode("utf-8").rstrip('\n').rstrip(' ').split(';')
+                                if len(res) != paramNumber:
+                                    print('#Error')
+                                    continue
+                                            
+                                # Log to file
+                                csvFile.write(data.decode("utf-8")+"\r\n")
 
     print('Deconnexion.')
     client.close()
+    f.close()
 
 # Main
 if __name__ == '__main__':    
