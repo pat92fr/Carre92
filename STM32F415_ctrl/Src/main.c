@@ -129,6 +129,8 @@ static int32_t lidar_temp_gauche = -1;
 static int32_t lidar_temp_droit = -1;
 static int32_t lidar_temp_haut = -1;
 static int32_t vitesse_mesuree = -1;
+static int32_t start_countdown = 0;
+
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -149,6 +151,7 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 	if(GPIO_Pin==START_BUTTON_Pin)
 	{
 		main_state = MAIN_STATE_AUTO;
+		start_countdown = 3;
 	}
 }
 
@@ -424,7 +427,6 @@ int main(void)
 		uint32_t telemetry_auto_dir = pwm_to_int(pwm_auto_dir);
 		uint32_t telemetry_auto_thr = pwm_to_int(pwm_auto_thr);
 		int32_t telemetry_speed = vitesse_mesuree;
-		uint32_t telemetry_mode = main_state == MAIN_STATE_AUTO ? 1 : 0;
 		// send telemetry frame
 		HAL_Serial_Print(&ai_com, "%d;%d;%d;%d;%d;%d;%d;%d;%d\r\n",
 				lidar_distance_gauche,
@@ -435,8 +437,10 @@ int main(void)
 				telemetry_manual_thr,
 				telemetry_auto_dir,
 				telemetry_auto_thr,
-				telemetry_mode
+				start_countdown
 			);
+		if(start_countdown>0)
+			--start_countdown;
 	}
 	switch(main_state) // MAIN state machine
 	{
