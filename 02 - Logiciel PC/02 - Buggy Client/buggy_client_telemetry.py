@@ -7,19 +7,23 @@
 
 # Import
 ########
-import socket
 import sys
 import os
+import time
+import socket
 import datetime
 import numpy as np
 import matplotlib.pyplot as plt
-import time
 from argparse import ArgumentParser
+from matplotlib.widgets import Button
+
+# Global
+########
 
 # Main procedure
 ################
 def main():
-
+    
     # Check parameters
     ##################
     parser = ArgumentParser()
@@ -96,9 +100,36 @@ def main():
     f, ax = plt.subplots(nbPlot, 1, sharex=True)
     for i in range(0, paramNumber):
         sampleCtx[i]['obj'] = ax[sampleCtx[i]['plot']]
-
-    print(sampleCtx)
     
+    # Create exit button
+    theEnd     = plt.axes([0.8, 0.025, 0.1, 0.05])
+    exitButton = Button(theEnd, 'Exit')
+
+    # Exit button
+    def exitNow(event):
+        print('Deconnexion.')
+        client.close()
+        if args.log :
+            csvFile.close()
+        sys.exit(0)
+    exitButton.on_clicked(exitNow)
+
+    # Create sample button
+    sample         = plt.axes([0.1, 0.025, 0.1, 0.05])
+    reSampleButton = Button(sample, 'Sample')
+    global stopDisplay
+    stopDisplay    = False
+
+    # Sample button
+    def reSample(event):
+        global stopDisplay
+        print('Resample')
+        stopDisplay = False
+        for c in range(1, len(sampleCtx)):
+            ctx = sampleCtx[c]["obj"]
+            ctx.clear()
+    reSampleButton.on_clicked(reSample)
+
     # Main while loop
     while True:
     
@@ -131,25 +162,14 @@ def main():
                     stopDisplay = True
                     for c in range(1, len(sampleCtx)):
                         ctx = sampleCtx[c]["obj"]
-                        #ctx.clear()
                         ctx.plot(np.array(sample_list[0]), np.array(sample_list[c]), sampleCtx[c]["color"], linewidth=1, label=sampleCtx[c]["title"])
                         handles, labels = ctx.get_legend_handles_labels()
                         ctx.legend(handles, labels)
                         ctx.grid(True)
                 
-                    print("# Press CTR-C to start a new aquisition.")
-                    
                     while stopDisplay:
-                        try:
-                            plt.pause(0.5)
-                        except KeyboardInterrupt:
-                            print("# CTRL-C: new telemetry acquisition")
-                            stopDisplay = False
-                            for c in range(1, len(sampleCtx)):
-                                ctx = sampleCtx[c]["obj"]
-                                ctx.clear()
-                            continue
-                        
+                        plt.pause(0.5)
+
                         # Log to file ?
                         if args.log :
                             # Wait for length
@@ -167,13 +187,8 @@ def main():
                                     # Log to file
                                     csvFile.write(data.decode("utf-8")+"\r\n")
 
-    print('Deconnexion.')
-    client.close()
-    f.close()
-
 # Main
 if __name__ == '__main__':    
     main()
-
 
 # EOF
