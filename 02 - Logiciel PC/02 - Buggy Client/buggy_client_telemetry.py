@@ -25,13 +25,14 @@ def main():
     parser = ArgumentParser()
     parser.add_argument("-p", "--port", dest="port",
                         help="port number", type=int, default=7001)
+    parser.add_argument("-d", "--duration", dest="duration",
+                        help="max sampling duration in seconds", type=int, default=5)
     parser.add_argument("-i", "--ip", dest="host",
                         help="IP address or host", type=str, default='10.42.0.1')
+    parser.add_argument("--log",
+                        help="Log telemetry in file", action="store_true")
     args = parser.parse_args()
 
-    # Create the file result
-    csvFile = open("./buggy_telemetry_" + time.strftime("%Y%m%d-%H%M%S") + ".csv","w+")
-    
     # Try the connection to the server
     ##################################
     client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -61,16 +62,25 @@ def main():
     print('Number of parameters:' + str(paramNumber))
 
     nbPlot = -1
+    csvTitle = ''
     for i in range(len(sampleCtx)):
+        csvTitle += sampleCtx[i]['title'] + ";"
         print (f"#  - sample id {i}: factor: {sampleCtx[i]['factor']} => {sampleCtx[i]['title']} {sampleCtx[i]['unit']}")
         if nbPlot < sampleCtx[i]['plot']:
            nbPlot = sampleCtx[i]['plot']
     nbPlot += 1
     print ("")
-
+    
+    # Create the file result
+    if args.log :
+        fileName = "./csv_buggy_telemetry_" + time.strftime("%Y%m%d-%H%M%S") + ".csv"
+        csvFile = open(fileName, "w+")
+        csvFile.write(csvTitle[:-1]+"\r\n")
+        print('# Log telemetry to file ', fileName)
+    
     # Variable
     nbSample    = 1
-    windowSize  = 5 * 60
+    windowSize  = args.duration * 60
 
     # Create the sample container
     sample_list = []
@@ -82,11 +92,13 @@ def main():
     for i in range(windowSize):
         sample_list[0][i] = i
 
-    # Display plot
+    # Create plot context
     f, ax = plt.subplots(nbPlot, 1, sharex=True)
     for i in range(0, paramNumber):
         sampleCtx[i]['obj'] = ax[sampleCtx[i]['plot']]
 
+    print(sampleCtx)
+    
     # Main while loop
     while True:
     
@@ -102,21 +114,24 @@ def main():
                     print('#Error')
                     continue
 
-                # Log to file
-                csvFile.write(data.decode("utf-8")+"\r\n")
+                # Log to file ?
+                if args.log :
+                    csvFile.write(data.decode("utf-8")+"\r\n")
 
                 # Log to ram
                 for i in range(1, paramNumber):
                     sample_list[i][nbSample] = float(res[i]) * sampleCtx[i]["factor"]
-                
+
+                # One more sample
                 nbSample +=1
-                
+
+                # Window is full ?
                 if nbSample >= windowSize:
                     nbSample = 0
                     stopDisplay = True
                     for c in range(1, len(sampleCtx)):
                         ctx = sampleCtx[c]["obj"]
-                        ctx.clear()
+                        #ctx.clear()
                         ctx.plot(np.array(sample_list[0]), np.array(sample_list[c]), sampleCtx[c]["color"], linewidth=1, label=sampleCtx[c]["title"])
                         handles, labels = ctx.get_legend_handles_labels()
                         ctx.legend(handles, labels)
@@ -134,22 +149,23 @@ def main():
                                 ctx = sampleCtx[c]["obj"]
                                 ctx.clear()
                             continue
-                                
-                        # Continu to log in file
-                        # Wait for length
-                        data = client.recv(4)
-                        if len(data) != 0:
-                            length = int(data.decode("utf-8").replace(' ',''))
-                            # Wait for the payload
-                            data = client.recv(length)
+                        
+                        # Log to file ?
+                        if args.log :
+                            # Wait for length
+                            data = client.recv(4)
                             if len(data) != 0:
-                                res = data.decode("utf-8").rstrip('\n').rstrip(' ').split(';')
-                                if len(res) != paramNumber:
-                                    print('#Error')
-                                    continue
+                                length = int(data.decode("utf-8").replace(' ',''))
+                                # Wait for the payload
+                                data = client.recv(length)
+                                if len(data) != 0:
+                                    res = data.decode("utf-8").rstrip('\n').rstrip(' ').split(';')
+                                    if len(res) != paramNumber:
+                                        print('#Error')
+                                        continue
                                             
-                                # Log to file
-                                csvFile.write(data.decode("utf-8")+"\r\n")
+                                    # Log to file
+                                    csvFile.write(data.decode("utf-8")+"\r\n")
 
     print('Deconnexion.')
     client.close()
