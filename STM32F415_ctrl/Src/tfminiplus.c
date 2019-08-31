@@ -10,6 +10,7 @@
 
 extern UART_HandleTypeDef huart3;
 extern UART_HandleTypeDef huart5;
+extern UART_HandleTypeDef huart2;
 
 // Timeout de 1000 ms
 #define TIMEOUT 1000
@@ -48,6 +49,7 @@ typedef struct
 // Instanciation des capteurs
 stMiniLidar miniLidarDroit;
 stMiniLidar miniLidarGauche;
+stMiniLidar miniLidarHaut;
 
 // Dans la routine d'IRQ du DMA, on positionne le numéro du capteur rattaché au DMA
 // Remarque générale, plutot que de typer numCapteur en int, on pourrait mettre un enum
@@ -61,6 +63,8 @@ void tfminiplusIrq(LIDAR_ID a_numCapteur)
 		pLidar = &miniLidarDroit;
 	else if(a_numCapteur == MINILIDAR_GAUCHE)
 		pLidar = &miniLidarGauche;
+	else if(a_numCapteur == MINILIDAR_HAUT)
+		pLidar = &miniLidarHaut;
 	else
 		pLidar = 0;
 
@@ -90,13 +94,16 @@ void tfminiplusIrq(LIDAR_ID a_numCapteur)
 					distance = pLidar->serialBuffer[2] + (pLidar->serialBuffer[3] << 8);
 					strength = pLidar->serialBuffer[4] + (pLidar->serialBuffer[5] << 8);
 					temp =     pLidar->serialBuffer[6] + (pLidar->serialBuffer[7] << 8);
-					// Si la force du signal de retour est suffisante, la donnée de distance est valable
-					if((strength>100) && (strength!=65535))
-					{
-						pLidar->distance = distance;
-						pLidar->strength = strength;
-					}
-					// Sinon, on laisse les valeurs de distance et d'intensité précédentes
+//					// Si la force du signal de retour est suffisante, la donnée de distance est valable
+//					if((strength>100) && (strength!=65535))
+//					{
+//						pLidar->distance = distance;
+//						pLidar->strength = strength;
+//					}
+//					// Sinon, on laisse les valeurs de distance et d'intensité précédentes
+//					pLidar->temperature = temp;
+					pLidar->distance = distance;
+					pLidar->strength = strength;
 					pLidar->temperature = temp;
 				}
 			}
@@ -265,7 +272,13 @@ int tfminiplus_getLastAcquisition(LIDAR_ID a_numCapteur, int32_t *a_pDistance, i
 	if(a_numCapteur == MINILIDAR_DROIT)
 	{
 		// On renvoie la distance mesurée par le premier capteur
-		if((miniLidarDroit.strength >= 100) && (miniLidarDroit.strength != 65535))
+		if(miniLidarDroit.distance == -2)
+		{
+			*a_pDistance = -2;
+			*a_pStrength = 0;
+			*a_pTemperature = 0;
+		}
+		else if((miniLidarDroit.strength >= 100) && (miniLidarDroit.strength != 65535))
 		{
 			*a_pDistance = miniLidarDroit.distance;
 			*a_pStrength = miniLidarDroit.strength;
@@ -283,12 +296,18 @@ int tfminiplus_getLastAcquisition(LIDAR_ID a_numCapteur, int32_t *a_pDistance, i
 		// On peut avoir strength 250 250 10 10 10 10 10 10
 		// Si le logiciel applicatif prend la mesure après le deuxième 250, et qu'il prend la deuxième mesure après le 4ieme 10,
 		// alors le driver pourrait renvoyer la dernière valeur valide, mais elle est très ancienne.
-		miniLidarDroit.strength = 0;
+		miniLidarDroit.distance = -2;
 	}
 	else if(a_numCapteur == MINILIDAR_GAUCHE)
 	{
 		// On renvoie la distance mesurée par le premier capteur
-		if((miniLidarGauche.strength >= 100) && (miniLidarGauche.strength != 65535))
+		if(miniLidarGauche.distance == -2)
+		{
+			*a_pDistance = -2;
+			*a_pStrength = 0;
+			*a_pTemperature = 0;
+		}
+		else if((miniLidarGauche.strength >= 100) && (miniLidarGauche.strength != 65535))
 		{
 			*a_pDistance = miniLidarGauche.distance;
 			*a_pStrength = miniLidarGauche.strength;
@@ -305,7 +324,35 @@ int tfminiplus_getLastAcquisition(LIDAR_ID a_numCapteur, int32_t *a_pDistance, i
 		// On peut avoir strength 250 250 10 10 10 10 10 10
 		// Si le logiciel applicatif prend la mesure après le deuxième 250, et qu'il prend la deuxième mesure après le 4ieme 10,
 		// alors le driver pourrait renvoyer la dernière valeur valide, mais elle est très ancienne.
-		miniLidarGauche.strength = 0;
+		miniLidarGauche.distance = -2;
+	}
+	else if(a_numCapteur == MINILIDAR_HAUT)
+	{
+		// On renvoie la distance mesurée par le premier capteur
+		if(miniLidarHaut.distance == -2)
+		{
+			*a_pDistance = -2;
+			*a_pStrength = 0;
+			*a_pTemperature = 0;
+		}
+		else if((miniLidarHaut.strength >= 100) && (miniLidarHaut.strength != 65535))
+		{
+			*a_pDistance = miniLidarHaut.distance;
+			*a_pStrength = miniLidarHaut.strength;
+			*a_pTemperature = miniLidarHaut.temperature;
+		}
+		else
+		{
+			*a_pDistance = -1;
+		}
+		erreur = 0;
+		// Réinitialisation du strength pour détecter lorsque le lidar arrête d'envoyer des valeurs valides
+		// En gros, le lidar envoie des captures toutes les 10 ms.
+		// La valeur du strength du rayon de retour permet de savoir si la mesure est valide.
+		// On peut avoir strength 250 250 10 10 10 10 10 10
+		// Si le logiciel applicatif prend la mesure après le deuxième 250, et qu'il prend la deuxième mesure après le 4ieme 10,
+		// alors le driver pourrait renvoyer la dernière valeur valide, mais elle est très ancienne.
+		miniLidarHaut.distance = -2;
 	}
 	else
 		// Numero de capteur inconnu
@@ -320,7 +367,7 @@ int tfminiplus_setOutputFormat(LIDAR_ID a_numCapteur, eLidarOutputFormat *a_pFor
 	int attente;
 	uint8_t commande[8];
 
-	if(a_numCapteur == 1)
+	if(a_numCapteur == MINILIDAR_DROIT)
 	{
 		if(*a_pFormat == standard_cm)
 		{
@@ -368,7 +415,7 @@ int tfminiplus_setOutputFormat(LIDAR_ID a_numCapteur, eLidarOutputFormat *a_pFor
 			// Timeout
 			erreur = -1;
 	}
-	else if(a_numCapteur == 2)
+	else if(a_numCapteur == MINILIDAR_GAUCHE)
 	{
 		if(*a_pFormat == standard_cm)
 		{
@@ -427,14 +474,19 @@ int tfminiplus_getFramerate(LIDAR_ID a_numCapteur, int32_t *a_pFramerate)
 {
 	int erreur;
 
-	if(a_numCapteur == 1)
+	if(a_numCapteur == MINILIDAR_DROIT)
 	{
 		*a_pFramerate = miniLidarDroit.framerate;
 		erreur = 0;
 	}
-	else if(a_numCapteur == 2)
+	else if(a_numCapteur == MINILIDAR_GAUCHE)
 	{
 		*a_pFramerate = miniLidarGauche.framerate;
+		erreur = 0;
+	}
+	else if(a_numCapteur == MINILIDAR_HAUT)
+	{
+		*a_pFramerate = miniLidarHaut.framerate;
 		erreur = 0;
 	}
 	else
@@ -448,14 +500,19 @@ int tfminiplus_getBaudrate(LIDAR_ID a_numCapteur, int32_t *a_pBaudrate)
 {
 	int erreur;
 
-	if(a_numCapteur == 1)
+	if(a_numCapteur == MINILIDAR_DROIT)
 	{
 		*a_pBaudrate = miniLidarDroit.baudrate;
 		erreur = 0;
 	}
-	else if(a_numCapteur == 2)
+	else if(a_numCapteur == MINILIDAR_GAUCHE)
 	{
 		*a_pBaudrate = miniLidarGauche.baudrate;
+		erreur = 0;
+	}
+	else if(a_numCapteur == MINILIDAR_HAUT)
+	{
+		*a_pBaudrate = miniLidarHaut.baudrate;
 		erreur = 0;
 	}
 	else
@@ -471,7 +528,7 @@ int tfminiplus_getVersion(LIDAR_ID a_numCapteur, int32_t *a_pVersion)
 	int attente;
 	uint8_t commande[8];
 
-	if(a_numCapteur == 1)
+	if(a_numCapteur == MINILIDAR_DROIT)
 	{
 		// Demande de la version au capteur
 		commande[0] = 0x5A; commande[1] = 0x04; commande[2] = 0x01; commande[3] = 0x5F;
@@ -495,7 +552,7 @@ int tfminiplus_getVersion(LIDAR_ID a_numCapteur, int32_t *a_pVersion)
 		else
 			erreur = -1;
 	}
-	else if(a_numCapteur == 2)
+	else if(a_numCapteur == MINILIDAR_GAUCHE)
 	{
 		// Demande de la version au capteur
 		commande[0] = 0x5A; commande[1] = 0x04; commande[2] = 0x01; commande[3] = 0x5F;
@@ -519,6 +576,30 @@ int tfminiplus_getVersion(LIDAR_ID a_numCapteur, int32_t *a_pVersion)
 		else
 			erreur = -1;
 	}
+	else if(a_numCapteur == MINILIDAR_HAUT)
+	{
+		// Demande de la version au capteur
+		commande[0] = 0x5A; commande[1] = 0x04; commande[2] = 0x01; commande[3] = 0x5F;
+		HAL_UART_Transmit(miniLidarHaut.pHuart, commande, 4, 100000);
+
+		// Attente de la réponse
+		miniLidarHaut.semaphore = 0;
+		attente = 0;
+		do {
+			attente++;
+			HAL_Delay(1);
+		} while((miniLidarHaut.semaphore==0) && (attente<TIMEOUT));
+
+		if(attente < TIMEOUT)
+		{
+			// Fourniture de la version
+			*a_pVersion = miniLidarHaut.version;
+
+			erreur = 0;
+		}
+		else
+			erreur = -1;
+	}
 	else
 		// Numero de capteur inconnu
 		erreur = -1;
@@ -534,7 +615,7 @@ int tfminiplus_init()
 
 	// Initialisation des parametres
 	miniLidarDroit.pHuart = &huart3;
-	miniLidarDroit.distance = -1;
+	miniLidarDroit.distance = -2;
 	miniLidarDroit.strength = 0;
 	miniLidarDroit.temperature = 0;
 	miniLidarDroit.baudrate = 115200;
@@ -542,16 +623,25 @@ int tfminiplus_init()
 	miniLidarDroit.semaphore = 0;
 
 	miniLidarGauche.pHuart = &huart5;
-	miniLidarGauche.distance = -1;
+	miniLidarGauche.distance = -2;
 	miniLidarGauche.strength = 0;
 	miniLidarGauche.temperature = 0;
 	miniLidarGauche.baudrate = 115200;
 	miniLidarGauche.framerate = 100;
 	miniLidarGauche.semaphore = 0;
 
+	miniLidarHaut.pHuart = &huart2;
+	miniLidarHaut.distance = -2;
+	miniLidarHaut.strength = 0;
+	miniLidarHaut.temperature = 0;
+	miniLidarHaut.baudrate = 115200;
+	miniLidarHaut.framerate = 100;
+	miniLidarHaut.semaphore = 0;
+
 	// Début d'écoute
 	retour = HAL_UART_Receive_DMA(miniLidarGauche.pHuart, miniLidarGauche.serialBuffer, 9);
-	retour = HAL_UART_Receive_DMA(miniLidarDroit.pHuart, miniLidarDroit.serialBuffer, 9);
+	retour += HAL_UART_Receive_DMA(miniLidarDroit.pHuart, miniLidarDroit.serialBuffer, 9);
+	retour += HAL_UART_Receive_DMA(miniLidarHaut.pHuart, miniLidarHaut.serialBuffer, 9);
 
 	return retour;
 }

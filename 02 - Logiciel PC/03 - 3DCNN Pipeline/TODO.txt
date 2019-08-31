@@ -1,0 +1,31 @@
+Pipeline :
+	VIDEO 720p60 > 160x90x3 > Crop to 160x64 > CNN > ( position ligne en haut, présence de la ligne )
+		Les lignes suprieures de l'image sont supprimées (~30%)
+		Deux traitements graphiques optionnels en entrée du CNN : 
+			* gray-scale
+			* et/ou blur 5x5
+		Sortie position de la ligne [-1,+1] positive vers la droite
+		Sortie présence de la ligne [-1,+1] positive si présente
+	
+	Remarque : CNN voire R-CNN si le dataset le permet.
+
+CNN :
+	3 à 4 couches de convolutions maximum
+	1 à 2 cocuhes de neurones maximum
+	< 500.000 poids
+	
+Dataset :
+	- synthèse
+	- enregistrement sur piste avec le guidage LIDAR seulement + labéllisation de la séquence à la main
+	- augmentation : flip horizontal, luminosité, ombres projetées aléatoires
+
+
+
+Note d'implémentation :
+* Keras-gpu peut implémenter le cropping (160x90 => 160x64) en GPU
+	model.add(Cropping2D(cropping=((26,0),(0,0))))
+* Keras-gpu peut implémenter la normalisation (RGB 8bit to float [-1..-1]) en GPU
+	model.add(Lambda(lambda x: x / 255.0 - 0.5, input_shape=(160,64,3)))
+
+
+

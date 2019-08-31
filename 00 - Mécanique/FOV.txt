@@ -1,8 +1,13 @@
+Avec caméra raspeberry pi 2.1 en mode 1280x720
+----------------------------------------------
 Distance parechoc camera = 5cm
 Hauteur camera = 16cm
+Largeur en bas = 27cm		Eloignement = 19cm / parechoc
+Largeur au centre = 50cm	Eloignement = 46cm / parechoc
 
-FOV : Largeur en bas = 27cm
-FOV : Largeur au centre = 50cm
-
-Coin inférieur droit   :  distance latérale // axe central=13.5cm   	distance/éloignement=19cm parechoc
-Coint milieu droit     :  distance latérale // axe central = 25cm		distance/éloignement=46cm parechoc
+Avec caméra raspeberry pi 2.1 + objectif D160 en mode 1280x720
+--------------------------------------------------------------
+Distance parechoc camera = 5cm
+Hauteur camera = 16cm
+Largeur en bas = 45cm, 			Eloignement  = 12cm / pare choc
+Largeur au centre = 125cm (environ) 	Eloignement = 55cm / pare choc
