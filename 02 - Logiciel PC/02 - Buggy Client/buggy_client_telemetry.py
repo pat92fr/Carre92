@@ -17,9 +17,6 @@ import matplotlib.pyplot as plt
 from argparse import ArgumentParser
 from matplotlib.widgets import Button
 
-# Global
-########
-
 # Main procedure
 ################
 def main():
@@ -114,21 +111,23 @@ def main():
         sys.exit(0)
     exitButton.on_clicked(exitNow)
 
-    # Create sample button
-    sample         = plt.axes([0.1, 0.025, 0.1, 0.05])
-    reSampleButton = Button(sample, 'Sample')
-    global stopDisplay
-    stopDisplay    = False
+    # Create stop/go button
+    global stop
+    stop = False
+
+    stopGo       = plt.axes([0.1, 0.025, 0.1, 0.05])
+    stopGoButton = Button(stopGo, 'stop/go')
 
     # Sample button
-    def reSample(event):
-        global stopDisplay
-        print('Resample')
-        stopDisplay = False
-        for c in range(1, len(sampleCtx)):
-            ctx = sampleCtx[c]["obj"]
-            ctx.clear()
-    reSampleButton.on_clicked(reSample)
+    def stopGoAction(event):
+        global stop
+        if stop == True:
+            stop = False
+            print('Go')
+        else:
+            stop = True
+            print('Stop')
+    stopGoButton.on_clicked(stopGoAction)
 
     # Main while loop
     while True:
@@ -157,35 +156,53 @@ def main():
                 nbSample +=1
 
                 # Window is full ?
-                if nbSample >= windowSize:
+                if (nbSample >= windowSize):
+
                     nbSample = 0
-                    stopDisplay = True
+                    
+                    print(nbSample)
+                    print(stop)
+                    
                     for c in range(1, len(sampleCtx)):
                         ctx = sampleCtx[c]["obj"]
                         ctx.plot(np.array(sample_list[0]), np.array(sample_list[c]), sampleCtx[c]["color"], linewidth=1, label=sampleCtx[c]["title"])
                         handles, labels = ctx.get_legend_handles_labels()
                         ctx.legend(handles, labels)
                         ctx.grid(True)
-                
-                    while stopDisplay:
-                        plt.pause(0.5)
 
-                        # Log to file ?
-                        if args.log :
-                            # Wait for length
-                            data = client.recv(4)
-                            if len(data) != 0:
-                                length = int(data.decode("utf-8").replace(' ',''))
-                                # Wait for the payload
-                                data = client.recv(length)
+                    plt.pause(0.5)
+
+                    if stop == False:
+                        for c in range(1, len(sampleCtx)):
+                            ctx = sampleCtx[c]["obj"]
+                            ctx.clear()
+                    else:
+                        for c in range(1, len(sampleCtx)):
+                            ctx = sampleCtx[c]["obj"]
+                            ctx.plot(np.array(sample_list[0]), np.array(sample_list[c]), sampleCtx[c]["color"], linewidth=1, label=sampleCtx[c]["title"])
+                            handles, labels = ctx.get_legend_handles_labels()
+                            ctx.legend(handles, labels)
+                            ctx.grid(True)
+                
+                        while stop:
+                            plt.pause(0.5)
+
+                            # Log to file ?
+                            if args.log :
+                                # Wait for length
+                                data = client.recv(4)
                                 if len(data) != 0:
-                                    res = data.decode("utf-8").rstrip('\n').rstrip(' ').split(';')
-                                    if len(res) != paramNumber:
-                                        print('#Error')
-                                        continue
+                                    length = int(data.decode("utf-8").replace(' ',''))
+                                    # Wait for the payload
+                                    data = client.recv(length)
+                                    if len(data) != 0:
+                                        res = data.decode("utf-8").rstrip('\n').rstrip(' ').split(';')
+                                        if len(res) != paramNumber:
+                                            print('#Error')
+                                            continue
                                             
-                                    # Log to file
-                                    csvFile.write(data.decode("utf-8")+"\r\n")
+                                        # Log to file
+                                        csvFile.write(data.decode("utf-8")+"\r\n")
 
 # Main
 if __name__ == '__main__':    
