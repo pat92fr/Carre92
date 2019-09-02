@@ -1,4 +1,2 @@
-P1 - remonter télémétrie équivalente au data logger (plusieurs subplots) <=> FRancois
-P2 - refonte FSM entre jetson et stm32 pour start manuel et stop automatique
-
+Nope
  

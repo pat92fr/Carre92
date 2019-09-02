@@ -159,7 +159,7 @@ def main():
                 # Window is full ?
                 if nbSample >= windowSize:
                     nbSample = 0
-                    stopDisplay = True
+                    stopDisplay = True ###False ######
                     for c in range(1, len(sampleCtx)):
                         ctx = sampleCtx[c]["obj"]
                         ctx.plot(np.array(sample_list[0]), np.array(sample_list[c]), sampleCtx[c]["color"], linewidth=1, label=sampleCtx[c]["title"])

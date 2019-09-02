@@ -18,6 +18,8 @@ CMD_KILL     = 'KILL'
 CMD_IA       = 'IA'
 CMD_REC_START= 'REC_START'
 CMD_REC_STOP = 'REC_STOP'
+CMD_DATASET_START= 'DATASET_START'
+CMD_DATASET_STOP = 'DATASET_STOP'
 CMD_RUN_START= 'RUN_START'
 CMD_RUN_STOP = 'RUN_STOP'
 CMD_SPLIT    = ';'
@@ -120,6 +122,24 @@ def REC_STOP():
         print('Unable to send command.')
         return
 
+def DATASET_START():
+    print('DATASET_START')
+    msg = CMD_DATASET_START
+    print('# Sending:' + msg)
+    n = client.send(msg.encode('utf-8'))
+    if (n != len(msg)):
+        print('Unable to send command.')
+        return
+    
+def DATASET_STOP():
+    print('DATASET_STOP')
+    msg = CMD_DATASET_STOP
+    print('# Sending:' + msg)
+    n = client.send(msg.encode('utf-8'))
+    if (n != len(msg)):
+        print('Unable to send command.')
+        return
+    
 def RUN_START():
     print('RUN_START')
     msg = CMD_RUN_START
@@ -242,9 +262,11 @@ Button(frame, text="Save file ", command=SAVE).grid(row=(nbParameters),      col
 Button(frame, text="IA        ", command=IA).grid(row=(nbParameters),        column=6)
 Button(frame, text="REC start ", command=REC_START).grid(row=(nbParameters), column=7)
 Button(frame, text="REC stop  ", command=REC_STOP).grid(row=(nbParameters),  column=8)
-Button(frame, text="KILL      ", command=KILL).grid(row=(nbParameters),      column=9)
-Button(frame, text="RUN START ", command=RUN_START).grid(row=(nbParameters),      column=10)
-Button(frame, text="RUN STOP  ", command=RUN_STOP).grid(row=(nbParameters),      column=11)
+Button(frame, text="DATASET start ", command=DATASET_START).grid(row=(nbParameters), column=9)
+Button(frame, text="DATASET stop  ", command=DATASET_STOP).grid(row=(nbParameters),  column=10)
+Button(frame, text="KILL      ", command=KILL).grid(row=(nbParameters),      column=11)
+Button(frame, text="RUN START ", command=RUN_START).grid(row=(nbParameters),      column=12)
+Button(frame, text="RUN STOP  ", command=RUN_STOP).grid(row=(nbParameters),      column=13)
 
 # Request the values
 frame.update_idletasks()
