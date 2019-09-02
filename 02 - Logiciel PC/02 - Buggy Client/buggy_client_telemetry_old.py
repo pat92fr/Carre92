@@ -159,10 +159,14 @@ def main():
                 if (nbSample >= windowSize):
 
                     nbSample = 0
+<<<<<<< HEAD
+                    stopDisplay = True ###False ######
+=======
                     
                     print(nbSample)
                     print(stop)
                     
+>>>>>>> 8cd45f928f7332b750c1e2c9bf3192be64634e98
                     for c in range(1, len(sampleCtx)):
                         ctx = sampleCtx[c]["obj"]
                         ctx.plot(np.array(sample_list[0]), np.array(sample_list[c]), sampleCtx[c]["color"], linewidth=1, label=sampleCtx[c]["title"])
