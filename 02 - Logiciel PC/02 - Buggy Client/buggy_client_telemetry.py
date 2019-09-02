@@ -104,7 +104,7 @@ def main():
 
     # Exit button
     def exitNow(event):
-        print('Deconnexion.')
+        print('Action requested by user: exit.')
         client.close()
         if args.log :
             csvFile.close()
@@ -123,10 +123,10 @@ def main():
         global stop
         if stop == True:
             stop = False
-            print('Go')
+            print('Action requested by user: do sampling mode.')
         else:
             stop = True
-            print('Stop')
+            print('Action requested by user: stop sampling mode.')
     stopGoButton.on_clicked(stopGoAction)
 
     # Main while loop
@@ -159,9 +159,6 @@ def main():
                 if (nbSample >= windowSize):
 
                     nbSample = 0
-                    
-                    print(nbSample)
-                    print(stop)
                     
                     for c in range(1, len(sampleCtx)):
                         ctx = sampleCtx[c]["obj"]
