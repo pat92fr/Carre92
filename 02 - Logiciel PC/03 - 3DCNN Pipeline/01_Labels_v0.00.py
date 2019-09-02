@@ -15,18 +15,19 @@ height = 90
 height_cropped = 64
 height_crop = height-height_cropped
 resize_size = (width, height)
-filename = '190210AA' 
+filename = 'capture_Thu_Aug_15_19-50-46_2019' 
 ouput_directory = 'dataset'
 
 global window
 global dataset
 global current_frame_filename
-
+global last_position
 # Function to be called when mouse 1 is clicked
 def printcoords(event):
     global window
     global dataset
     global current_frame_filename
+    global last_position
     x = window.winfo_pointerx()-5
     y1 = float(x) / 1280.0 * 2.0 - 1.0
     if y1<-1.0:
@@ -37,6 +38,7 @@ def printcoords(event):
     print('filename:' + current_frame_filename + "   y1:" + str(y1) + "   y2:" + str(y2))
     dataset.write("%s;%f;%f\r\n" % (current_frame_filename, y1, y2))
     window.destroy()
+    last_position = y1
 
 capture = cv2.VideoCapture(filename+'.avi')
 if not capture:
@@ -45,6 +47,7 @@ if not capture:
 print("Processing video file...")
 dataset = open(ouput_directory + '/' + 'dataset.txt','w+')
 frame_counter = 0
+last_position = 0.0
 while True:
     # read frame
     returnval, frame = capture.read()
@@ -68,12 +71,15 @@ while True:
         # GUI
         window = Tk()
         window.title('Viewer')  
-        window.geometry("1280x720+0+0")
-        canvas = Canvas(window, width = width, height = height_cropped)      
+        window.geometry("1280x512+0+0")
+        canvas = Canvas(window, width = 1280, height = 512)      
         canvas.pack(side='top', fill='both', expand='yes')      
-        frame_color = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        frame_color = cv2.cvtColor(cv2.resize(frame_cropped,(1280,512)), cv2.COLOR_BGR2RGB)
         picture = ImageTk.PhotoImage(Image.fromarray(frame_color))
         canvas.create_image(0,20,image=picture,anchor="nw")
+        canvas.create_rectangle(0, 20+80-5, 1280, 20+80+5, outline="blue")
+        canvas.create_rectangle(int(1280.0*(last_position+1.0)/2.0)-10, 20+80-10,int(1280.0*(last_position+1.0)/2.0)+10, 20+80+10, outline="blue")
+        ##last_position
         canvas.bind("<ButtonPress-1>",printcoords)
         window.mainloop()
         # flush

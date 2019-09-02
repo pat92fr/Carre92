@@ -1,3 +1,5 @@
+TODO : Faire le code de vérification du dataset avec possibilité de correction
+
 Pipeline :
 	VIDEO 720p60 > 160x90x3 > Crop to 160x64 > CNN > ( position ligne en haut, présence de la ligne )
 		Les lignes suprieures de l'image sont supprimées (~30%)
@@ -15,8 +17,10 @@ CNN :
 	< 500.000 poids
 	
 Dataset :
-	- synthèse
-	- enregistrement sur piste avec le guidage LIDAR seulement + labéllisation de la séquence à la main
+	- enregistrement sur piste en mode manuel 
+		+ labéllisation de la séquence à la main
+		+ labéllisation de la séquence sur la base des commandes manuelles + post traitement (vérification)
+	- enregistrement sur piste avec le guidage LIDAR + labéllisation de la séquence à la main
 	- augmentation : flip horizontal, luminosité, ombres projetées aléatoires
 
 
