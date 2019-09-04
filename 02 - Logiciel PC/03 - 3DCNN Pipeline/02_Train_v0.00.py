@@ -68,7 +68,7 @@ picture_initial_shape = (picture_initial_height, picture_initial_width,3)
 
 picture_final_width = 160 
 picture_final_height = 64
-picture_final_shape = (picture_final_height, picture_final_width,3)
+picture_final_shape = (picture_final_height, picture_final_width,1)
 
 picture_height_crop = picture_initial_height-picture_final_height
 
@@ -85,7 +85,7 @@ def load_picture(filename):
     # smoothing and gray scale
     image_smoothed= cv2.blur(image,(3,3))
     image_bw = cv2.cvtColor(image_smoothed, cv2.COLOR_RGB2GRAY)
-#    assert(image_bw.shape == (90,160))
+    assert(image_bw.shape == (picture_initial_height,picture_initial_width))
 #    # cut frame
 #    frame_size = (32,160)
 #    low_frame = image_bw[intermediate_size[1]-frame_size[0]:intermediate_size[1],0:frame_size[1]]
@@ -95,15 +95,14 @@ def load_picture(filename):
 #    # normalize
 #    low_frame = low_frame/255.0
 #    middle_frame = middle_frame/255.0
-#    # reshape for conv2D
-#    low_frame = low_frame.reshape(32,160,1)
-#    middle_frame = middle_frame.reshape(32,160,1)
+    # reshape for conv layers
+    frame = image_bw.reshape(picture_initial_height,picture_initial_width,1)
     # out
-    return image_bw
+    return frame
 
 def load_dataset():
-    print("Load dataset file...")
     global dataset_dir, dataset_filename
+    print("Load dataset file...")
     file = open(dataset_dir+"/"+dataset_filename, "r")
     content = file.read()
     file.close()
@@ -121,20 +120,21 @@ def load_dataset():
         filename = fields[0]
         x = load_picture(filename)
         y = []
-        # EWMA on DIR (bias correction)
+        # EWMA on DIR (with bias correction)
         raw_dir = float(fields[1])/255.0*2.0-1.0
         filtered_dir = alpha * raw_dir + beta*filtered_dir
         filtered_counter += 1
         corrected_dir = filtered_dir / (1.0 - pow(beta, float(filtered_counter)))
         y.append( corrected_dir ) # DIR
         # TODO : EWMA on THR
-        y.append( float(fields[2])/255.0*2.0-1.0) # THR
+        raw_thr = float(fields[2])/255.0*2.0-1.0
+        y.append( raw_thr ) # THR
         X.append(x)
         Y.append(y)
         if True:
             print(str(y))
             plt.clf()
-            plt.imshow(x, cmap = 'gray' )
+            plt.imshow(x.reshape(picture_initial_height,picture_initial_width), cmap = 'gray' )
             plt.axvline(x=(y[0]+1.0)/2.0*picture_initial_width,linewidth=2, label='DIR')
             plt.axhline(y=picture_height_crop,linewidth=2, label='CROP', marker="v", linestyle='--')
             plt.axhline(y=picture_initial_height/2,linewidth=2)

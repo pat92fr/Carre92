@@ -134,14 +134,14 @@ def load_dataset():
         y.append( raw_thr ) # THR
         X.append(x)
         Y.append(y)
-#        if False:
-#            print(str(y))
-#            plt.clf()
-#            plt.imshow(x.reshape(picture_initial_height,picture_initial_width), cmap = 'gray' )
-#            plt.axvline(x=(y[0]+1.0)/2.0*picture_initial_width,linewidth=2, label='DIR')
-#            plt.axhline(y=picture_height_crop,linewidth=2, label='CROP', marker="v", linestyle='--')
-#            plt.axhline(y=picture_initial_height/2,linewidth=2)
-#            plt.pause(0.001)        
+##        if True:
+##            print(str(y))
+##            plt.clf()
+##            plt.imshow(x.reshape(picture_initial_height,picture_initial_width), cmap = 'gray' )
+##            plt.axvline(x=(y[0]+1.0)/2.0*picture_initial_width,linewidth=2, label='DIR')
+##            plt.axhline(y=picture_height_crop,linewidth=2, label='CROP', marker="v", linestyle='--')
+##            plt.axhline(y=picture_initial_height/2,linewidth=2)
+##            plt.pause(0.001)        
     print("Done.")
     print("Dataset, size: "+str(len(X))+"/"+str(len(Y)))
     return np.array(X, ndmin=4),np.array(Y, ndmin=2)
