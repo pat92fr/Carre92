@@ -134,6 +134,7 @@ static int32_t lidar_temp_droit = -1;
 static int32_t lidar_temp_haut = -1;
 static int32_t vitesse_mesuree = -1;
 static int32_t start_countdown = 0;
+static int32_t nb_impulsions_aimants = 0;
 
 /* USER CODE END PV */
 
@@ -190,6 +191,7 @@ void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim) // Callback for PWM inp
 	{
 		if (htim->Channel == HAL_TIM_ACTIVE_CHANNEL_1)
 		{
+			nb_impulsions_aimants++;
 			RC4_period = HAL_TIM_ReadCapturedValue(htim, TIM_CHANNEL_1);
 			RC4_last_time = HAL_GetTick(); // timestamp last pulse
 		}
@@ -453,7 +455,7 @@ int main(void)
 		uint32_t telemetry_auto_thr = pwm_to_int(pwm_auto_thr);
 		int32_t telemetry_speed = vitesse_mesuree;
 		// send telemetry frame
-		HAL_Serial_Print(&ai_com, "%d;%d;%d;%d;%d;%d;%d;%d;%d\r\n",
+		HAL_Serial_Print(&ai_com, "%d;%d;%d;%d;%d;%d;%d;%d;%d;%d\r\n",
 				lidar_distance_gauche,
 				lidar_distance_droit,
 				lidar_distance_haut,
@@ -462,7 +464,8 @@ int main(void)
 				telemetry_manual_thr,
 				telemetry_auto_dir,
 				telemetry_auto_thr,
-				start_countdown
+				start_countdown,
+				nb_impulsions_aimants
 			);
 		if(start_countdown>0)
 			--start_countdown;
