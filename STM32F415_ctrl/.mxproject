@@ -1,7 +1,7 @@
 [PreviousGenFiles]
-HeaderPath=C:/GitHub/Carre92/STM32F415_ctrl/Inc
+HeaderPath=D:/Perso/Robotique/2019/Carre92/STM32F415_ctrl/Inc
 HeaderFiles=stm32f4xx_it.h;stm32f4xx_hal_conf.h;main.h;
-SourcePath=C:/GitHub/Carre92/STM32F415_ctrl/Src
+SourcePath=D:/Perso/Robotique/2019/Carre92/STM32F415_ctrl/Src
 SourceFiles=stm32f4xx_it.c;stm32f4xx_hal_msp.c;main.c;
 
 [PreviousLibFiles]

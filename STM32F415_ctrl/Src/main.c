@@ -71,6 +71,7 @@
 /* Private variables ---------------------------------------------------------*/
 TIM_HandleTypeDef htim1;
 TIM_HandleTypeDef htim3;
+TIM_HandleTypeDef htim4;
 TIM_HandleTypeDef htim8;
 TIM_HandleTypeDef htim12;
 
@@ -95,6 +96,9 @@ static uint32_t RC1_duty_cycle = 0;
 static uint32_t RC2_last_time = 0;
 static uint32_t RC2_period = 0;
 static uint32_t RC2_duty_cycle = 0;
+static uint32_t RC4_last_time = 0;
+static uint32_t RC4_period = 0;
+static uint32_t RC4_duty_cycle = 0;
 static char com_line[32];
 static uint32_t com_position = 0;
 static uint32_t com_last_time = 0;
@@ -130,6 +134,7 @@ static int32_t lidar_temp_droit = -1;
 static int32_t lidar_temp_haut = -1;
 static int32_t vitesse_mesuree = -1;
 static int32_t start_countdown = 0;
+static int32_t nb_impulsions_aimants = 0;
 
 /* USER CODE END PV */
 
@@ -145,6 +150,7 @@ static void MX_UART4_Init(void);
 static void MX_UART5_Init(void);
 static void MX_TIM12_Init(void);
 static void MX_USART2_UART_Init(void);
+static void MX_TIM4_Init(void);
 /* USER CODE BEGIN PFP */
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 {
@@ -169,7 +175,7 @@ void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim) // Callback for PWM inp
 			RC2_duty_cycle = HAL_TIM_ReadCapturedValue(htim, TIM_CHANNEL_2);
 		}
 	}
-	else if(htim==&htim12) // RC1 = THR from RX
+	else if(htim==&htim12) // RC4 = THR from RX
 	{
 		if (htim->Channel == HAL_TIM_ACTIVE_CHANNEL_1)
 		{
@@ -179,6 +185,19 @@ void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim) // Callback for PWM inp
 		else if (htim->Channel == HAL_TIM_ACTIVE_CHANNEL_2)
 		{
 			RC1_duty_cycle = HAL_TIM_ReadCapturedValue(htim, TIM_CHANNEL_2);
+		}
+	}
+	else if(htim==&htim4) // RC3 = Odométrie from RX
+	{
+		if (htim->Channel == HAL_TIM_ACTIVE_CHANNEL_1)
+		{
+			nb_impulsions_aimants++;
+			RC4_period = HAL_TIM_ReadCapturedValue(htim, TIM_CHANNEL_1);
+			RC4_last_time = HAL_GetTick(); // timestamp last pulse
+		}
+		else if (htim->Channel == HAL_TIM_ACTIVE_CHANNEL_2)
+		{
+			RC4_duty_cycle = HAL_TIM_ReadCapturedValue(htim, TIM_CHANNEL_2);
 		}
 	}
 }
@@ -238,6 +257,7 @@ int main(void)
   MX_UART5_Init();
   MX_TIM12_Init();
   MX_USART2_UART_Init();
+  MX_TIM4_Init();
   /* USER CODE BEGIN 2 */
   HAL_TIM_PWM_Start(&htim1,TIM_CHANNEL_1); // Start PWM outputs
   HAL_TIM_PWM_Start(&htim1,TIM_CHANNEL_2);
@@ -259,6 +279,8 @@ int main(void)
   HAL_TIM_IC_Start_IT(&htim3,TIM_CHANNEL_2);
   HAL_TIM_IC_Start_IT(&htim12,TIM_CHANNEL_1);
   HAL_TIM_IC_Start_IT(&htim12,TIM_CHANNEL_2);
+  HAL_TIM_IC_Start_IT(&htim4,TIM_CHANNEL_1);
+  HAL_TIM_IC_Start_IT(&htim4,TIM_CHANNEL_2);
   HAL_Serial_Init(&huart4,&ai_com); // Start com port
   HAL_GPIO_WritePin(LED0_GPIO_Port,LED0_Pin,GPIO_PIN_RESET); // Init LEDs
   HAL_GPIO_WritePin(LED1_GPIO_Port,LED1_Pin,GPIO_PIN_RESET);
@@ -420,7 +442,12 @@ int main(void)
 		tfminiplus_getLastAcquisition(MINILIDAR_DROIT, &lidar_distance_droit, &lidar_strength_droit, &lidar_temp_droit);
 		tfminiplus_getLastAcquisition(MINILIDAR_HAUT, &lidar_distance_haut, &lidar_strength_haut, &lidar_temp_haut);
 		// query other sensors
-		vitesse_mesuree = -1;
+		// Capteur de vitesse
+		// Si nous avons eu une mesure il y a plus de 1 seconde, on renvoie un code d'erreur
+		if(RC4_last_time + 650 > HAL_GetTick())
+			vitesse_mesuree = RC4_period;
+		else
+			vitesse_mesuree = 65535;
 		// build telemetry frame
 		uint32_t telemetry_manual_dir = pwm_to_int(pwm_manual_dir);
 		uint32_t telemetry_manual_thr = pwm_to_int(pwm_manual_thr);
@@ -428,7 +455,7 @@ int main(void)
 		uint32_t telemetry_auto_thr = pwm_to_int(pwm_auto_thr);
 		int32_t telemetry_speed = vitesse_mesuree;
 		// send telemetry frame
-		HAL_Serial_Print(&ai_com, "%d;%d;%d;%d;%d;%d;%d;%d;%d\r\n",
+		HAL_Serial_Print(&ai_com, "%d;%d;%d;%d;%d;%d;%d;%d;%d;%d\r\n",
 				lidar_distance_gauche,
 				lidar_distance_droit,
 				lidar_distance_haut,
@@ -437,7 +464,8 @@ int main(void)
 				telemetry_manual_thr,
 				telemetry_auto_dir,
 				telemetry_auto_thr,
-				start_countdown
+				start_countdown,
+				nb_impulsions_aimants
 			);
 		if(start_countdown>0)
 			--start_countdown;
@@ -739,6 +767,80 @@ static void MX_TIM3_Init(void)
   /* USER CODE BEGIN TIM3_Init 2 */
 
   /* USER CODE END TIM3_Init 2 */
+
+}
+
+/**
+  * @brief TIM4 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_TIM4_Init(void)
+{
+
+  /* USER CODE BEGIN TIM4_Init 0 */
+
+  /* USER CODE END TIM4_Init 0 */
+
+  TIM_ClockConfigTypeDef sClockSourceConfig = {0};
+  TIM_SlaveConfigTypeDef sSlaveConfig = {0};
+  TIM_IC_InitTypeDef sConfigIC = {0};
+  TIM_MasterConfigTypeDef sMasterConfig = {0};
+
+  /* USER CODE BEGIN TIM4_Init 1 */
+
+  /* USER CODE END TIM4_Init 1 */
+  htim4.Instance = TIM4;
+  htim4.Init.Prescaler = 839;
+  htim4.Init.CounterMode = TIM_COUNTERMODE_UP;
+  htim4.Init.Period = 0xffff;
+  htim4.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+  htim4.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+  if (HAL_TIM_Base_Init(&htim4) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
+  if (HAL_TIM_ConfigClockSource(&htim4, &sClockSourceConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  if (HAL_TIM_IC_Init(&htim4) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sSlaveConfig.SlaveMode = TIM_SLAVEMODE_RESET;
+  sSlaveConfig.InputTrigger = TIM_TS_TI1FP1;
+  sSlaveConfig.TriggerPolarity = TIM_INPUTCHANNELPOLARITY_RISING;
+  sSlaveConfig.TriggerPrescaler = TIM_ICPSC_DIV1;
+  sSlaveConfig.TriggerFilter = 3;
+  if (HAL_TIM_SlaveConfigSynchro(&htim4, &sSlaveConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sConfigIC.ICPolarity = TIM_INPUTCHANNELPOLARITY_RISING;
+  sConfigIC.ICSelection = TIM_ICSELECTION_DIRECTTI;
+  sConfigIC.ICPrescaler = TIM_ICPSC_DIV1;
+  sConfigIC.ICFilter = 3;
+  if (HAL_TIM_IC_ConfigChannel(&htim4, &sConfigIC, TIM_CHANNEL_1) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sConfigIC.ICPolarity = TIM_INPUTCHANNELPOLARITY_FALLING;
+  sConfigIC.ICSelection = TIM_ICSELECTION_INDIRECTTI;
+  if (HAL_TIM_IC_ConfigChannel(&htim4, &sConfigIC, TIM_CHANNEL_2) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
+  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
+  if (HAL_TIMEx_MasterConfigSynchronization(&htim4, &sMasterConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN TIM4_Init 2 */
+
+  /* USER CODE END TIM4_Init 2 */
 
 }
 
