@@ -58,7 +58,6 @@ def main():
     sampleCtx[8]  = { "title": "Direction",    "unit": "",   "color": "-r",   "factor": 1.0, "plot": 3, "obj": None }
     sampleCtx[9]  = { "title": "Gaz",          "unit": "",   "color": "-b",   "factor": 1.0, "plot": 3, "obj": None }
     sampleCtx[10] = { "title": "Mode",         "unit": "",   "color": "--k",  "factor": 1.0, "plot": 4, "obj": None }
-    sampleCtx[11] = { "title": "Speed",        "unit": "m/s",   "color": "-r",  "factor": 1.0, "plot": 4, "obj": None }
     
     paramNumber = len(sampleCtx)
     print('Number of parameters:' + str(paramNumber))
