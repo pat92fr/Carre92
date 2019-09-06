@@ -47,7 +47,7 @@ picture_height_crop = picture_initial_height-picture_final_height
 ## PARAMETERS ##################################################################
 
 # inputs
-dataset_dir = "dataset"
+dataset_dir = "dataset_004"
 dataset_filename = "dataset.txt"
 train_valid_dataset_ratio = 0.05
 
@@ -410,4 +410,7 @@ plt.show()
 ##Epoch 89/100
 ## - 12s - loss: 0.0018 - mean_squared_error: 7.5785e-04 - val_loss: 0.0014 - val_mean_squared_error: 4.8364e-04
 ##Epoch 00089: early stopping
-
+##dataset 004 :
+##    Epoch 90/100
+## - 38s - loss: 0.0013 - mean_squared_error: 5.1954e-04 - val_loss: 0.0011 - val_mean_squared_error: 3.8377e-04
+##Epoch 00090: early stopping

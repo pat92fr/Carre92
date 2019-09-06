@@ -41,7 +41,6 @@ depth = 6 # pictures frames
 skip = 3 # pictures frames
 picture_sequence_shape = (depth, picture_initial_height, picture_initial_width, 1)
 
-#picture_final_width = 160 
 picture_final_height = 64
 picture_height_crop = picture_initial_height-picture_final_height
 
@@ -101,15 +100,6 @@ def load_picture(filename):
     image_smoothed= cv2.blur(image,(3,3))
     image_bw = cv2.cvtColor(image_smoothed, cv2.COLOR_RGB2GRAY)
     assert(image_bw.shape == (picture_initial_height,picture_initial_width))
-#    # cut frame
-#    frame_size = (32,160)
-#    low_frame = image_bw[intermediate_size[1]-frame_size[0]:intermediate_size[1],0:frame_size[1]]
-#    middle_frame = image_bw[intermediate_size[1]-2*frame_size[0]:intermediate_size[1]-frame_size[0],0:frame_size[1]]                
-#    assert(low_frame.shape == frame_size)
-#    assert(middle_frame.shape == frame_size)
-#    # normalize
-#    low_frame = low_frame/255.0
-#    middle_frame = middle_frame/255.0
     # reshape for conv layers
     frame = image_bw.reshape(picture_initial_height,picture_initial_width,1)
     # out
@@ -331,7 +321,7 @@ tensorboard = TensorBoard(log_dir=output_dir+"/{}".format(time.time()), batch_si
 filepath="weights-improvement-{epoch:03d}-{val_mean_squared_error:.4f}.hdf5"
 mc = ModelCheckpoint(output_dir+"/"+filepath, monitor='val_mean_squared_error', mode='min', save_best_only=True) #, verbose=1)
 # early stopping
-es = EarlyStopping(monitor='val_mean_squared_error', mode='min', min_delta=0.0005, verbose=1, patience=10)
+es = EarlyStopping(monitor='val_mean_squared_error', mode='min', min_delta=0.0003, verbose=1, patience=30)
 ## fit the model
 history = model.fit(
     x=Xtrain, 
@@ -391,11 +381,6 @@ plt.show()
 ##    ('conv3D', 64, (3,3,3), (1,1,1)),
 ##    ('maxpooling3D', (1,2,2), (1,2,2)),
 ##
-##    ##('conv3D', 128, (3,3,3), (1,1,1)),
-##    ##('maxpooling3D', (1,2,2), (1,2,2))
-##    
-##    ##('dropout',  0.1),
-##    ##('batchnorm', 0),
 ##] # type, filters, size, stride
 ##param_units_hidden= [256,256,0,0]
 ##Epoch 30/100
@@ -416,14 +401,6 @@ plt.show()
 ##    ('conv3D', 32, (3,3,3), (1,1,1)),
 ##    ('maxpooling3D', (1,2,2), (1,2,2)),
 ##
-##    ##('conv3D', 64, (3,3,3), (1,1,1)),
-##    ##('maxpooling3D', (1,2,2), (1,2,2)),
-##
-##    ##('conv3D', 128, (3,3,3), (1,1,1)),
-##    ##('maxpooling3D', (1,2,2), (1,2,2))
-##    
-##    ##('dropout',  0.1),
-##    ##('batchnorm', 0),
 ##] # type, filters, size, stride
 ##param_units_hidden= [256,256,0,0]
 ##Epoch 36/100

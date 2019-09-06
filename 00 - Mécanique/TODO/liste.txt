@@ -1,3 +1,2 @@
-- ajouter potentiomètre pour le réglage de vitesse
-- ajouter BEC 5V supplémentaire pour RX et Servo
-- faite un guide en ABS noir pour les LIDAR si besoin (cas de reflection sol)
+- faire un guide en ABS noir pour les LIDAR si besoin (cas de reflection sol)
+-
