@@ -1,12 +1,13 @@
 ## PARAMETERS ##################################################################
 
-# inputs
-dataset_dir = [ "dataset_004","dataset_003"]
-dataset_filename = "dataset.txt"
-
-# outputs
-model_dir = "model"
-model_filename = "model"
+# inputs/outputs
+dataset_dir = [ "dataset_004","dataset_003"]     ## add dataset here
+dataset_filename = "dataset.txt"    ## do not change
+video_dir = "video"    ## do not change
+dataset_preview_filename = "dataset_preview"    ## do not change
+dataset_train_valid_3D_dir = "dataset_train_valid_3D"    ## do not change
+model_dir = "model"    ## do not change
+model_filename = "model"    ## do not change
 
 # picture
 picture_height_crop = 26    ## default 26 pixels (top of picture to crop)
@@ -23,7 +24,7 @@ throttle_alpha = 0.01       ## default 0.01
 depth = 6           ## default 6 frames processed by CNN
 skip = 3            ## default 3 frames skiped between each pair of frames processed by CNN
 
-# parameters
+# CNN parameters
 ### see build_3d_cnn https://github.com/autorope/donkeycar/blob/dev/donkeycar/parts/keras.py
 ### Credit: https://github.com/jessecha/DNRacing/blob/master/3D_CNN_Model/model.py
 conv_layers = [
@@ -35,15 +36,6 @@ conv_layers = [
     
     ('conv3D', 32, (3,3,3), (1,1,1)),
     ('maxpooling3D', (1,2,2), (1,2,2)),
-
-    ##('conv3D', 64, (3,3,3), (1,1,1)),
-    ##('maxpooling3D', (1,2,2), (1,2,2)),
-
-    ##('conv3D', 128, (3,3,3), (1,1,1)),
-    ##('maxpooling3D', (1,2,2), (1,2,2))
-    
-    ##('dropout',  0.1),
-    ##('batchnorm', 0),
 ]
 full_connected_hidden_layers= [
     (256, 'relu',  0.1),         ## default 256 units in 1srt hidden layer, 10% dropout
@@ -53,12 +45,12 @@ full_connected_hidden_layers= [
 # hyperparameters
 hyp_train_valid_dataset_ratio = 0.05
 hyp_batch_size = 128 
-hyp_epoch = 100
+hyp_epoch = 50
 hyp_lr = 0.0001 
 hyp_lr_decay = 0.0
 hyp_l2_regularization = 0.0001 
-hyp_min_delta=0.0001
-hyp_patience=20
+hyp_min_delta=0.0002
+hyp_patience=10
 
 ## RESULTS ##################################################################
 

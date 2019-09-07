@@ -1,13 +1,15 @@
 ## PARAMETERS ##################################################################
 
 # inputs/outputs
-dataset_dir = [ "dataset_004","dataset_003"]     ## add dataset here
+dataset_dir = [ "dataset_002", "dataset_004","dataset_003"]     ## add training dataset here
+testset_dir = [ "dataset_002", "dataset_004","dataset_003"]     ## add test dataset here (en attendant, on remet les training sets)
 dataset_filename = "dataset.txt"    ## do not change
 video_dir = "video"    ## do not change
 dataset_preview_filename = "dataset_preview"    ## do not change
 dataset_train_valid_3D_dir = "dataset_train_valid_3D"    ## do not change
 model_dir = "model"    ## do not change
 model_filename = "model"    ## do not change
+dataset_prediction_filename = "dataset_prediction"    ## do not change
 
 # picture
 picture_height_crop = 26    ## default 26 pixels (top of picture to crop)
@@ -45,12 +47,12 @@ full_connected_hidden_layers= [
 # hyperparameters
 hyp_train_valid_dataset_ratio = 0.05
 hyp_batch_size = 128 
-hyp_epoch = 50
+hyp_epoch = 100
 hyp_lr = 0.0001 
 hyp_lr_decay = 0.0
 hyp_l2_regularization = 0.0001 
-hyp_min_delta=0.0002
-hyp_patience=10
+hyp_min_delta=0.0001
+hyp_patience=20
 
 ## RESULTS ##################################################################
 

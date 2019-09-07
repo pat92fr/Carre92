@@ -133,5 +133,5 @@ plt.xlabel('epoch')
 plt.legend(['train', 'test'], loc='upper right')
 plt.savefig(params.model_dir+"/"+"history" + '_' + time.asctime().replace(' ', '_').replace(':', '-') + '.png')
 #plt.show()
-#plt.close(fig)    # close the figure
+plt.close(fig)    # close the figure
 print("Saved graph to disk")
