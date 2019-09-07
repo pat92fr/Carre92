@@ -3,6 +3,8 @@ import my_datasettools as dtools
 
 ## MAIN ########################################################################
 
-# load dataset file
-X,Y = dtools.load_dataset(params.dataset_dir,  params.dataset_filename, display = True)
+for directory in params.dataset_dir:
+    print(directory)
+    # load dataset file
+    X,Y = dtools.load_dataset(directory,  params.dataset_filename, display = True)
 

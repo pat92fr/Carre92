@@ -1,0 +1,3 @@
+- trimer la voiture
+- réduire la course de la direction et des gaz à la RC.
+	* cause : plage trop faible de direction pour l'apprentissage.
