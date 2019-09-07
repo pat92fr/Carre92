@@ -131,6 +131,7 @@ plt.yscale("log")
 plt.ylabel('mean_squared_error')
 plt.xlabel('epoch')
 plt.legend(['train', 'test'], loc='upper right')
-plt.show()
 plt.savefig(params.model_dir+"/"+"history" + '_' + time.asctime().replace(' ', '_').replace(':', '-') + '.png')
+#plt.show()
+plt.close(fig)    # close the figure
 print("Saved graph to disk")
