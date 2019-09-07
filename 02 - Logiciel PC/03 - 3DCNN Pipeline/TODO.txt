@@ -1,7 +1,5 @@
 Couper la ligne inférieure,
-Couper la ligne supérieure
 Optimiser la taille du dernier volume
-Faire un outil de visualisation de dataset
 Refactoriser l'outil d'entrainnement
 Refactoriser l'outil de prédiction
 Distribuer les taches d'entrainnement
