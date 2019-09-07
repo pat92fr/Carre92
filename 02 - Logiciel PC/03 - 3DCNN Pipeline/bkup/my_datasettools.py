@@ -2,7 +2,7 @@ import cv2
 import numpy as np
 import matplotlib.pyplot as plt
 
-import my_constants as consts
+import my_contants as const
 import my_parameters as params
 
 ## FUNCTIONS ###################################################################
@@ -10,13 +10,13 @@ import my_parameters as params
 def load_and_preprocess_picture(filename):
     # read picture
     frame = cv2.imread(filename,cv2.IMREAD_COLOR)
-    assert(frame.shape == consts.picture_initial_shape)
+    assert(frame.shape == const.picture_initial_shape)
     # smoothing and gray scale
     frame= cv2.blur(frame,params.blur_kernel)
     frame = cv2.cvtColor(frame, cv2.COLOR_RGB2GRAY)
-    assert(frame.shape == (consts.picture_initial_height,consts.picture_initial_width))
+    assert(frame.shape == (const.picture_initial_height,const.picture_initial_width))
     # reshape for conv layers
-    frame = frame.reshape(consts.picture_initial_height,consts.picture_initial_width,1)
+    frame = frame.reshape(const.picture_initial_height,const.picture_initial_width,1)
     # out
     return frame
 
@@ -61,18 +61,18 @@ def load_dataset(dataset_dir,  dataset_filename,  display = False):
         if display:
             print(str(y))
             plt.clf()
-            plt.imshow(x.reshape(consts.picture_initial_height,consts.picture_initial_width), cmap = 'gray' )
-            plt.axvline(x=(y[0]+1.0)/2.0*consts.picture_initial_width,linewidth=2, color='g')
-            plt.axvline(x=consts.picture_initial_width/2,linewidth=2)
+            plt.imshow(x.reshape(const.picture_initial_height,const.picture_initial_width), cmap = 'gray' )
+            plt.axvline(x=(y[0]+1.0)/2.0*const.picture_initial_width,linewidth=2, color='g')
+            plt.axvline(x=const.picture_initial_width/2,linewidth=2)
             plt.axhline(y=params.picture_height_crop,linewidth=2, marker="v", linestyle='--')
-            plt.axhline(y=consts.picture_initial_height/2,linewidth=2)
+            plt.axhline(y=const.picture_initial_height/2,linewidth=2)
             plt.pause(0.0001)        
     print("Done.")
     X = np.array(X, ndmin=4)
     Y = np.array(Y, ndmin=2)
     print("X.shape:" + str(X.shape))
     print("Y.shape:" + str(Y.shape))
-    assert( X.shape == (m,consts.picture_initial_height, consts.picture_initial_width, 1))
+    assert( X.shape == (m,const.picture_initial_height, const.picture_initial_width, 1))
     assert( Y.shape == (m,2))
     return X, Y 
 
