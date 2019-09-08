@@ -1,26 +1,29 @@
-from math import pi, sin, cos
 import numpy as np
 import cv2
-
  
 from direct.showbase.ShowBase import ShowBase
 from direct.task import Task
-#from panda3d.core import KeyboardButton
 from panda3d.core import *
-
+from os import mkdir
 #from direct.actor.Actor import Actor
 #from direct.interval.IntervalGlobal import Sequence
 #from panda3d.core import Point3
- 
+
+root_dir = 'c:/tmp'
+dataset_dir = 'dataset'
  
 class MyApp(ShowBase):
     def __init__(self):
         ShowBase.__init__(self)
         
+        self.quit = False
+        
         # Window
         winprops  = WindowProperties()
-        winprops .setSize(1280, 720)
+        winprops .setSize(640, 360)
         base.win.requestProperties(winprops ) 
+        
+        base.setFrameRateMeter(True)
         
         # gamepad
         self.gamepad = None
@@ -35,21 +38,19 @@ class MyApp(ShowBase):
         # Disable the camera trackball controls.
         self.disableMouse()
  
+        # load circuit model
         self.circuitNodePath = self.loader.loadModel("/c/tmp/circuit.bam")
         self.circuitNodePath.reparentTo(self.render)
         self.circuitNodePath.setScale(1.0, 1.0, 1.0)
         self.circuitNodePath.setPos(1.5,-5,0)
         self.circuitNodePath.setHpr(0,90, 270)
 
-        # Load the environment model.
+        # load the environment model.
         self.scene = self.loader.loadModel("models/environment")
-        # Reparent the model to render.
         self.scene.reparentTo(self.render)
-        # Apply scale and position transforms on the model.
         self.scene.setScale(1.25, 1.25, 1.25)
         self.scene.setPos(0,0, -1)
  
-
 #        # Load the environment model.
 #        self.box = self.loader.loadModel("models/box")
 #        # Reparent the model to render.
@@ -65,6 +66,7 @@ class MyApp(ShowBase):
         self.backward_button = KeyboardButton.ascii_key('s')
         self.right_button = KeyboardButton.ascii_key('d')
         self.left_button = KeyboardButton.ascii_key('q')
+        self.quit_button = KeyboardButton.ascii_key('x')
 
         #♠self.camera.lens.setAspectRatio(1280.0 / 720.0)
         self.camLens.setFov(70)
@@ -101,6 +103,10 @@ class MyApp(ShowBase):
 
         self.taskMgr.add(self.move_task, 'modeTask')
  
+    def windDown():
+        # De-initialization code goes here!
+        self.quit = True
+  
     def move_task(self, task):
         
         # gamepad inputs
@@ -119,6 +125,10 @@ class MyApp(ShowBase):
         # Check if the player is holding W or S
         is_down = self.mouseWatcherNode.is_button_down
      
+        if is_down(self.quit_button):
+            self.quit  = True
+            print('q')
+
         if is_down(self.forward_button):
             xspeed += self.forward_speed
             print('f')
@@ -175,18 +185,23 @@ class MyApp(ShowBase):
  
 app = MyApp()
 #app.run()
+try:
+    mkdir(root_dir+'/'+dataset_dir)
+except FileExistsError:
+    pass
+dataset_file = open(root_dir+'/'+dataset_dir+'/'+'dataset.txt',  'w')
 counter = 0
-dataset_file = open('C:/tmp/' + 'dataset/dataset.txt',  "w")
-while True:
+while not app.quit:
     taskMgr.step()
     frame = app.get_camera_image()
     frame = cv2.resize(frame[:, :, 0:3], (160, 90),   interpolation = cv2.INTER_AREA)
-    filename = 'dataset/render' + str(counter) + '.jpg'
-    cv2.imwrite('C:/tmp/' + filename, frame) 
-    counter += 1
-    dataset_file.write(filename +';' + str(int(app.direction*127.0+128.0)) + ';' + str(int(app.throttle*127.0+128.0)) + '\n')
+    filename = dataset_dir + '/render_' + str(counter) + '.jpg'
+    cv2.imwrite(root_dir + '/' + filename, frame) 
+    dataset_file.write(filename +';' + str(int(128.0-app.direction*127.0)) + ';' + str(int(app.throttle*127.0+128.0)) + '\n')
     dataset_file.flush()
+    counter += 1
 dataset_file.close()
-    #print(str(frame[:, :, 0:3].shape))
+print('m:' + str(counter))
+
     
     
