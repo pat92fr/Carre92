@@ -1,4 +1,7 @@
 from math import pi, sin, cos
+import numpy as np
+import cv2
+
  
 from direct.showbase.ShowBase import ShowBase
 from direct.task import Task
@@ -72,8 +75,8 @@ class MyApp(ShowBase):
         #self.camera.reparentTo(self.box)
 
         # osd
-        dr = self.win.makeDisplayRegion()
-        dr.setSort(20)
+        self.dr = self.win.makeDisplayRegion()
+        self.dr.setSort(20)
          
         myCamera2d = NodePath(Camera('myCam2d'))
         lens = OrthographicLens()
@@ -85,7 +88,16 @@ class MyApp(ShowBase):
         myRender2d.setDepthTest(False)
         myRender2d.setDepthWrite(False)
         myCamera2d.reparentTo(myRender2d)
-        dr.setCamera(myCamera2d)
+        self.dr.setCamera(myCamera2d)
+
+        lines = LineSegs()
+        lines.moveTo(100,0,0)
+        lines.drawTo(100,500,0)
+        lines.setThickness(4)
+        node = lines.create()
+        np = NodePath(node)
+        np.reparentTo(myRender2d)
+        
 
         self.taskMgr.add(self.move_task, 'modeTask')
  
@@ -132,6 +144,25 @@ class MyApp(ShowBase):
         self.camera.set_y(self.camera, y_delta)
         
         return Task.cont
+
+    def get_camera_image(self, requested_format=None):
+        """
+        Returns the camera's image, which is of type uint8 and has values
+        between 0 and 255.
+        The 'requested_format' argument should specify in which order the
+        components of the image must be. For example, valid format strings are
+        "RGBA" and "BGRA". By default, Panda's internal format "BGRA" is used,
+        in which case no data is copied over.
+        """
+        tex = self.dr.getScreenshot()
+        if requested_format is None:
+            data = tex.getRamImage()
+        else:
+            data = tex.getRamImageAs(requested_format)
+        image = np.frombuffer(data, np.uint8)  # use data.get_data() instead of data in python 2
+        image.shape = (tex.getYSize(), tex.getXSize(), tex.getNumComponents())
+        image = np.flipud(image)
+        return image
         
     # Define a procedure to move the camera.
 #    def spinCameraTask(self, task):
@@ -143,4 +174,15 @@ class MyApp(ShowBase):
 #        return Task.cont
  
 app = MyApp()
-app.run()
+#app.run()
+counter = 0
+while True:
+    taskMgr.step()
+    frame = app.get_camera_image()
+    frame = cv2.resize(frame[:, :, 0:3], (160, 90),   interpolation = cv2.INTER_AREA)
+    cv2.imwrite('C:/tmp/render' + str(counter) + '.jpg', frame) 
+    counter += 1
+
+    #print(str(frame[:, :, 0:3].shape))
+    
+    
