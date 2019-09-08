@@ -2,7 +2,8 @@ from math import pi, sin, cos
  
 from direct.showbase.ShowBase import ShowBase
 from direct.task import Task
-from panda3d.core import KeyboardButton
+#from panda3d.core import KeyboardButton
+from panda3d.core import *
 
 #from direct.actor.Actor import Actor
 #from direct.interval.IntervalGlobal import Sequence
@@ -12,7 +13,22 @@ from panda3d.core import KeyboardButton
 class MyApp(ShowBase):
     def __init__(self):
         ShowBase.__init__(self)
- 
+        
+        # Window
+        winprops  = WindowProperties()
+        winprops .setSize(1280, 720)
+        base.win.requestProperties(winprops ) 
+        
+        # gamepad
+        self.gamepad = None
+        devices = self.devices.getDevices(InputDevice.DeviceClass.gamepad)
+        if devices:
+            print("Devices founds..." + str(len(devices)))
+            # gamepad yet.
+            if devices[0].device_class == InputDevice.DeviceClass.gamepad and not self.gamepad:
+                print("Found %s" % (devices[0]))
+                self.gamepad = devices[0]
+                
         # Disable the camera trackball controls.
         self.disableMouse()
  
@@ -55,11 +71,38 @@ class MyApp(ShowBase):
         #self.camera.setHpr(0,-20,0)
         #self.camera.reparentTo(self.box)
 
+        # osd
+        dr = self.win.makeDisplayRegion()
+        dr.setSort(20)
+         
+        myCamera2d = NodePath(Camera('myCam2d'))
+        lens = OrthographicLens()
+        lens.setFilmSize(2, 2)
+        lens.setNearFar(-1000, 1000)
+        myCamera2d.node().setLens(lens)
+         
+        myRender2d = NodePath('myRender2d')
+        myRender2d.setDepthTest(False)
+        myRender2d.setDepthWrite(False)
+        myCamera2d.reparentTo(myRender2d)
+        dr.setCamera(myCamera2d)
+
         self.taskMgr.add(self.move_task, 'modeTask')
  
     def move_task(self, task):
-        xspeed = 0.0
-        wspeed = 0.0
+        
+        # gamepad inputs
+        self.direction = self.gamepad.findAxis(InputDevice.Axis.right_x).value
+        self.throttle = self.gamepad.findAxis(InputDevice.Axis.left_x ).value
+         
+        # center
+        self.direction -= 0.38
+        self.throttle -= 0.41
+        
+        print(str(self.direction) + " " + str(self.throttle))
+
+        xspeed = self.throttle * 1000.0
+        wspeed = self.direction * 10000.0
      
         # Check if the player is holding W or S
         is_down = self.mouseWatcherNode.is_button_down
