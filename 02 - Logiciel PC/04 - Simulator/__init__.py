@@ -1,3 +1,5 @@
+### https://github.com/jlevy44/UnrealAI/blob/master/CarAI/joshua_work/game/src/simulation.py
+
 import numpy as np
 import cv2
  
@@ -16,13 +18,10 @@ class MyApp(ShowBase):
     def __init__(self):
         ShowBase.__init__(self)
         
-        self.quit = False
-        
         # Window
         winprops  = WindowProperties()
         winprops .setSize(640, 360)
         base.win.requestProperties(winprops ) 
-        
         base.setFrameRateMeter(True)
         
         # gamepad
@@ -42,40 +41,43 @@ class MyApp(ShowBase):
         self.circuitNodePath = self.loader.loadModel("/c/tmp/circuit.bam")
         self.circuitNodePath.reparentTo(self.render)
         self.circuitNodePath.setScale(1.0, 1.0, 1.0)
-        self.circuitNodePath.setPos(1.5,-5,0)
+        self.circuitNodePath.setPos(1.0,-5,0)
         self.circuitNodePath.setHpr(0,90, 270)
 
         # load the environment model.
         self.scene = self.loader.loadModel("models/environment")
         self.scene.reparentTo(self.render)
         self.scene.setScale(1.25, 1.25, 1.25)
-        self.scene.setPos(0,0, -1)
+        self.scene.setPos(0,0, -0.1)
  
-#        # Load the environment model.
-#        self.box = self.loader.loadModel("models/box")
-#        # Reparent the model to render.
-#        self.box.reparentTo(self.render)
-#        # Apply scale and position transforms on the model.
-#        self.box.setScale(1.0, 1.0, 1.0)
-#        self.box.setPos(0, 0, 0.0)
+        # Load the environment model.
+        self.car = self.loader.loadModel("models/box")
+        self.car.reparentTo(self.render)
+        self.car.setScale(1.0, 1.0, 1.0)
+        self.car.setPos(0, 0, 0.0)
 
-        self.forward_speed = 150.0 # units per second
-        self.backward_speed = 10.0
-        self.rotate_speed = 6000.0
-        self.forward_button = KeyboardButton.ascii_key('z')
-        self.backward_button = KeyboardButton.ascii_key('s')
-        self.right_button = KeyboardButton.ascii_key('d')
-        self.left_button = KeyboardButton.ascii_key('q')
-        self.quit_button = KeyboardButton.ascii_key('x')
+        # Lights
+        render.clearLight()
+        
+        alight = AmbientLight('ambientLight')
+        alight.setColor(Vec4(0.4, 0.4, 0.4, 1))
+        alightNP = render.attachNewNode(alight)
+        render.setLight(alightNP)
 
-        #♠self.camera.lens.setAspectRatio(1280.0 / 720.0)
-        self.camLens.setFov(70)
-        self.camLens.setNear(0.001)
-        self.camera.setPos(0.5,0,0.2)
+        dlight = DirectionalLight('directionalLight')
+        dlight.setDirection(Vec3(1, 1, -1))
+        dlight.setColor(Vec4(1.0, 1.0, 0.8, 1))
+        dlightNP = render.attachNewNode(dlight)
+        render.setLight(dlightNP)
+
+        # camera
+        self.camLens.setFov(80)
+        self.camLens.setNear(0.01)
+        self.camera.setPos(0.0,0.1,0.2)
         self.camera.setHpr(0,0,0)
-        #self.camera.setHpr(0,-20,0)
-        #self.camera.reparentTo(self.box)
-
+        self.camera.setHpr(0,-12,0)
+        self.camera.reparentTo(self.car)
+    
         # osd
         self.dr = self.win.makeDisplayRegion()
         self.dr.setSort(20)
@@ -92,22 +94,32 @@ class MyApp(ShowBase):
         myCamera2d.reparentTo(myRender2d)
         self.dr.setCamera(myCamera2d)
 
-        lines = LineSegs()
-        lines.moveTo(100,0,0)
-        lines.drawTo(100,500,0)
-        lines.setThickness(4)
-        node = lines.create()
-        np = NodePath(node)
-        np.reparentTo(myRender2d)
+#        lines = LineSegs()
+#        lines.moveTo(100,0,0)
+#        lines.drawTo(100,500,0)
+#        lines.setThickness(4)
+#        node = lines.create()
+#        np = NodePath(node)
+#        np.reparentTo(myRender2d)
         
+        # controls
+        self.quit_button = KeyboardButton.ascii_key('q')
+        self.quit = False
 
-        self.taskMgr.add(self.move_task, 'modeTask')
+        # tasks
+        self.taskMgr.add(self.move_task, 'moveTask')
  
     def windDown():
         # De-initialization code goes here!
         self.quit = True
   
     def move_task(self, task):
+
+        # Check if the player is holding keys
+        is_down = self.mouseWatcherNode.is_button_down
+        if is_down(self.quit_button):
+            self.quit  = True
+            print('q')
         
         # gamepad inputs
         self.direction = self.gamepad.findAxis(InputDevice.Axis.right_x).value
@@ -118,40 +130,12 @@ class MyApp(ShowBase):
         self.throttle -= 0.41
         
         print(str(self.direction) + " " + str(self.throttle))
-
-        xspeed = self.throttle * 1000.0
-        wspeed = self.direction * 10000.0
-     
-        # Check if the player is holding W or S
-        is_down = self.mouseWatcherNode.is_button_down
-     
-        if is_down(self.quit_button):
-            self.quit  = True
-            print('q')
-
-        if is_down(self.forward_button):
-            xspeed += self.forward_speed
-            print('f')
-     
-        if is_down(self.backward_button):
-            xspeed -= self.backward_speed
-            print('b')
-     
-        if is_down(self.right_button):
-            wspeed -= self.rotate_speed
-            print('r')
-     
-        if is_down(self.left_button):
-            wspeed += self.rotate_speed
-            print('l')
-            
-        # Move the player
-        y_delta = xspeed * task.getDt()
-        w_delta = wspeed * task.getDt()
-        #self.box.setHpr(self.box, w_delta, 0, 0)
-        #self.box.set_y(self.box, y_delta)
-        self.camera.setHpr(self.camera, w_delta, 0, 0)
-        self.camera.set_y(self.camera, y_delta)
+        
+        # move
+        y_delta = self.throttle * 1000.0 * task.getDt()
+        w_delta = self.direction * 10000.0 * task.getDt()
+        self.car.setHpr(self.car, w_delta, 0, 0)
+        self.car.set_y(self.car, y_delta)
         
         return Task.cont
 
