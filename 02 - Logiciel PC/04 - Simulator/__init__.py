@@ -176,13 +176,17 @@ class MyApp(ShowBase):
 app = MyApp()
 #app.run()
 counter = 0
+dataset_file = open('C:/tmp/' + 'dataset/dataset.txt',  "w")
 while True:
     taskMgr.step()
     frame = app.get_camera_image()
     frame = cv2.resize(frame[:, :, 0:3], (160, 90),   interpolation = cv2.INTER_AREA)
-    cv2.imwrite('C:/tmp/render' + str(counter) + '.jpg', frame) 
+    filename = 'dataset/render' + str(counter) + '.jpg'
+    cv2.imwrite('C:/tmp/' + filename, frame) 
     counter += 1
-
+    dataset_file.write(filename +';' + str(int(app.direction*127.0+128.0)) + ';' + str(int(app.throttle*127.0+128.0)) + '\n')
+    dataset_file.flush()
+dataset_file.close()
     #print(str(frame[:, :, 0:3].shape))
     
     
