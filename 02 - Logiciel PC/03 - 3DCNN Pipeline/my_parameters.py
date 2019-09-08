@@ -1,8 +1,8 @@
 ## PARAMETERS ##################################################################
 
-# inputs/outputs
-dataset_dir = [ "dataset_002", "dataset_004","dataset_003"]     ## add training dataset here
-testset_dir = [ "dataset_002", "dataset_004","dataset_003"]     ## add test dataset here (en attendant, on remet les training sets)
+# inputs/outputs "dataset_002", "dataset_003", "dataset_004"
+dataset_dir = [ "dataset_002", "dataset_003", "dataset_004" ]     ## add training dataset here
+testset_dir = [ "dataset_002", "dataset_003", "dataset_004" ]     ## add test dataset here (en attendant, on remet les training sets)
 dataset_filename = "dataset.txt"    ## do not change
 video_dir = "video"    ## do not change
 dataset_preview_filename = "dataset_preview"    ## do not change
@@ -19,8 +19,8 @@ picture_final_height = 64    ##default 64 pixels (part of picture processed by C
 blur_kernel = (3,3)         ## from (1,1) to (5,5)
 
 # direction and throttle filter
-direction_alpha = 0.01     ## default 0.01
-throttle_alpha = 0.01       ## default 0.01
+direction_alpha = 0.1     ## default 0.01
+throttle_alpha = 0.1       ## default 0.01
 
 # picture sequence for CNN
 depth = 6           ## default 6 frames processed by CNN
@@ -46,13 +46,13 @@ full_connected_hidden_layers= [
 
 # hyperparameters
 hyp_train_valid_dataset_ratio = 0.05
-hyp_batch_size = 128 
-hyp_epoch = 100
+hyp_batch_size = 256 
+hyp_epoch = 120
 hyp_lr = 0.0001 
 hyp_lr_decay = 0.0
 hyp_l2_regularization = 0.0001 
 hyp_min_delta=0.0001
-hyp_patience=20
+hyp_patience=30
 
 ## RESULTS ##################################################################
 

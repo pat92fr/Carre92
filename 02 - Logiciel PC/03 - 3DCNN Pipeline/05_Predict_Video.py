@@ -40,7 +40,7 @@ picture_height_crop = picture_initial_height-picture_final_height
 
 # inputs
 input_directory = 'testset'
-input_filename = 'capture_Thu_Aug_15_19-50-46_2019'
+input_filename = '0001-1000' #'capture_Thu_Aug_15_19-50-46_2019'
 
 # outputs
 ouput_directory = 'predict'
