@@ -157,15 +157,6 @@ class MyApp(ShowBase):
         image.shape = (tex.getYSize(), tex.getXSize(), tex.getNumComponents())
         image = np.flipud(image)
         return image
-        
-    # Define a procedure to move the camera.
-#    def spinCameraTask(self, task):
-#        angleDegrees = task.time * 6.0
-#        angleRadians = angleDegrees * (pi / 180.0)
-#        distance = 10
-#        self.camera.setPos(distance * sin(angleRadians), -distance * cos(angleRadians), 2)
-#        self.camera.setHpr(angleDegrees, 0, 0)
-#        return Task.cont
  
 app = MyApp()
 #app.run()
@@ -177,12 +168,13 @@ dataset_file = open(root_dir+'/'+dataset_dir+'/'+'dataset.txt',  'w')
 counter = 0
 while not app.quit:
     taskMgr.step()
-    frame = app.get_camera_image()
-    frame = cv2.resize(frame[:, :, 0:3], (160, 90),   interpolation = cv2.INTER_AREA)
-    filename = dataset_dir + '/render_' + str(counter) + '.jpg'
-    cv2.imwrite(root_dir + '/' + filename, frame) 
-    dataset_file.write(filename +';' + str(int(128.0-app.direction*127.0)) + ';' + str(int(app.throttle*127.0+128.0)) + '\n')
-    dataset_file.flush()
+    if counter != 0: # first frame buffer is empty, skip it!
+        frame = app.get_camera_image()
+        frame = cv2.resize(frame[:, :, 0:3], (160, 90),   interpolation = cv2.INTER_AREA)
+        filename = dataset_dir + '/render_' + str(counter) + '.jpg'
+        cv2.imwrite(root_dir + '/' + filename, frame) 
+        dataset_file.write(filename +';' + str(int(128.0-app.direction*127.0*1.4)) + ';' + str(int(app.throttle*127.0*1.4+128.0)) + '\n') # *1.4 gain
+        dataset_file.flush()
     counter += 1
 dataset_file.close()
 print('m:' + str(counter))
