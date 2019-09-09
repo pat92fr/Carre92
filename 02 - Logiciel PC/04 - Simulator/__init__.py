@@ -6,6 +6,8 @@ import cv2
 from direct.showbase.ShowBase import ShowBase
 from direct.task import Task
 from panda3d.core import *
+from panda3d.core import Material
+from panda3d.core import Spotlight
 from os import mkdir
 #from direct.actor.Actor import Actor
 #from direct.interval.IntervalGlobal import Sequence
@@ -36,13 +38,20 @@ class MyApp(ShowBase):
                 
         # Disable the camera trackball controls.
         self.disableMouse()
- 
+
+        # create material
+        myMaterial = Material()
+        myMaterial.setShininess(0.5) #Make this material shiny
+        myMaterial.setSpecular(LColor(255,255,0,0))
+        #myMaterial.setAmbient((0, 0, 1, 1)) #Make this material blue
+
         # load circuit model
-        self.circuitNodePath = self.loader.loadModel("/c/tmp/circuit.bam")
+        self.circuitNodePath = self.loader.loadModel("/c/tmp/media/circuit.bam")
         self.circuitNodePath.reparentTo(self.render)
         self.circuitNodePath.setScale(1.0, 1.0, 1.0)
         self.circuitNodePath.setPos(1.0,-5,0)
         self.circuitNodePath.setHpr(0,90, 270)
+        self.circuitNodePath.setMaterial(myMaterial)
 
         # load the environment model.
         self.scene = self.loader.loadModel("models/environment")
@@ -66,10 +75,20 @@ class MyApp(ShowBase):
 
         dlight = DirectionalLight('directionalLight')
         dlight.setDirection(Vec3(1, 1, -1))
-        dlight.setColor(Vec4(1.0, 1.0, 0.8, 1))
+        #dlight.setColor(Vec4(1.0, 1.0, 0.8, 1))
+        dlight.setColorTemperature(6500)
         dlightNP = render.attachNewNode(dlight)
         render.setLight(dlightNP)
 
+##        s1light = Spotlight('spot1Light')
+##        s1light.setColor(Vec4(0.0, 1.0, 0.0, 1.0))
+##        lens = PerspectiveLens()
+##        s1light.setLens(lens)
+##        s1light.setPos(0, 0, 10)
+##        s1light.lookAt(self.circuitNodePath)
+##        s1lightNP = render.attachNewNode(s1light)
+##        render.setLight(s1lightNP)
+        
         # camera
         self.camLens.setFov(80)
         self.camLens.setNear(0.01)
@@ -132,8 +151,10 @@ class MyApp(ShowBase):
         print(str(self.direction) + " " + str(self.throttle))
         
         # move
-        y_delta = self.throttle * 1000.0 * task.getDt()
-        w_delta = self.direction * 10000.0 * task.getDt()
+        #y_delta = self.throttle * 1000.0 * task.getDt()
+        #w_delta = self.direction * 10000.0 * task.getDt()
+        y_delta = self.throttle * 100.0 * task.getDt()
+        w_delta = self.direction * 1000.0 * task.getDt()
         self.car.setHpr(self.car, w_delta, 0, 0)
         self.car.set_y(self.car, y_delta)
         
@@ -172,9 +193,9 @@ while not app.quit:
         frame = app.get_camera_image()
         frame = cv2.resize(frame[:, :, 0:3], (160, 90),   interpolation = cv2.INTER_AREA)
         filename = dataset_dir + '/render_' + str(counter) + '.jpg'
-        cv2.imwrite(root_dir + '/' + filename, frame) 
-        dataset_file.write(filename +';' + str(int(128.0-app.direction*127.0*1.4)) + ';' + str(int(app.throttle*127.0*1.4+128.0)) + '\n') # *1.4 gain
-        dataset_file.flush()
+        ##cv2.imwrite(root_dir + '/' + filename, frame) 
+        ##dataset_file.write(filename +';' + str(int(128.0-app.direction*127.0*1.4)) + ';' + str(int(app.throttle*127.0*1.4+128.0)) + '\n') # *1.4 gain
+        ##dataset_file.flush()
     counter += 1
 dataset_file.close()
 print('m:' + str(counter))
