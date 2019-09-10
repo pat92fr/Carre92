@@ -4,3 +4,5 @@
 - aligner la course physique avec la course virtuelle du simulateur
 - vérifier aiTHR suite à l'apprentissage, éliminer si trop éloignée ou modérer dans l'équiation de cout
 - faire de l'augmentation (lumière,neural style trfr) sur le volume si possible, si non sur les images.
+- remettre data augmentation pour eclairage (pattern)
+- refaire un test avec 2D conv et data augmentation
