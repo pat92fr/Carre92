@@ -27,7 +27,9 @@ def build_model(input_shape, conv_layers, full_connected_hidden_layers, output_s
             if conv_layer_count == 0:
                 model.add(Conv3D(filters=c[1], kernel_size=c[2], strides=c[3], dilation_rate = (1, 1, 1), padding='valid', activation='relu', input_shape=input_shape))
             else:
-                model.add(Conv3D(filters=c[1], kernel_size=c[2], strides=c[3], dilation_rate = (1, 1, 1), padding='valid', activation='relu'))
+                model.add(Conv3D(filters=c[1], kernel_size=c[2], strides=c[3], dilation_rate = (1, 1, 1), padding='valid'))
+                model.add(BatchNormalization())
+                model.add(Activation('relu'))
         if c[0] == 'maxpooling2D':
             model.add(MaxPooling2D(pool_size=c[1],strides=c[2]))
         if c[0] == 'avgpooling2D':

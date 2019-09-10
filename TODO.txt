@@ -1,3 +1,6 @@
 - trimer la voiture
 - réduire la course de la direction et des gaz à la RC.
 	* cause : plage trop faible de direction pour l'apprentissage.
+- aligner la course physique avec la course virtuelle du simulateur
+- vérifier aiTHR suite à l'apprentissage, éliminer si trop éloignée ou modérer dans l'équiation de cout
+- faire de l'augmentation (lumière,neural style trfr) sur le volume si possible, si non sur les images.
