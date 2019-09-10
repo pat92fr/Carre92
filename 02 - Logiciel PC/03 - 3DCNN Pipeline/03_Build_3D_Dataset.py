@@ -25,7 +25,6 @@ def build_sequence_dataset(X, Y, depth, skip):
         x = np.array(x)
         assert(x.shape == picture_sequence_shape)
         y = Y[i+depth*skip]
-        assert(y.shape == (2, ))
         Xsequence.append(x)
         Ysequence.append(y)
     # repeat and flip hor
@@ -36,17 +35,16 @@ def build_sequence_dataset(X, Y, depth, skip):
         x = np.array(x)
         assert(x.shape == picture_sequence_shape)
         y = -Y[i+depth*skip]
-        assert(y.shape == (2, ))
         Xsequence.append(x)
         Ysequence.append(y)
     print("Done.")
     print("Sequence dataset, size: "+str(len(Xsequence))+"/"+str(len(Ysequence)))
     Xsequence = np.array(Xsequence)
-    Ysequence = np.array(Ysequence)
+    Ysequence = np.array(Ysequence).T
     print("Xsequence:" + str(Xsequence.shape))
     print("Ysequence:" + str(Ysequence.shape))
     assert( Xsequence.shape == (2*(m-depth*skip),params.depth, consts.picture_initial_height, consts.picture_initial_width, 1))
-    assert( Ysequence.shape == (2*(m-depth*skip),2))
+    assert( Ysequence.shape == (2*(m-depth*skip),))
     return Xsequence,Ysequence
 
 ## MAIN ########################################################################

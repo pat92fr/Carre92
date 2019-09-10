@@ -33,27 +33,20 @@ def load_dataset(dataset_dir,  dataset_filename,  display = False):
     X = []
     Y = []
     filtered_direction = 0.0
-    filtered_throttle = 0.0
     direction_beta = 1.0-params.direction_alpha
-    throttle_beta = 1.0-params.throttle_alpha
     filtered_counter = 0
     for l in lines:
         fields = l.split(';')
         filename = fields[0]
         # build example
         x = load_and_preprocess_picture(filename)
-        y = []
+        y = 0.0
         filtered_counter += 1
         # EWMA on DIR (with bias correction)
         raw_dir = float(fields[1])/255.0*2.0-1.0
         filtered_direction = params.direction_alpha * raw_dir + direction_beta*filtered_direction
         corrected_direction = filtered_direction / (1.0 - pow(direction_beta, float(filtered_counter)))
-        y.append( corrected_direction ) # DIR
-        # TODO : EWMA on THR (with bias correction)
-        raw_thr = float(fields[2])/255.0*2.0-1.0
-        filtered_throttle = params.throttle_alpha * raw_thr + throttle_beta*filtered_throttle
-        corrected_throttle = filtered_throttle / (1.0 - pow(throttle_beta, float(filtered_counter)))
-        y.append( corrected_throttle ) # DIR
+        y = corrected_direction
         # append example
         X.append(x)
         Y.append(y)
@@ -62,17 +55,17 @@ def load_dataset(dataset_dir,  dataset_filename,  display = False):
             print(str(y))
             plt.clf()
             plt.imshow(x.reshape(consts.picture_initial_height,consts.picture_initial_width), cmap = 'gray' )
-            plt.axvline(x=(y[0]+1.0)/2.0*consts.picture_initial_width,linewidth=2, color='g')
+            plt.axvline(x=(y+1.0)/2.0*consts.picture_initial_width,linewidth=2, color='g')
             plt.axvline(x=consts.picture_initial_width/2,linewidth=2)
             plt.axhline(y=params.picture_height_crop,linewidth=2, marker="v", linestyle='--')
             plt.axhline(y=consts.picture_initial_height/2,linewidth=2)
             plt.pause(0.0001)        
     print("Done.")
     X = np.array(X, ndmin=4)
-    Y = np.array(Y, ndmin=2)
+    Y = np.array(np.transpose(Y))
     print("X.shape:" + str(X.shape))
     print("Y.shape:" + str(Y.shape))
     assert( X.shape == (m,consts.picture_initial_height, consts.picture_initial_width, 1))
-    assert( Y.shape == (m,2))
+    assert( Y.shape == (m,))
     return X, Y 
 

@@ -19,14 +19,10 @@ def build_model(input_shape, conv_layers, full_connected_hidden_layers, output_s
         if c[0] == 'norm':
             model.add(Lambda(lambda x: x / 255.0 - 0.5))
         if c[0] == 'conv2D':
-            if conv_layer_count == 0:
-                model.add(Conv2D(filters=c[1], kernel_size=c[2], strides=c[3], dilation_rate = (1, 1), padding='valid', activation='relu', input_shape=input_shape))
-            else:
-                model.add(Conv2D(filters=c[1], kernel_size=c[2], strides=c[3], dilation_rate = (1, 1), padding='valid', activation='relu'))
+                model.add(Conv2D(filters=c[1], kernel_size=c[2], strides=c[3], dilation_rate = (1, 1), padding='valid'))
+                model.add(BatchNormalization())
+                model.add(Activation('relu'))
         if c[0] == 'conv3D':
-            if conv_layer_count == 0:
-                model.add(Conv3D(filters=c[1], kernel_size=c[2], strides=c[3], dilation_rate = (1, 1, 1), padding='valid', activation='relu', input_shape=input_shape))
-            else:
                 model.add(Conv3D(filters=c[1], kernel_size=c[2], strides=c[3], dilation_rate = (1, 1, 1), padding='valid'))
                 model.add(BatchNormalization())
                 model.add(Activation('relu'))
@@ -51,7 +47,7 @@ def build_model(input_shape, conv_layers, full_connected_hidden_layers, output_s
         model.add(BatchNormalization())
         model.add(Activation(h[1]))
         model.add(Dropout(h[2]))
-    # design model : last layer with 2 outputs
+    # design model : last layer with outputs
     model.add(Dense(output_shape,activity_regularizer=l2(l2_regularization)))
     model.add(Activation("linear"))
     print("Done.")

@@ -56,7 +56,7 @@ for x, y in zip(X, Y):
     cv2.rectangle(overlay, (0,0), (consts.picture_initial_width,params.picture_height_crop), color=(255, 0, 0), thickness =-1)
     cv2.line(overlay, (0,int(consts.picture_initial_height/2)), (consts.picture_initial_width,int(consts.picture_initial_height/2)), color=(255, 0, 0), thickness = 1)
     cv2.line(overlay, (int(consts.picture_initial_width/2),0), (int(consts.picture_initial_width/2),consts.picture_initial_height), color=(255, 0, 0), thickness = 1)
-    cv2.line(overlay, (int((y[0]+1.0)/2.0*consts.picture_initial_width), 0), (int((y[0]+1.0)/2.0*consts.picture_initial_width),consts.picture_initial_height), color=(0, 255, 0), thickness = 2)
+    cv2.line(overlay, (int((y+1.0)/2.0*consts.picture_initial_width), 0), (int((y+1.0)/2.0*consts.picture_initial_width),consts.picture_initial_height), color=(0, 255, 0), thickness = 2)
     cv2.line(overlay, (int((dir+1.0)/2.0*consts.picture_initial_width), 0), (int((dir+1.0)/2.0*consts.picture_initial_width),consts.picture_initial_height), color=(0, 0, 255), thickness = 2)
     alpha = 0.30
     cv2.addWeighted(overlay, alpha, frame, 1 - alpha, 0, output)

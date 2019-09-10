@@ -95,7 +95,7 @@ print("Yvalid, size: "+str(len(Yvalid)))
 #training_generator = data_generator(Xtrain,Ytrain,hyp_batch_size)
 #validation_generator = data_generator(Xvalid,Yvalid,hyp_batch_size)
 # design model
-model = mtools.build_model(picture_sequence_shape, params.conv_layers, params.full_connected_hidden_layers, 2, params.hyp_l2_regularization)
+model = mtools.build_model(picture_sequence_shape, params.conv_layers, params.full_connected_hidden_layers, 1, params.hyp_l2_regularization)
 # compile model
 opt = Adam(lr=params.hyp_lr,decay=params.hyp_lr_decay)
 model.compile(loss='mean_squared_error', optimizer=opt, metrics=['mse'])

@@ -135,7 +135,6 @@ class MyApp(ShowBase):
         self.autopilot = True
 
         self.autopilot_dir = 0.0 
-        self.autopilot_thr = 0.0 
 
         # tasks
         self.taskMgr.add(self.move_task, 'moveTask')
@@ -183,7 +182,7 @@ class MyApp(ShowBase):
 
         if self.autopilot:
             self.direction = self.autopilot_dir
-            self.throttle = 0.11+self.autopilot_thr
+            self.throttle = 0.18
 
             # move
             #y_delta = self.throttle * 1000.0 * task.getDt()
@@ -258,11 +257,9 @@ while not app.quit:
     if app.autopilot:
         yprediction = model.predict(xsequence.reshape(1,params.depth,consts.picture_initial_height,consts.picture_initial_width,1))
         app.autopilot_dir = -yprediction.item(0)*2.0
-        app.autopilot_thr = yprediction.item(1)*0.5
-        print(str(counter) + "aiDIR:" + str(app.autopilot_dir) + "  aiTHR:" + str(app.autopilot_thr))
+        print(str(counter) + " aiDIR:" + str(app.autopilot_dir))
     else:
         app.autopilot_dir = 0
-        app.autopilot_thr = 0 
     # dataset recording
     if app.recording and not app.autopilot and counter != 0: # first frame buffer is empty, skip it!
         filename = dataset_dir + '/render_' + str(record_counter) + '.jpg'

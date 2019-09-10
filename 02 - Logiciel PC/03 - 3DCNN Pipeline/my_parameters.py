@@ -1,8 +1,8 @@
 ## PARAMETERS ##################################################################
 
 # inputs/outputs "dataset_002", "dataset_003", "dataset_004",
-dataset_dir = [  "dataset_005", "dataset_006" ]     ## add training dataset here
-testset_dir = [ "dataset_005", "dataset_006" ]     ## add test dataset here (en attendant, on remet les training sets)
+dataset_dir = [  "dataset_005" ]     ## add training dataset here
+testset_dir = [  "dataset_006" ]     ## add test dataset here (en attendant, on remet les training sets)
 dataset_filename = "dataset.txt"    ## do not change
 video_dir = "video"    ## do not change
 dataset_preview_filename = "dataset_preview"    ## do not change
@@ -20,11 +20,10 @@ blur_kernel = (3,3)         ## from (1,1) to (5,5)
 
 # direction and throttle filter
 direction_alpha = 0.1     ## default 0.01
-throttle_alpha = 0.1       ## default 0.01
 
 # picture sequence for CNN
-depth = 6           ## default 6 frames processed by CNN
-skip = 3            ## default 3 frames skiped between each pair of frames processed by CNN
+depth = 3           ## default 6 frames processed by CNN
+skip = 5            ## default 3 frames skiped between each pair of frames processed by CNN
 
 # CNN parameters
 ### see build_3d_cnn https://github.com/autorope/donkeycar/blob/dev/donkeycar/parts/keras.py
@@ -37,30 +36,30 @@ conv_layers = [
     ('maxpooling3D', (1,2,2), (1,2,2)),     ## size, stride
     ('dropout',  0.2),
     
-    ('conv3D', 12, (3,3,3), (1,1,1)),
+    ('conv3D', 12, (1,3,3), (1,1,1)),
     ('maxpooling3D', (1,2,2), (1,2,2)),
     ('dropout',  0.2),
 
-    ('conv3D', 16, (2,3,3), (1,1,1)),
+    ('conv3D', 16, (1,3,3), (1,1,1)),
     ('maxpooling3D', (1,2,2), (1,2,2)),
     ('dropout',  0.2),
 
    
 ]
 full_connected_hidden_layers= [
-    (64, 'relu',  0.2),         ## default 256 units in 1srt hidden layer, 10% dropout
-    (32, 'relu',  0.2)       ## default 128 units in 2nd hidden layer, 10% dropout
+    (32, 'relu',  0.2),         ## default 256 units in 1srt hidden layer, 10% dropout
+    (16, 'relu',  0.2)       ## default 128 units in 2nd hidden layer, 10% dropout
 ]      
 
 # hyperparameters
 hyp_train_valid_dataset_ratio = 0.05
 hyp_batch_size = 128 
-hyp_epoch = 120
+hyp_epoch = 30
 hyp_lr = 0.0001 
 hyp_lr_decay = 0.0
 hyp_l2_regularization = 0.0001 
 hyp_min_delta=0.0001
-hyp_patience=30
+hyp_patience=20
 
 ## RESULTS ##################################################################
 
@@ -133,4 +132,40 @@ hyp_patience=30
 ## - 91s - loss: 0.0039 - mean_squared_error: 0.0028 - val_loss: 0.0154 - val_mean_squared_error: 0.0149
 ##Epoch 107/120
 ## - 91s - loss: 0.0039 - mean_squared_error: 0.0028 - val_loss: 0.0020 - val_mean_squared_error: 9.6055e-04
-## 
+##
+
+
+
+##
+### picture sequence for CNN
+##depth = 3           ## default 6 frames processed by CNN
+##skip = 5            ## default 3 frames skiped between each pair of frames processed by CNN
+##
+### CNN parameters
+##### see build_3d_cnn https://github.com/autorope/donkeycar/blob/dev/donkeycar/parts/keras.py
+##### Credit: https://github.com/jessecha/DNRacing/blob/master/3D_CNN_Model/model.py
+##conv_layers = [
+##    ('crop3D', picture_height_crop),         ## do not change
+##    ('norm', 0),                                  ## do not change
+##    
+##    ('conv3D', 8, (3,5,5), (1,2,2)),           ## filters, kernel_size, stride
+##    ('maxpooling3D', (1,2,2), (1,2,2)),     ## size, stride
+##    ('dropout',  0.2),
+##    
+##    ('conv3D', 12, (1,3,3), (1,1,1)),
+##    ('maxpooling3D', (1,2,2), (1,2,2)),
+##    ('dropout',  0.2),
+##
+##    ('conv3D', 16, (1,3,3), (1,1,1)),
+##    ('maxpooling3D', (1,2,2), (1,2,2)),
+##    ('dropout',  0.2),
+##
+##   
+##]
+##full_connected_hidden_layers= [
+##    (32, 'relu',  0.2),         ## default 256 units in 1srt hidden layer, 10% dropout
+##    (16, 'relu',  0.2)       ## default 128 units in 2nd hidden layer, 10% dropout
+##]   
+##Epoch 30/30
+## - 37s - loss: 0.0050 - mean_squared_error: 0.0042 - val_loss: 0.0033 - val_mean_squared_error: 0.0028
+ 
