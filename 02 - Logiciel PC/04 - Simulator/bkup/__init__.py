@@ -182,7 +182,7 @@ class MyApp(ShowBase):
 
         if self.autopilot:
             self.direction = self.autopilot_dir
-            self.throttle = 0.5 #0.12
+            self.throttle = 0.12
 
             # move
             #y_delta = self.throttle * 1000.0 * task.getDt()
@@ -255,10 +255,8 @@ while not app.quit:
     assert(xsequence.shape == sequence_shape)
     #prediction
     if app.autopilot:
-        #yprediction = model.predict(xsequence.reshape(1,params.depth,consts.picture_initial_height,consts.picture_initial_width,1))
-        yprediction = model.predict(gray.reshape(1,consts.picture_initial_height,consts.picture_initial_width,1))
-        #app.autopilot_dir = -yprediction.item(0)*2.0
-        app.autopilot_dir = -yprediction.item(0)*5.0
+        yprediction = model.predict(xsequence.reshape(1,params.depth,consts.picture_initial_height,consts.picture_initial_width,1))
+        app.autopilot_dir = -yprediction.item(0)*2.0
         print(str(counter) + " aiDIR:" + str(app.autopilot_dir))
     else:
         app.autopilot_dir = 0
