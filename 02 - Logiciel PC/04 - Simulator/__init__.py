@@ -132,7 +132,7 @@ class MyApp(ShowBase):
         self.recording = False
         self.autopilot_button = KeyboardButton.ascii_key('a')
         self.humanpilot_button = KeyboardButton.ascii_key('m')
-        self.autopilot = True
+        self.autopilot = False
 
         self.autopilot_dir = 0.0 
         self.autopilot_thr = 0.0 
