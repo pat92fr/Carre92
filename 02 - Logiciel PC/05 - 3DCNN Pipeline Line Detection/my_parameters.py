@@ -4,6 +4,7 @@
 dataset_dir = [  "dataset_005" ]     ## add training dataset here
 testset_dir = [  "dataset_006" ]     ## add test dataset here (en attendant, on remet les training sets)
 dataset_filename = "dataset.txt"    ## do not change
+label_filename = "label.txt"     ## do not change
 video_dir = "video"    ## do not change
 dataset_preview_filename = "dataset_preview"    ## do not change
 dataset_train_valid_3D_dir = "dataset_train_valid_3D"    ## do not change

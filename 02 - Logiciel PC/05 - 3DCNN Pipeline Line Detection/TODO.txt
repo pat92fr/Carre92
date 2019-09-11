@@ -1,0 +1,10 @@
+try mkdir
+regul + dropout
+Couper la ligne inférieure,
+Optimiser la taille du dernier volume
+Refactoriser l'outil de prédiction
+Distribuer les taches d'entrainnement
+
+
+
+
