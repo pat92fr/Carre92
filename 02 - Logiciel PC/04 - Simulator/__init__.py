@@ -132,7 +132,7 @@ class MyApp(ShowBase):
         self.recording = False
         self.autopilot_button = KeyboardButton.ascii_key('a')
         self.humanpilot_button = KeyboardButton.ascii_key('m')
-        self.autopilot = False
+        self.autopilot = True
 
         self.autopilot_dir = 0.0 
 
@@ -258,7 +258,8 @@ while not app.quit:
         #yprediction = model.predict(xsequence.reshape(1,params.depth,consts.picture_initial_height,consts.picture_initial_width,1))
         yprediction = model.predict(gray.reshape(1,consts.picture_initial_height,consts.picture_initial_width,1))
         #app.autopilot_dir = -yprediction.item(0)*2.0
-        app.autopilot_dir = -yprediction.item(0)*5.0
+        #app.autopilot_dir = -yprediction.item(0)*5.0
+        app.autopilot_dir = -yprediction.item(0)*6.0
         print(str(counter) + " aiDIR:" + str(app.autopilot_dir))
     else:
         app.autopilot_dir = 0

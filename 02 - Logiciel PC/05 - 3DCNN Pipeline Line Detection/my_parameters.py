@@ -37,7 +37,7 @@ conv_layers = [
     ('conv2D', 8, (5,5), (2,2)),           ## filters, kernel_size, stride
     ('maxpooling2D', (2,2), (2,2)),     ## size, stride
     ('dropout',  0.2),
-    
+
 ]
 full_connected_hidden_layers= [
     (8, 'relu',  0.2),         ## default 256 units in 1srt hidden layer, 10% dropout
@@ -47,7 +47,7 @@ full_connected_hidden_layers= [
 # hyperparameters
 hyp_train_valid_dataset_ratio = 0.05
 hyp_batch_size = 256 
-hyp_epoch = 50
+hyp_epoch = 60
 hyp_lr = 0.0001 
 hyp_lr_decay = 0.0
 hyp_l2_regularization = 0.0001 
@@ -71,4 +71,23 @@ hyp_patience=20
 ##]    
 ##Epoch 20/20
 ## - 3s - loss: 0.0660 - mean_squared_error: 0.0436 - val_loss: 0.0253 - val_mean_squared_error: 0.0060
- 
+
+
+# CNN parameters
+### see build_3d_cnn https://github.com/autorope/donkeycar/blob/dev/donkeycar/parts/keras.py
+### Credit: https://github.com/jessecha/DNRacing/blob/master/3D_CNN_Model/model.py
+##conv_layers = [
+##    ('crop2D', picture_height_crop),         ## do not change
+##    ('norm', 0),                                  ## do not change
+##    
+##    ('conv2D', 8, (5,5), (2,2)),           ## filters, kernel_size, stride
+##    ('maxpooling2D', (2,2), (2,2)),     ## size, stride
+##    ('dropout',  0.2),
+##
+##]
+##full_connected_hidden_layers= [
+##    (8, 'relu',  0.2),         ## default 256 units in 1srt hidden layer, 10% dropout
+###    (16, 'relu',  0.2)       ## default 128 units in 2nd hidden layer, 10% dropout
+##]  
+##Epoch 60/60
+## - 8s - val_mean_squared_error: 0.0030
