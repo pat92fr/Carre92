@@ -8,6 +8,7 @@ import my_datasettools as dtools
 ## GLOBAL ########################################################################
 
 display_ratio = 8
+framerate_ratio = 0.9
 
 mouse_x = 0.0
 
@@ -59,17 +60,19 @@ for dataset_dir in params.dataset_dir:
         if frame_counter == 0:
             cv2.waitKey(3000)
         else:
-            cv2.waitKey(int(1000/60))
+            cv2.waitKey(int(1000.0/60.0*1.0/framerate_ratio))
         X.append(filename)
         Y.append(mouse_x)
         print(str(frame_counter)+'/'+str(m)+' tag:'+str(mouse_x))
         frame_counter += 1
+        ##if frame_counter == 680:
+        ##    break
     print("Done.")
     # open label.txt
     print("Build label file...")
     label_file = open(dataset_dir+"/"+params.label_filename, "w")
     for x, y in zip(X, Y):
-        label_file.write(X+';'+str(int(y))+'\n')
+        label_file.write(x+';'+str(float(y))+'\n')
     label_file.close()
     print("Done.")
 cv2.destroyAllWindows()
