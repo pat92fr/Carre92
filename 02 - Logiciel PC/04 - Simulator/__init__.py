@@ -175,8 +175,8 @@ class MyApp(ShowBase):
             # move
             #y_delta = self.throttle * 1000.0 * task.getDt()
             #w_delta = self.direction * 10000.0 * task.getDt()
-            y_delta = self.throttle * 1000.0 * task.getDt()
-            w_delta = self.direction * 10000.0 * task.getDt()
+            y_delta = self.throttle * 100.0 * task.getDt()
+            w_delta = self.direction * 1000.0 * task.getDt()
             self.car.setHpr(self.car, w_delta, 0, 0)
             self.car.set_y(self.car, y_delta)
 
