@@ -6,6 +6,7 @@ import time
 from keras.optimizers import Adam
 from keras.callbacks import TensorBoard, EarlyStopping, ModelCheckpoint
 #from tensorflow.python.keras.utils import Sequence
+from keras.utils import multi_gpu_model
 
 import my_constants as const
 import my_parameters as params
@@ -99,6 +100,9 @@ model = mtools.build_model(picture_shape, params.conv_layers, params.full_connec
 # compile model
 opt = Adam(lr=params.hyp_lr,decay=params.hyp_lr_decay)
 model.compile(loss='mean_squared_error', optimizer=opt, metrics=['mse'])
+#parallel_model = multi_gpu_model(model, gpus=2)
+#parallel_model.compile(loss='mean_squared_error',optimizer=opt, metrics=['mse'])
+
 # tensorboard
 tensorboard = TensorBoard(log_dir=params.model_dir+"/{}".format(time.time()), batch_size=params.hyp_batch_size)
 # checkpoint
@@ -107,6 +111,7 @@ mc = ModelCheckpoint(params.model_dir+"/"+filepath, monitor='val_mean_squared_er
 # early stopping
 es = EarlyStopping(monitor='val_mean_squared_error', mode='min', min_delta=params.hyp_min_delta, verbose=1, patience=params.hyp_patience)
 ## fit the model
+#history = parallel_model.fit(
 history = model.fit(
     x=Xtrain, 
     y=Ytrain, 

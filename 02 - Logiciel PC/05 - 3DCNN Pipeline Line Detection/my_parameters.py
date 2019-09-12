@@ -1,8 +1,8 @@
 ## PARAMETERS ##################################################################
 
 # inputs/outputs "dataset_002", "dataset_003", "dataset_004",
-dataset_dir = [  "dataset_005" ]     ## add training dataset here
-testset_dir = [  "dataset_006" ]     ## add test dataset here (en attendant, on remet les training sets)
+dataset_dir = [  "dataset_003", "dataset_004", "dataset_007"  ]     ## add training dataset here
+testset_dir = [  "dataset_008" ]     ## add test dataset here (en attendant, on remet les training sets)
 dataset_filename = "dataset.txt"    ## do not change
 label_filename = "label.txt"     ## do not change
 video_dir = "video"    ## do not change
@@ -47,7 +47,7 @@ full_connected_hidden_layers= [
 # hyperparameters
 hyp_train_valid_dataset_ratio = 0.05
 hyp_batch_size = 256 
-hyp_epoch = 20
+hyp_epoch = 50
 hyp_lr = 0.0001 
 hyp_lr_decay = 0.0
 hyp_l2_regularization = 0.0001 
