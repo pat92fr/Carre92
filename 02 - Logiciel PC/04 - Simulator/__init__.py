@@ -259,7 +259,7 @@ while not app.quit:
         yprediction = model.predict(gray.reshape(1,consts.picture_initial_height,consts.picture_initial_width,1))
         #app.autopilot_dir = -yprediction.item(0)*2.0
         #app.autopilot_dir = -yprediction.item(0)*5.0
-        app.autopilot_dir = -yprediction.item(0)*6.0
+        app.autopilot_dir = -yprediction.item(0)*8.0
         print(str(counter) + " aiDIR:" + str(app.autopilot_dir))
     else:
         app.autopilot_dir = 0
