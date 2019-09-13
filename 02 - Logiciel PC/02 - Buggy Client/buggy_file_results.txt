@@ -1,9 +1,9 @@
 lidar_direction_kp=0.0033
 lidar_direction_ki=0.0003
 lidar_direction_kd=0.1
-ai_direction_kp=0.8
+ai_direction_kp=2.0
 ai_direction_ki=0.0
-ai_direction_kd=0.0
+ai_direction_kd=2.0
 speed_kp=10.0
 speed_ki=0.0
 speed_kd=0.0
