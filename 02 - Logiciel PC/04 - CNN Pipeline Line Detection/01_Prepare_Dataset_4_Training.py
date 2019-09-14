@@ -1,6 +1,7 @@
 ## GLOBALS ###################################################################
 
 import numpy as np
+import cv2
 import os
 import shutil
 from sklearn.model_selection import train_test_split
@@ -43,6 +44,11 @@ for dataset_dir in params.train_and_valid_dataset_list:
         # accumulate
         X.append(x)
         Y.append(y)
+        # augmentation & accumulate
+        #flip horizontaly
+        xf = cv2.flip(x.reshape(consts.picture_initial_height,consts.picture_initial_width),1).reshape(consts.picture_initial_height,consts.picture_initial_width,1)
+        X.append(xf)
+        Y.append(-y)        
     print("Done.")
 
 # to numpy
@@ -72,5 +78,6 @@ if os.path.isfile(file):
     shutil.copy(file,file +'.bak')
 
 print("Compressing and writing file to disk...")
-np.savez(file, Xtrain, Ytrain, Xvalid, Yvalid)
+###np.savez_compressed(file, xt=Xtrain, yt=Ytrain, xv=Xvalid, yv=Yvalid) ##compression gain too low
+np.savez(file, xt=Xtrain, yt=Ytrain, xv=Xvalid, yv=Yvalid) ## quicker
 print("Done.")
