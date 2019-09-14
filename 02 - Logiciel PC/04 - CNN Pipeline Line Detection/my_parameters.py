@@ -24,11 +24,11 @@ layers = [
 # hyperparameters
 hyp_train_valid_dataset_ratio = 0.05
 hyp_batch_size = 256 
-hyp_epoch = 10
+hyp_epoch = 100
 hyp_lr = 0.0001 
 hyp_lr_decay = 0.0
-hyp_min_delta=0.0001
-hyp_patience=20
+hyp_min_delta=0.0005
+hyp_patience=12
 
 ## RESULTS ##################################################################
 
@@ -40,6 +40,7 @@ hyp_patience=20
 #     ('conv2D', 8, (5,5), (2,2),'relu'), ## filters, kernel_size, stride, activation
 #     ('maxpooling2D', (2,2), (2,2)),     ## size, stride
 #     ('dropout',  0.2), ## %
+#     ('flatten',  0),  ## do not change ## CONV to FC transition
 #     ('fc', 8, 'relu', 0.0001), ## units, activation, l2
 #     ('dropout',  0.2), ## %
 #     ('fc', 1, 'linear', 0.0001), ## units, activation, l2         

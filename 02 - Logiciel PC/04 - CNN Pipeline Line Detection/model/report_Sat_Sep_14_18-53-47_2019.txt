@@ -1,0 +1,3 @@
+model/model.h5_Sat_Sep_14_18-53-47_2019.h5
+cross-validation scores:[0.004745767990184009, 0.004734227253640436]
+[('crop2D', 26), ('norm', 0), ('conv2D', 8, (5, 5), (2, 2), 'relu'), ('conv2D', 8, (5, 5), (2, 2), 'relu'), ('maxpooling2D', (2, 2), (2, 2)), ('dropout', 0.2), ('flatten', 0), ('fc', 8, 'relu', 0.0001), ('dropout', 0.2), ('fc', 1, 'linear', 0.0001)]

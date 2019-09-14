@@ -5,7 +5,6 @@ import matplotlib.pyplot as plt
 import time
 import os
 import shutil
-#from datetime import datetime
 import random 
 
 from sklearn.utils import shuffle
@@ -81,7 +80,7 @@ def augment_picture(batch_x,batch_y):
         if False:
             skimage.io.imsave(output_dir+"/batch_x/"+"save_"+str(counter)+".jpeg", x) #skimage.util.img_as_ubyte(x))
             counter += 1
-        # reshape for conv2D
+        # reshape for conv
         ###x = x.reshape(90,160,1)
     # output
     return batch_x, batch_y
@@ -143,7 +142,7 @@ opt = Adam(lr=params.hyp_lr,decay=params.hyp_lr_decay)
 plot_losses = PlotLosses()
 
 # early stopping
-es = EarlyStopping(monitor='val_mean_squared_error', mode='min', min_delta=params.hyp_min_delta, verbose=1, patience=params.hyp_patience)
+es = EarlyStopping(monitor='mean_squared_error', mode='min', min_delta=params.hyp_min_delta, verbose=1, patience=params.hyp_patience)
 
 # tensorboard
 tensorboard = TensorBoard(log_dir=consts.model_directory+"/{}".format(time.time()), batch_size=params.hyp_batch_size)
@@ -193,8 +192,9 @@ print("Done.")
 
 ## list all data in history
 ####print(history.history.keys())
+
+## history
 print("Saving history to disk...")
-## plot history
 plt.clf()
 plt.plot(history.history['mean_squared_error'], label='train')
 plt.plot(history.history['val_mean_squared_error'], label='test')
@@ -203,8 +203,18 @@ plt.ylabel('mean_squared_error')
 plt.xlabel('epoch')
 plt.legend(['train', 'test'], loc='upper right')
 plt.savefig(consts.model_directory + '/' + 'history' + '_' + time.asctime().replace(' ', '_').replace(':', '-') + '.png')
-#plt.show()
-#plt.close(fig)    # close the figure
 print("Done.")
 
-# evaluate on tests sets : TODO
+# evaluate model on cross-validation set
+scores = model.evaluate(Xvalid, Yvalid, verbose=1)
+
+# evaluate model on test set
+
+# report
+print("Saving report to disk...")
+report = open(consts.model_directory + '/' + 'report' + '_' + time.asctime().replace(' ', '_').replace(':', '-') + '.txt',"w")
+report.write(consts.model_directory + '/' + consts.model_filename + '_' + time.asctime().replace(' ', '_').replace(':', '-') + '.h5' + '\n')
+report.write("cross-validation scores:" + str(scores) + '\n')
+report.write(str(params.layers) + '\n')
+report.close()
+print("Done.")

@@ -1,6 +1,6 @@
 ## PARAMETER ###################################################################
 
-dataset_list = [ "dataset_002" ] # list the dataset directory names to be labelled
+dataset_list = [ "dataset_002" ] # list the dataset directory names to be visualized
 
 ## GLOBAL ######################################################################
 
@@ -32,7 +32,6 @@ out = cv2.VideoWriter(
     (consts.picture_initial_width,consts.picture_initial_height)
 )
 cv2.namedWindow('image')
-
 
 # for each dataset in the list
 for dataset_dir in dataset_list:
