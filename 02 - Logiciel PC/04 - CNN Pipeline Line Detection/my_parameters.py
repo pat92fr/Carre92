@@ -14,7 +14,7 @@ layers = [
     ('maxpooling2D', (2,2), (2,2)),     ## size, stride
     ('dropout',  0.2), ## %
     ('flatten',  0),  ## do not change ## CONV to FC transition
-    ('fc', 8, 'relu', 0.0001), ## units, activation, l2
+    ('fc', 8, 'tanh', 0.0001), ## units, activation, l2
     ('dropout',  0.2), ## %
     ('fc', 1, 'linear', 0.0001), ## units, activation, l2        
     # do not change unit and activation of the last layer (one output, no activation = linear)
@@ -27,7 +27,7 @@ hyp_batch_size = 256
 hyp_epoch = 100
 hyp_lr = 0.0001 
 hyp_lr_decay = 0.0
-hyp_min_delta=0.0005
+hyp_min_delta=0.0002
 hyp_patience=12
 
 ## RESULTS ##################################################################

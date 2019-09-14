@@ -1,8 +1,7 @@
 ## PARAMETER ###################################################################
 
 dataset_list = [ "dataset_007" ] # list the dataset directory names to be visualized
-layer_start = 2 # bypass crop and lambda layers
-layer_count = 3 # how many layers to visualize (cannot exceed the number of CONV/POOL layers of model)
+show_layer = 2+7 # bypass crop and lambda layers (add2)
 
 ## GLOBAL ######################################################################
 
@@ -27,7 +26,7 @@ model.summary()
 print("Done.")
 
 # internal activation model
-layer_outputs = [layer.output for layer in model.layers[layer_start:layer_start+layer_count]] # Extracts the outputs of the top 4 layers
+layer_outputs = [model.layers[show_layer].output ] # Extracts the outputs of the top 4 layers
 activation_model = models.Model(inputs=model.input, outputs=layer_outputs) # Creates a model that will return these outputs, given the model input
 layer_names = []
 # for layer in model.layers[:layer_count]:
@@ -84,25 +83,23 @@ for dataset_dir in dataset_list:
         y_pre = model.predict(x.reshape(1,consts.picture_initial_height,consts.picture_initial_width,1)).item(0)
         # internal activation model
         activations = activation_model.predict(x.reshape(1,consts.picture_initial_height,consts.picture_initial_width,1))
-        plot_id = 0
-        whole_display_grid = np.zeros((720,160*layer_count),np.uint8)
+        ###print(str(activations.shape))
         for layer_activation in activations: 
+            ###print(str(layer_activation.shape))
             n_features = layer_activation.shape[-1] # Number of features in the feature map
-            size_h = layer_activation.shape[1] #The feature map has shape (1, size, size, n_features).
-            size_w = layer_activation.shape[2] #The feature map has shape (1, size, size, n_features).
+            size_h = layer_activation.shape[0] #The feature map has shape (1, size, size, n_features).
+            size_w = layer_activation.shape[1] #The feature map has shape (1, size, size, n_features).
             display_grid = np.zeros((size_h * n_features, size_w),np.uint8)
             for feature in range(n_features): # Tiles each filter into a big vertical grid
-                channel_image = layer_activation[0,:, :,feature]
+                channel_image = layer_activation[:, :,feature]
                 channel_image -= channel_image.mean() # Post-processes the feature to make it visually palatable
                 channel_image /= channel_image.std()
                 channel_image *= 64
                 channel_image += 128
                 channel_image = np.clip(channel_image, 0, 255).astype('uint8')
-                display_grid[feature * size_h : (feature + 1) * size_h, 0 : size_w] = channel_image
-            frame_activation = cv2.resize(display_grid,160,720)
+                display_grid[(feature) * size_h : (feature+1) * size_h, 0 : size_w] = channel_image
+            frame_activation = cv2.resize(display_grid,(consts.picture_initial_width,consts.picture_final_height*(n_features)))
             cv2.imshow('activations',frame_activation)
-            plot_id +=1
-            #whole_display_grid[:,] = 
         # display example
         frame = x.reshape(consts.picture_initial_height,consts.picture_initial_width)
         frame = cv2.cvtColor(frame,cv2.COLOR_GRAY2RGB)
