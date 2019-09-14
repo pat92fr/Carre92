@@ -1,0 +1,4 @@
+1. Télécharger les datasets (archivers) depuis le OneDrive ou le GoogleDrive
+2. Décompresser les datasets (images) dans un dossier en local (ex.: c:/datasets/)
+	note : la structure obtenue est "c:/datasets/dataset_0nn/" avec nn allant de 01 à xx
+3. Reporter dans le fichier de paramètres le nom du dossier local contenant les datasets
