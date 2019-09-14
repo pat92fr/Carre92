@@ -8,12 +8,12 @@
 dataset_filename = "dataset.txt"    
 label_filename = "label.txt"
 model_filename = "model"    
-dataset_preview_filename = "dataset_preview"
-dataset_prediction_filename = "dataset_prediction" 
+dataset_preview_filename = "dataset_preview.avi"
+dataset_prediction_filename = "dataset_prediction.avi" 
 
 # directory file names
-video_directory = "model"    
-mode_directory = "video"        
+video_directory = "video"    
+model_directory = "model"        
 train_valid_dataset_directory = "train_valid_dataset"
 
 # picture
