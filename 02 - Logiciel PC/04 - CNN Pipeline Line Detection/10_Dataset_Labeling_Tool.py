@@ -34,19 +34,21 @@ for dataset_dir in dataset_list:
     print(dataset_dir)
     
     # load curent dataset.txt 
-    print("Load dataset file...")
+    print("Loading dataset file...")
     dataset_file = open(params.base_dataset_directory+dataset_dir+"/"+consts.dataset_filename, "r")
     content = dataset_file.read()
     dataset_file.close()
     print("Done.")
 
     # parse curentdataset.txt 
-    print("Parse dataset file...")
+    print("Parsing dataset file...")
     lines = content.splitlines()
     m = len(lines)
     print(" m=" + str(m) + " examples")
+    print("Done.")
 
     # for each picture of current dataset
+    print("Labeling...")
     X = []
     Y = []
     frame_counter = 0
@@ -92,7 +94,7 @@ for dataset_dir in dataset_list:
         shutil.copy(label_full_path_name,label_full_path_name+'.bak')
 
     # write label.txt
-    print("Build label file...")
+    print("Writing label file to disk...")
     label_file = open(params.base_dataset_directory+dataset_dir+"/"+consts.label_filename, "w")
     for x, y in zip(X, Y):
         label_file.write(x+';'+str(float(y))+'\n')

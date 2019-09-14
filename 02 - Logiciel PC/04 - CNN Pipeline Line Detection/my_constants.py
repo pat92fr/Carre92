@@ -10,6 +10,7 @@ label_filename = "label.txt"
 model_filename = "model"    
 dataset_preview_filename = "dataset_preview.avi"
 dataset_prediction_filename = "dataset_prediction.avi" 
+train_valid_dataset_filename = "train_and_valid_dataset.npz"
 
 # directory file names
 video_directory = "video"    

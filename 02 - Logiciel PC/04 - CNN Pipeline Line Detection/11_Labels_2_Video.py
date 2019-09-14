@@ -39,19 +39,21 @@ for dataset_dir in dataset_list:
     print(dataset_dir)
 
     # load label.txt 
-    print("Load label file...")
+    print("Loading label file...")
     label_file = open(params.base_dataset_directory+dataset_dir+'/'+consts.label_filename, "r")
     content = label_file.read()
     label_file.close()
     print("Done.")
 
     # parse label.txt 
-    print("Parse label file...")
+    print("Parsing label file...")
     lines = content.splitlines()
     m = len(lines)
     print(" m=" + str(m) + " examples")
+    print("Done.")
 
     # for each example (picture,linepos) of current dataset
+    print("Making video...")
     frame_counter = 0
     for l in lines:
         fields = l.split(';')
@@ -79,6 +81,8 @@ for dataset_dir in dataset_list:
         cv2.waitKey(1)
         frame_counter += 1
 
+    out.release()
+    print("Done.")
+
 #close
-out.release()
 cv2.destroyAllWindows()
