@@ -62,6 +62,7 @@ class MyApp(ShowBase):
         self.lignenoireNodePath = self.loader.loadModel("/c/tmp/media/lignenoire.bam")
         self.ligneblancheNodePath = self.loader.loadModel("/c/tmp/media/ligneblanche.bam")
         self.bordureNodePath = self.loader.loadModel("/c/tmp/media/bordure.bam")
+        self.archNodePath = self.loader.loadModel("/c/tmp/media/arch.bam")
         
         #ligneblancheTexture = loader.loadTexture('/c/tmp/media/white_altered.png')
         #self.ligneblancheNodePath.setTexture(ligneblancheTexture, 1)
@@ -99,6 +100,7 @@ class MyApp(ShowBase):
         self.lignenoireNodePath.reparentTo(self.circuitNodePath)
         self.ligneblancheNodePath.reparentTo(self.circuitNodePath)
         self.bordureNodePath.reparentTo(self.circuitNodePath)
+        self.archNodePath.reparentTo(self.circuitNodePath)
 
         self.circuitNodePath.reparentTo(self.render)
         self.circuitNodePath.setScale(1.0, 1.0, 1.0)
