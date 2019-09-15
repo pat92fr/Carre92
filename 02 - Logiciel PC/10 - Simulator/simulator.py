@@ -66,14 +66,32 @@ class MyApp(ShowBase):
         #ligneblancheTexture = loader.loadTexture('/c/tmp/media/white_altered.png')
         #self.ligneblancheNodePath.setTexture(ligneblancheTexture, 1)
 
-        tex = loader.loadTexture('/c/tmp/media/white.png')
-        #ts = TextureStage('ts')
-        ts = self.solNodePath.findTextureStage('*')
-        ts.setMode(TextureStage.MModulate)
+        tex1 = loader.loadTexture('/c/tmp/media/1_wood.jpg')
+        tex2 = loader.loadTexture('/c/tmp/media/1_wood_alt.jpg')
+
+        print(str(TextureStage.getDefault()))
+        print(str(self.solNodePath.findAllTextureStages()))
+        print(str(self.solNodePath.findTextureStage('*')))
+        print(str(self.solNodePath.findAllTextures()))
+        
+        ts1 = self.solNodePath.findTextureStage('*')
+
+        ts2 = TextureStage('solTS')
+        ts2.setMode(TextureStage.MModulate)
+        ts2.setTexcoordName('0')
+        ts2.setColor(LColor(1,1,1,1))
+        self.solNodePath.setTexture(ts2, tex2)
+
+        print(str(self.solNodePath.findAllTextureStages()))
+        print(str(self.solNodePath.findTextureStage('0')))
+        print(str(self.solNodePath.findTextureStage('solTS')))
+        print(str(self.solNodePath.findAllTextures()))
+
         #self.solNodePath.setTexScale(ts, 2, 2.5)
         #self.solNodePath.setTexRotate(ts, 70)        
-        self.solNodePath.setTexture(ts, tex, 1) # just override texture
-
+        #ts.setMode(TextureStage.MModulate)
+        #self.solNodePath.setTexture(ts, tex2, 2) # just override texture
+        
       
     
         self.circuitNodePath = NodePath('circuit')
@@ -114,7 +132,8 @@ class MyApp(ShowBase):
         dlight = DirectionalLight('directionalLight')
         dlight.setDirection(Vec3(1, 1, -1))
         #dlight.setColor(Vec4(1.0, 1.0, 0.8, 1))
-        dlight.setColorTemperature(6500)
+        #dlight.setColorTemperature(6500)
+        dlight.setColorTemperature(5800)
         dlightNP = render.attachNewNode(dlight)
         render.setLight(dlightNP)
 
@@ -298,3 +317,4 @@ print('m:' + str(record_counter))
 
     
     
+
