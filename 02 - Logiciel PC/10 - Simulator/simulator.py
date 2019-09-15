@@ -1,3 +1,10 @@
+## PARAMETERS #################################################################
+
+autopilot_Kp = 8.0 # autopilot line position (prediction) to steering angle
+autopilot_speed = 0.4
+
+## GLOBALS ########################################################################
+
 ### https://github.com/jlevy44/UnrealAI/blob/master/CarAI/joshua_work/game/src/simulation.py
 
 import numpy as np
@@ -44,18 +51,45 @@ class MyApp(ShowBase):
         self.disableMouse()
 
         # create material
-        myMaterial = Material()
-        myMaterial.setShininess(0.5) #Make this material shiny
-        myMaterial.setSpecular(LColor(255,255,0,0))
-        #myMaterial.setAmbient((0, 0, 1, 1)) #Make this material blue
+        self.circuitMaterial = Material()
+        self.circuitMaterial.setShininess(0.5) #Make this material shiny
+        self.circuitMaterial.setSpecular(LColor(255,255,0,0))
+        self.circuitMaterial.setAmbient((0, 1, 1, 1)) 
 
         # load circuit model
-        self.circuitNodePath = self.loader.loadModel("/c/tmp/media/circuit.bam")
+        
+        self.solNodePath = self.loader.loadModel("/c/tmp/media/sol.bam")
+        self.lignenoireNodePath = self.loader.loadModel("/c/tmp/media/lignenoire.bam")
+        self.ligneblancheNodePath = self.loader.loadModel("/c/tmp/media/ligneblanche.bam")
+        self.bordureNodePath = self.loader.loadModel("/c/tmp/media/bordure.bam")
+        
+        #ligneblancheTexture = loader.loadTexture('/c/tmp/media/white_altered.png')
+        #self.ligneblancheNodePath.setTexture(ligneblancheTexture, 1)
+
+        tex = loader.loadTexture('/c/tmp/media/white.png')
+        #ts = TextureStage('ts')
+        ts = self.solNodePath.findTextureStage('*')
+        ts.setMode(TextureStage.MModulate)
+        #self.solNodePath.setTexScale(ts, 2, 2.5)
+        #self.solNodePath.setTexRotate(ts, 70)        
+        self.solNodePath.setTexture(ts, tex, 1) # just override texture
+
+      
+    
+        self.circuitNodePath = NodePath('circuit')
+        self.solNodePath.reparentTo(self.circuitNodePath)
+        self.lignenoireNodePath.reparentTo(self.circuitNodePath)
+        self.ligneblancheNodePath.reparentTo(self.circuitNodePath)
+        self.bordureNodePath.reparentTo(self.circuitNodePath)
+
         self.circuitNodePath.reparentTo(self.render)
         self.circuitNodePath.setScale(1.0, 1.0, 1.0)
         self.circuitNodePath.setPos(1.0,-5,0)
         self.circuitNodePath.setHpr(0,90, 270)
-        self.circuitNodePath.setMaterial(myMaterial)
+
+#        self.circuitNodePath.setMaterial(self.circuitMaterial)
+
+
 
         # load the environment model.
         self.scene = self.loader.loadModel("models/environment")
@@ -73,7 +107,7 @@ class MyApp(ShowBase):
         render.clearLight()
         
         alight = AmbientLight('ambientLight')
-        alight.setColor(Vec4(0.2, 0.2, 0.2, 1))
+        alight.setColor(Vec4(0.4, 0.4, 0.4, 1))
         alightNP = render.attachNewNode(alight)
         render.setLight(alightNP)
 
@@ -85,13 +119,13 @@ class MyApp(ShowBase):
         render.setLight(dlightNP)
 
         s1light = PointLight('spot1Light')
-        s1light.setColor(Vec4(0.0, 1.0, 0.0, 1.0))
-        s1light.setPoint((0, 0, 0.3))
+        s1light.setColor(Vec4(0.0, 1.0, 1.0, 1.0))
+        s1light.setPoint((0, 0, 0.5))
         s1light.setMaxDistance(4.0)
         s1light.setAttenuation((0.1,0.01,0.001))
         s1lightNP = render.attachNewNode(s1light)
-        render.setLight(s1lightNP)
-        self.circuitNodePath.setLight(s1lightNP)
+        #render.setLight(s1lightNP)
+        #self.circuitNodePath.setLight(s1lightNP)
         
         # camera
         self.camLens.setFov(80)
@@ -135,6 +169,7 @@ class MyApp(ShowBase):
         self.autopilot = True
 
         self.autopilot_dir = 0.0 
+        self.direction = 0.0
 
         # tasks
         self.taskMgr.add(self.move_task, 'moveTask')
@@ -181,8 +216,8 @@ class MyApp(ShowBase):
             self.car.set_y(self.car, y_delta)
 
         if self.autopilot:
-            self.direction = self.autopilot_dir
-            self.throttle = 0.5 #0.12
+            self.direction = self.direction*0.8 + 0.2*self.autopilot_dir
+            self.throttle = autopilot_speed
 
             # move
             #y_delta = self.throttle * 1000.0 * task.getDt()
@@ -213,13 +248,6 @@ class MyApp(ShowBase):
         image = np.flipud(image)
         return image
 
-## GLOBALS ########################################################################
-
-fifo_shape = (params.depth*params.skip,consts.picture_initial_height,consts.picture_initial_width,1)
-fifo = np.zeros( fifo_shape )
-sequence_shape = (params.depth,consts.picture_initial_height,consts.picture_initial_width,1)
-xsequence = np.zeros( sequence_shape )
-
 ## MAIN ########################################################################
 
 # open model
@@ -227,42 +255,34 @@ print("Load model from disk ...")
 model = load_model("model/model.h5")
 model.summary()
 print("Done.")
-#
-app = MyApp()
-#app.run()
 try:
     mkdir(root_dir+'/'+dataset_dir)
 except FileExistsError:
     pass
 dataset_file = open(root_dir+'/'+dataset_dir+'/'+'dataset.txt',  'w')
+# init game
+app = MyApp()
 counter = 0
 record_counter = 0
 while not app.quit:
+    # game tick
     taskMgr.step()
+    # get picture for CNN
     frame = app.get_camera_image()
-    frame = frame[:, :, 0:3]
+    # supress alpha channel
+    frame = frame[:, :, 0:3] 
+    #resize to CNN input format
     frame = cv2.resize(frame, (160, 90),   interpolation = cv2.INTER_AREA)
-    assert(frame.shape == consts.picture_initial_shape)
-    blur= cv2.blur(frame,params.blur_kernel)
-    gray = cv2.cvtColor(blur,cv2.COLOR_BGR2GRAY)
-    assert(gray.shape == (consts.picture_initial_height,consts.picture_initial_width))
-    # reshape for conv layers
-    gray = gray.reshape(consts.picture_initial_height,consts.picture_initial_width,1)
-    # fifo
-    fifo[:-1] = fifo[1:]; fifo[-1] = gray
-    assert(fifo.shape == fifo_shape)
-    xsequence = fifo[0:params.depth*params.skip:params.skip]
-    assert(xsequence.shape == sequence_shape)
-    #prediction
-    if app.autopilot:
-        #yprediction = model.predict(xsequence.reshape(1,params.depth,consts.picture_initial_height,consts.picture_initial_width,1))
-        yprediction = model.predict(gray.reshape(1,consts.picture_initial_height,consts.picture_initial_width,1))
-        #app.autopilot_dir = -yprediction.item(0)*2.0
-        #app.autopilot_dir = -yprediction.item(0)*5.0
-        app.autopilot_dir = -yprediction.item(0)*8.0
-        print(str(counter) + " aiDIR:" + str(app.autopilot_dir))
-    else:
-        app.autopilot_dir = 0
+    # smotth and gray scale
+    frame = cv2.blur(frame,params.blur_kernel)
+    frame = cv2.cvtColor(frame,cv2.COLOR_BGR2GRAY)
+    # reshape for CNN
+    frame = frame.reshape(90,160,1)
+    # use CNN
+    yprediction = model.predict(frame.reshape(1,90,160,1)).item(0)
+    ###print(str(counter) + " aiDIR:" + str(yprediction))
+    # push steering from CNN to game
+    app.autopilot_dir = -yprediction*autopilot_Kp
     # dataset recording
     if app.recording and not app.autopilot and counter != 0: # first frame buffer is empty, skip it!
         filename = dataset_dir + '/render_' + str(record_counter) + '.jpg'
@@ -270,7 +290,9 @@ while not app.quit:
         dataset_file.write(filename +';' + str(int(128.0-app.direction*127.0*1.4)) + ';' + str(int(app.throttle*127.0*1.4+128.0)) + '\n') # *1.4 gain
         dataset_file.flush()
         record_counter += 1
+
     counter += 1
+
 dataset_file.close()
 print('m:' + str(record_counter))
 
