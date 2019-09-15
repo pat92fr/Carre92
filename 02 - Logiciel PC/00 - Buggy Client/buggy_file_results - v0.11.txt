@@ -1,0 +1,16 @@
+lidar_direction_kp=0.0033
+lidar_direction_ki=0.0003
+lidar_direction_kd=0.1
+ai_direction_kp=2.0
+ai_direction_ki=0.0
+ai_direction_kd=2.0
+speed_kp=10.0
+speed_ki=0.0
+speed_kd=0.0
+speed_kff=15.0
+min_speed=0.5
+max_speed=1.2
+k_speed=0.01
+positional_error_threshold=350
+dual_rate=0.5
+direction_trim=4

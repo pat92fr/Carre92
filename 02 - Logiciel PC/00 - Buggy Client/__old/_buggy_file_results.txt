@@ -1,9 +1,0 @@
-kp=0.0033
-ki=0.0003
-kd=0.1
-min_speed=146
-max_speed=163
-k_speed=0.01
-positional_error_threshold=350
-dual_rate=0.5
-direction_trim=4

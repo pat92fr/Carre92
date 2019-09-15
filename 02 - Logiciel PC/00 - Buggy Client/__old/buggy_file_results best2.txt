@@ -1,3 +1,0 @@
-param_kp=0.002
-param_ki=0.0003
-param_kd=0.1
