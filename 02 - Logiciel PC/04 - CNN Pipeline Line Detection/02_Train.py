@@ -119,6 +119,8 @@ Xtrain = dataset['xt']
 Ytrain = dataset['yt']
 Xvalid = dataset['xv']
 Yvalid = dataset['yv']
+Xtest = dataset['xtst']
+Ytest = dataset['ytst']
 dataset.close()
 print("Done.")
 
@@ -126,6 +128,8 @@ print("Xtrain, shape: "+str(Xtrain.shape))
 print("Ytrain, shape: "+str(Ytrain.shape))
 print("Xvalid, shape: "+str(Xvalid.shape))
 print("Yvalid, shape: "+str(Yvalid.shape))
+print("Xtest, shape: "+str(Xtest.shape))
+print("Ytest, shape: "+str(Ytest.shape))
 
 # mkdir
 if not os.path.exists(consts.model_directory):
@@ -206,7 +210,9 @@ plt.savefig(consts.model_directory + '/' + 'history' + '_' + time.asctime().repl
 print("Done.")
 
 # evaluate model on cross-validation set
-scores = model.evaluate(Xvalid, Yvalid, verbose=1)
+train_scores = model.evaluate(Xtrain, Ytrain, verbose=1)
+val_scores = model.evaluate(Xvalid, Yvalid, verbose=1)
+tst_scores = model.evaluate(Xtest, Ytest, verbose=1)
 
 # evaluate model on test set
 
@@ -214,7 +220,9 @@ scores = model.evaluate(Xvalid, Yvalid, verbose=1)
 print("Saving report to disk...")
 report = open(consts.model_directory + '/' + 'report' + '_' + time.asctime().replace(' ', '_').replace(':', '-') + '.txt',"w")
 report.write(consts.model_directory + '/' + consts.model_filename + '_' + time.asctime().replace(' ', '_').replace(':', '-') + '.h5' + '\n')
-report.write("cross-validation scores:" + str(scores) + '\n')
+report.write("training set scores:" + str(train_scores) + '\n')
+report.write("cross-validation set scores:" + str(val_scores) + '\n')
+report.write("test set scores:" + str(tst_scores) + '\n')
 report.write(str(params.layers) + '\n')
 report.close()
 print("Done.")

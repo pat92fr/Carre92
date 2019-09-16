@@ -12,6 +12,7 @@ import my_datasettools as dtools
 ## MAIN ########################################################################
 
 #init
+print("Processing training set and cross-validation set...")
 X = []
 Y = []
 
@@ -67,6 +68,54 @@ print("Xvalid, size: "+str(len(Xvalid)))
 print("Yvalid, size: "+str(len(Yvalid)))
 print("Done.")
 
+#init
+print("Processing test set...")
+Xtst = []
+Ytst = []
+
+# for each dataset in the list
+for dataset_dir in params.test_dataset_list:
+    print(dataset_dir)
+
+    # load label.txt 
+    print("Loading label file...")
+    label_file = open(params.base_dataset_directory+dataset_dir+'/'+consts.label_filename, "r")
+    content = label_file.read()
+    label_file.close()
+    print("Done.")
+
+    # parse label.txt 
+    print("Parsing label file...")
+    lines = content.splitlines()
+    m = len(lines)
+    print(" m=" + str(m) + " examples")
+    print("Done.")
+
+    # for each example (picture,linepos) of current dataset
+    print("Building dataset...")
+    for l in lines:
+        fields = l.split(';')
+        filename = fields[0]
+        y = float(fields[1])
+        # load picture
+        x = dtools.load_and_preprocess_picture(params.base_dataset_directory+filename)
+        # accumulate
+        Xtst.append(x)
+        Ytst.append(y)
+        # augmentation & accumulate
+        #flip horizontaly
+        xf = cv2.flip(x.reshape(consts.picture_initial_height,consts.picture_initial_width),1).reshape(consts.picture_initial_height,consts.picture_initial_width,1)
+        Xtst.append(xf)
+        Ytst.append(-y)        
+    print("Done.")
+
+# to numpy
+Xtst = np.array(Xtst)
+Ytst = np.array(Ytst)
+print(str(Xtst.shape))
+print(str(Ytst.shape))
+print("Done.")
+
 # mkdir
 train_valid_dataset_directory = params.base_dataset_directory+consts.train_valid_dataset_directory
 if not os.path.exists(train_valid_dataset_directory):
@@ -78,6 +127,5 @@ if os.path.isfile(file):
     shutil.copy(file,file +'.bak')
 
 print("Compressing and writing file to disk...")
-###np.savez_compressed(file, xt=Xtrain, yt=Ytrain, xv=Xvalid, yv=Yvalid) ##compression gain too low
-np.savez(file, xt=Xtrain, yt=Ytrain, xv=Xvalid, yv=Yvalid) ## quicker
+np.savez(file, xt=Xtrain, yt=Ytrain, xv=Xvalid, yv=Yvalid, xtst=Xtst, ytst=Ytst) ## quicker
 print("Done.")

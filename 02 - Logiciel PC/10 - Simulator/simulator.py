@@ -33,7 +33,7 @@ class MyApp(ShowBase):
         
         # Window
 		winprops  = WindowProperties()
-		winprops .setSize(640, 360)
+		winprops .setSize(1280, 720)
 		base.win.requestProperties(winprops ) 
 		base.setFrameRateMeter(True)
         
@@ -130,25 +130,23 @@ class MyApp(ShowBase):
 		render.clearLight()
 
 		alight = AmbientLight('ambientLight')
-		alight.setColor(Vec4(0.4, 0.4, 0.4, 1))
+		alight.setColor(Vec4(0.5, 0.5, 0.5, 1))
 		alightNP = render.attachNewNode(alight)
 		render.setLight(alightNP)
 
 		dlight = DirectionalLight('directionalLight')
 		dlight.setDirection(Vec3(1, 1, -1))
-		#dlight.setColor(Vec4(1.0, 1.0, 0.8, 1))
-		#dlight.setColorTemperature(6500)
-		dlight.setColorTemperature(5800)
+		dlight.setColorTemperature(6500)
 		dlightNP = render.attachNewNode(dlight)
 		render.setLight(dlightNP)
 
 		s1light = PointLight('spot1Light')
-		s1light.setColor(Vec4(0.0, 1.0, 1.0, 1.0))
+		s1light.setColor(Vec4(1.0, 1.0, 1.0, 1.0))
 		s1light.setPoint((0, 0, 0.5))
 		s1light.setMaxDistance(4.0)
 		s1light.setAttenuation((0.1,0.01,0.001))
 		s1lightNP = render.attachNewNode(s1light)
-		#render.setLight(s1lightNP)
+		render.setLight(s1lightNP)
 		#self.circuitNodePath.setLight(s1lightNP)
 
 		# camera
