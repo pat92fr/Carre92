@@ -15,6 +15,7 @@ import my_constants as consts
 import my_parameters as params
 
 from direct.showbase.ShowBase import ShowBase
+from direct.filter.CommonFilters import CommonFilters
 from direct.task import Task
 from panda3d.core import *
 from panda3d.core import Material
@@ -31,6 +32,12 @@ class MyApp(ShowBase):
 	def __init__(self):
 		ShowBase.__init__(self)
         
+        # Check video card capabilities.
+		if not self.win.getGsg().getSupportsBasicShaders():
+			addTitle("Bump Mapping: "
+				"Video driver reports that Cg shaders are not supported.")
+			return
+
         # Window
 		winprops  = WindowProperties()
 		winprops .setSize(1280, 720)
@@ -50,11 +57,7 @@ class MyApp(ShowBase):
         # Disable the camera trackball controls.
 		self.disableMouse()
 
-        # create material
-		self.circuitMaterial = Material()
-		self.circuitMaterial.setShininess(0.5) #Make this material shiny
-		self.circuitMaterial.setSpecular(LColor(255,255,0,0))
-		self.circuitMaterial.setAmbient((0, 1, 1, 1)) 
+
 
         # load circuit model
         
@@ -63,7 +66,7 @@ class MyApp(ShowBase):
 		self.ligneblancheNodePath = self.loader.loadModel("/c/tmp/media/ligneblanche.bam")
 		self.bordureNodePath = self.loader.loadModel("/c/tmp/media/bordure.bam")
 		self.archNodePath = self.loader.loadModel("/c/tmp/media/arch.bam")
-        
+
 		# print(str(TextureStage.getDefault()))
 		# print(str(self.solNodePath.findAllTextureStages()))
 		# print(str(self.solNodePath.findTextureStage('*')))
@@ -72,7 +75,10 @@ class MyApp(ShowBase):
 
 		# replace base texture for sol
 		tex1 = loader.loadTexture('/c/tmp/media/sol_toulouse.jpg')
+		#tex1 = loader.loadTexture('/c/tmp/media/sol_NormalMap.jpg')
+		#tex1 = loader.loadTexture('/c/tmp/media/sol_DisplacementMap.jpg')
 		ts1 = self.solNodePath.findTextureStage('0')
+		ts1.setTexcoordName('0')
 		self.solNodePath.setTexture(ts1, tex1, 1)
 		# add texture for illumination of sol
 		tex2 = loader.loadTexture('/c/tmp/media/sol_shadow.png')
@@ -81,6 +87,13 @@ class MyApp(ShowBase):
 		ts2.setTexcoordName('0')
 		ts2.setColor(LColor(1,1,1,1))
 		self.solNodePath.setTexture(ts2, tex2)
+		# add texture for normalmap of sol
+		tex4 = loader.loadTexture('/c/tmp/media/sol_NormalMap.jpg','/c/tmp/media/sol_DisplacementMap.jpg')
+		ts4 = TextureStage('solTSNM')
+		ts4.setMode(TextureStage.MNormalHeight)
+		ts4.setTexcoordName('0')
+		#self.solNodePath.setTexture(ts4, tex4)
+
 
 		# add texture for illumination of bordure
 		tex3 = loader.loadTexture('/c/tmp/media/side_shadow.png')
@@ -91,13 +104,33 @@ class MyApp(ShowBase):
 		self.bordureNodePath.setTexture(ts3, tex3)
 
 
+
+
 		print(str(self.solNodePath.findAllTextureStages()))
 		print(str(self.solNodePath.findTextureStage('0')))
 		print(str(self.solNodePath.findTextureStage('solTS')))
+		print(str(self.solNodePath.findTextureStage('solTSNM')))
 		print(str(self.solNodePath.findAllTextures()))
 
-      
-    
+		# NormalMap https://cpetry.github.io/NormalMap-Online/
+
+
+		# create material
+		self.lowSpecMaterial = Material()
+		self.lowSpecMaterial.setSpecular((0.05, 0.05, 0.05, 1))
+		self.lowSpecMaterial.setShininess(10) #Make this material shiny
+
+		self.hiSpecMaterial = Material()
+		self.hiSpecMaterial.setSpecular((0.9, 0.9, 0.9, 1))
+		self.hiSpecMaterial.setShininess(80) #Make this material shiny
+
+		self.solNodePath.setMaterial(self.lowSpecMaterial, 1)
+		self.lignenoireNodePath.setMaterial(self.hiSpecMaterial, 1)
+		self.ligneblancheNodePath.setMaterial(self.hiSpecMaterial, 1)
+		self.bordureNodePath.setMaterial(self.lowSpecMaterial, 1)
+		self.archNodePath.setMaterial(self.lowSpecMaterial, 1)
+
+                #
 		self.circuitNodePath = NodePath('circuit')
 		self.solNodePath.reparentTo(self.circuitNodePath)
 		self.lignenoireNodePath.reparentTo(self.circuitNodePath)
@@ -109,10 +142,6 @@ class MyApp(ShowBase):
 		self.circuitNodePath.setScale(1.0, 1.0, 1.0)
 		self.circuitNodePath.setPos(1.0,-5,0)
 		self.circuitNodePath.setHpr(0,90, 270)
-
-#       self.circuitNodePath.setMaterial(self.circuitMaterial)
-
-
 
         # load the environment model.
 		self.scene = self.loader.loadModel("models/environment")
@@ -130,24 +159,27 @@ class MyApp(ShowBase):
 		render.clearLight()
 
 		alight = AmbientLight('ambientLight')
-		alight.setColor(Vec4(0.5, 0.5, 0.5, 1))
+		alight.setColor(Vec4(0.55, 0.55, 0.55, 1))
 		alightNP = render.attachNewNode(alight)
+
+		directionalLight = DirectionalLight('directionalLight')
+		directionalLight.setDirection(Vec3(1, 1, -1))
+		directionalLight.setSpecularColor((0.8, 0.8, 0.8, 1))
+		directionalLight.setColorTemperature(6500)
+		directionalLightNP = render.attachNewNode(directionalLight)
+
+		plight = PointLight('spot1Light')
+		plight.setColor(Vec4(1.0, 1.0, 1.0, 1.0))
+		plight.setAttenuation(LVector3(0.7, 0.05, 0))
+		plnp = self.render.attachNewNode(plight)
+		plnp.setPos((0, 0, 1.0))
+
+        # Tell Panda that it should generate shaders performing per-pixel
+        # lighting for the room.
+		self.circuitNodePath.setLight(plnp)
+		self.circuitNodePath.setLight(directionalLightNP)
+		#self.circuitNodePath.setShaderAuto()
 		render.setLight(alightNP)
-
-		dlight = DirectionalLight('directionalLight')
-		dlight.setDirection(Vec3(1, 1, -1))
-		dlight.setColorTemperature(6500)
-		dlightNP = render.attachNewNode(dlight)
-		render.setLight(dlightNP)
-
-		s1light = PointLight('spot1Light')
-		s1light.setColor(Vec4(1.0, 1.0, 1.0, 1.0))
-		s1light.setPoint((0, 0, 0.5))
-		s1light.setMaxDistance(4.0)
-		s1light.setAttenuation((0.1,0.01,0.001))
-		s1lightNP = render.attachNewNode(s1light)
-		render.setLight(s1lightNP)
-		#self.circuitNodePath.setLight(s1lightNP)
 
 		# camera
 		self.camLens.setFov(80)
@@ -157,21 +189,21 @@ class MyApp(ShowBase):
 		self.camera.setHpr(0,-13,0)
 		self.camera.reparentTo(self.car)
 
-		# osd
+		# # osd
 		self.dr = self.win.makeDisplayRegion()
 		self.dr.setSort(20)
 
-		myCamera2d = NodePath(Camera('myCam2d'))
-		lens = OrthographicLens()
-		lens.setFilmSize(2, 2)
-		lens.setNearFar(-1000, 1000)
-		myCamera2d.node().setLens(lens)
+		# myCamera2d = NodePath(Camera('myCam2d'))
+		# lens = OrthographicLens()
+		# lens.setFilmSize(2, 2)
+		# lens.setNearFar(-1000, 1000)
+		# myCamera2d.node().setLens(lens)
 
-		myRender2d = NodePath('myRender2d')
-		myRender2d.setDepthTest(False)
-		myRender2d.setDepthWrite(False)
-		myCamera2d.reparentTo(myRender2d)
-		self.dr.setCamera(myCamera2d)
+		# myRender2d = NodePath('myRender2d')
+		# myRender2d.setDepthTest(False)
+		# myRender2d.setDepthWrite(False)
+		# myCamera2d.reparentTo(myRender2d)
+		# self.dr.setCamera(myCamera2d)
 
 		#        lines = LineSegs()
 		#        lines.moveTo(100,0,0)
