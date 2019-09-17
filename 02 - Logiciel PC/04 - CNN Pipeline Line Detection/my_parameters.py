@@ -10,7 +10,8 @@ layers = [
     ('crop2D', 26), ## do not change
     ('norm', 0), ## do not change
     ('conv2D', 8, (5,5), (2,2),'relu'), ## filters, kernel_size, stride, activation
-    ('conv2D', 8, (5,5), (2,2),'relu'), ## filters, kernel_size, stride, activation
+    ('maxpooling2D', (2,2), (2,2)),     ## size, stride
+    ('conv2D', 16, (3,9), (2,2),'relu'), ## filters, kernel_size, stride, activation
     ('maxpooling2D', (2,2), (2,2)),     ## size, stride
     ('dropout',  0.2), ## %
     ('flatten',  0),  ## do not change ## CONV to FC transition
