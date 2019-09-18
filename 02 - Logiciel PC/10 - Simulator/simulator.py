@@ -11,11 +11,10 @@ import numpy as np
 import cv2
 from keras import models
 from keras.models import load_model
-import my_constants as consts
-import my_parameters as params
 
 from direct.showbase.ShowBase import ShowBase
 from direct.filter.CommonFilters import CommonFilters
+from direct.gui.OnscreenText import OnscreenText
 from direct.task import Task
 from panda3d.core import *
 from panda3d.core import Material
@@ -28,10 +27,30 @@ from os import mkdir
 root_dir = 'c:/tmp'
 dataset_dir = 'dataset'
 
+# Macro-like function used to reduce the amount to code needed to create the
+# on screen instructions
+def genLabelText(text, i):
+    return OnscreenText(text=text, parent=base.a2dTopLeft, pos=(0.07, -.06 * i - 0.1),
+                        fg=(1, 1, 1, 1), align=TextNode.ALeft, shadow=(0, 0, 0, 0.5), scale=.05)
+
+
+
 class MyApp(ShowBase):
 	def __init__(self):
 		ShowBase.__init__(self)
         
+        # OSD menu
+		self.shadowText = genLabelText("s: Ground shadows", 0)
+		self.publicityText = genLabelText("p: Side publicity and shadows", 1)
+
+        # dynamic settings
+		self.apply_ground_shadow = False
+		self.apply_side_publicity_and_shadow = False
+
+		#events
+		self.accept("s",     self.setGroundShadow)
+		self.accept("p",     self.setSidePublicityAndShadow)
+
         # Check video card capabilities.
 		if not self.win.getGsg().getSupportsBasicShaders():
 			addTitle("Bump Mapping: "
@@ -110,11 +129,12 @@ class MyApp(ShowBase):
 		tex1 = loader.loadTexture('/c/tmp/media/sol_toulouse.jpg')
 		#tex1 = loader.loadTexture('/c/tmp/media/sol_NormalMap.jpg')
 		#tex1 = loader.loadTexture('/c/tmp/media/sol_DisplacementMap.jpg')
-		ts1 = self.solNodePath.findTextureStage('0')
-		ts1.setTexcoordName('0')
-		self.solNodePath.setTexture(ts1, tex1, 1)
+		self.ts1 = self.solNodePath.findTextureStage('0')
+		self.ts1.setTexcoordName('0')
+		self.solNodePath.setTexture(self.ts1, tex1, 1)
 
 		# add texture for illumination of sol
+		self.sol_no_shadow_texture = loader.loadTexture('/c/tmp/media/no_shadow.png')
 		self.sol_shadow_textures = [ 
 			loader.loadTexture('/c/tmp/media/sol_shadow_1.png'),
 			loader.loadTexture('/c/tmp/media/sol_shadow_2.png'),
@@ -125,8 +145,8 @@ class MyApp(ShowBase):
 		self.ts2 = TextureStage('solTS')
 		self.ts2.setMode(TextureStage.MModulate)
 		self.ts2.setTexcoordName('0')
-		self.ts2.setColor(LColor(1,1,1,1))
-		self.solNodePath.setTexture(self.ts2, self.sol_shadow_textures[self.sol_shadow_texture_index])
+		self.ts2.setColor(LColor(0,0,0,1))
+		self.solNodePath.setTexture(self.ts2, self.sol_no_shadow_texture)
 
 		# add texture for normalmap of sol
 		tex4 = loader.loadTexture('/c/tmp/media/sol_NormalMap.jpg','/c/tmp/media/sol_DisplacementMap.jpg')
@@ -136,13 +156,21 @@ class MyApp(ShowBase):
 		#self.solNodePath.setTexture(ts4, tex4)
 
 
+		# replace base texture for side
+		self.side_base_texture_no_publicity = loader.loadTexture('/c/tmp/media/2create_wood_0019o.jpg')
+		self.side_base_texture_with_publicity = loader.loadTexture('/c/tmp/media/2create_wood_0019.jpg')
+		self.ts4 = self.bordureNodePath.findTextureStage('0')
+		self.ts4.setTexcoordName('0')
+		self.bordureNodePath.setTexture(self.ts4, self.side_base_texture_no_publicity, 1)
+
 		# add texture for illumination of bordure
-		tex3 = loader.loadTexture('/c/tmp/media/side_shadow.png')
-		ts3 = TextureStage('sideTS')
-		ts3.setMode(TextureStage.MModulate)
-		ts3.setTexcoordName('0')
-		ts3.setColor(LColor(1,1,1,1))
-		self.bordureNodePath.setTexture(ts3, tex3)
+		self.side_no_shadow_texture = loader.loadTexture('/c/tmp/media/no_shadow.png')
+		self.side_shadow_texture = loader.loadTexture('/c/tmp/media/side_shadow.png')
+		self.ts3 = TextureStage('sideTS')
+		self.ts3.setMode(TextureStage.MModulate)
+		self.ts3.setTexcoordName('0')
+		self.ts3.setColor(LColor(0,0,0,1))
+		self.bordureNodePath.setTexture(self.ts3, self.side_no_shadow_texture)
 
 		# print(str(self.solNodePath.findAllTextureStages()))
 		# print(str(self.solNodePath.findTextureStage('0')))
@@ -214,13 +242,33 @@ class MyApp(ShowBase):
 		render.setLight(alightNP)
 
 	def update_toulouse_map(self):
-		self.sol_shadow_texture_index += 1
-		if self.sol_shadow_texture_index >= len(self.sol_shadow_textures):
+		if self.apply_ground_shadow:
+			self.sol_shadow_texture_index += 1
+			if self.sol_shadow_texture_index >= len(self.sol_shadow_textures):
+				self.sol_shadow_texture_index = 0
+			self.solNodePath.setTexture(self.ts2, self.sol_shadow_textures[self.sol_shadow_texture_index])
+
+	def setGroundShadow(self):
+		if self.apply_ground_shadow:
+			self.apply_ground_shadow = False
+			self.solNodePath.setTexture(self.ts2, self.sol_no_shadow_texture)
+		else:
+			self.apply_ground_shadow = True
 			self.sol_shadow_texture_index = 0
-		self.solNodePath.setTexture(self.ts2, self.sol_shadow_textures[self.sol_shadow_texture_index])
+			self.solNodePath.setTexture(self.ts2, self.sol_shadow_textures[self.sol_shadow_texture_index])
+			self.sol_shadow_texture_index += 1
 
+	def setSidePublicityAndShadow(self):
+		if self.apply_side_publicity_and_shadow:
+			self.apply_side_publicity_and_shadow = False
+			self.bordureNodePath.setTexture(self.ts3, self.side_no_shadow_texture)
+			self.bordureNodePath.setTexture(self.ts4, self.side_base_texture_no_publicity, 1)
+		else:
+			self.apply_side_publicity_and_shadow = True
+			self.bordureNodePath.setTexture(self.ts3, self.side_shadow_texture)
+			self.bordureNodePath.setTexture(self.ts4, self.side_base_texture_with_publicity, 1)
 
-	def windDown():
+	def windDown(self):
         # De-initialization code goes here!
 		self.quit = True
   
@@ -318,7 +366,7 @@ while not app.quit:
     #resize to CNN input format
     frame_orign = cv2.resize(frame_orign, (160, 90),   interpolation = cv2.INTER_AREA)
     # smotth and gray scale
-    frame = cv2.blur(frame_orign,params.blur_kernel)
+    frame = cv2.blur(frame_orign,(3,3))
     frame = cv2.cvtColor(frame,cv2.COLOR_BGR2GRAY)
     # reshape for CNN
     frame = frame.reshape(90,160,1)
