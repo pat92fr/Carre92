@@ -1,6 +1,6 @@
 ## PARAMETERS #################################################################
 
-autopilot_Kp = 8.0 # autopilot line position (prediction) to steering angle
+autopilot_Kp = 8.0 #8.0 # autopilot line position (prediction) to steering angle
 autopilot_speed = 0.4
 
 ## GLOBALS ########################################################################
@@ -57,10 +57,44 @@ class MyApp(ShowBase):
         # Disable the camera trackball controls.
 		self.disableMouse()
 
+		# load map
+		self.load_toulouse_map()
 
+        # make car node (no model attached)
+		self.car = NodePath('car')
+		self.car.reparentTo(self.render)
+		self.car.setPos(0, 40, 0.0)
+
+		# camera
+		self.camLens.setFov(90)
+		self.camLens.setNear(0.01)
+		self.camera.setPos(0.0,0.1,0.20)
+		self.camera.setHpr(0,0,0)
+		self.camera.setHpr(0,-15,0)
+		self.camera.reparentTo(self.car)
+
+		# osd
+		self.dr = self.win.makeDisplayRegion()
+		self.dr.setSort(20)
+
+		# controls
+		self.quit_button = KeyboardButton.ascii_key('q')
+		self.quit = False
+		self.recording_button = KeyboardButton.ascii_key('r')
+		self.recording = False
+		self.autopilot_button = KeyboardButton.ascii_key('a')
+		self.humanpilot_button = KeyboardButton.ascii_key('m')
+		self.autopilot = True
+		self.autopilot_dir = 0.0 
+		self.direction = 0.0
+
+		# tasks
+		self.taskMgr.add(self.move_task, 'moveTask')
+
+
+	def load_toulouse_map(self):
 
         # load circuit model
-        
 		self.solNodePath = self.loader.loadModel("/c/tmp/media/sol.bam")
 		self.lignenoireNodePath = self.loader.loadModel("/c/tmp/media/lignenoire.bam")
 		self.ligneblancheNodePath = self.loader.loadModel("/c/tmp/media/ligneblanche.bam")
@@ -72,7 +106,6 @@ class MyApp(ShowBase):
 		# print(str(self.solNodePath.findTextureStage('*')))
 		# print(str(self.solNodePath.findAllTextures()))
 
-
 		# replace base texture for sol
 		tex1 = loader.loadTexture('/c/tmp/media/sol_toulouse.jpg')
 		#tex1 = loader.loadTexture('/c/tmp/media/sol_NormalMap.jpg')
@@ -80,13 +113,21 @@ class MyApp(ShowBase):
 		ts1 = self.solNodePath.findTextureStage('0')
 		ts1.setTexcoordName('0')
 		self.solNodePath.setTexture(ts1, tex1, 1)
+
 		# add texture for illumination of sol
-		tex2 = loader.loadTexture('/c/tmp/media/sol_shadow.png')
-		ts2 = TextureStage('solTS')
-		ts2.setMode(TextureStage.MModulate)
-		ts2.setTexcoordName('0')
-		ts2.setColor(LColor(1,1,1,1))
-		self.solNodePath.setTexture(ts2, tex2)
+		self.sol_shadow_textures = [ 
+			loader.loadTexture('/c/tmp/media/sol_shadow_1.png'),
+			loader.loadTexture('/c/tmp/media/sol_shadow_2.png'),
+			loader.loadTexture('/c/tmp/media/sol_shadow_3.png'),
+			loader.loadTexture('/c/tmp/media/sol_shadow_4.png')
+		]
+		self.sol_shadow_texture_index = 0
+		self.ts2 = TextureStage('solTS')
+		self.ts2.setMode(TextureStage.MModulate)
+		self.ts2.setTexcoordName('0')
+		self.ts2.setColor(LColor(1,1,1,1))
+		self.solNodePath.setTexture(self.ts2, self.sol_shadow_textures[self.sol_shadow_texture_index])
+
 		# add texture for normalmap of sol
 		tex4 = loader.loadTexture('/c/tmp/media/sol_NormalMap.jpg','/c/tmp/media/sol_DisplacementMap.jpg')
 		ts4 = TextureStage('solTSNM')
@@ -103,17 +144,13 @@ class MyApp(ShowBase):
 		ts3.setColor(LColor(1,1,1,1))
 		self.bordureNodePath.setTexture(ts3, tex3)
 
-
-
-
-		print(str(self.solNodePath.findAllTextureStages()))
-		print(str(self.solNodePath.findTextureStage('0')))
-		print(str(self.solNodePath.findTextureStage('solTS')))
-		print(str(self.solNodePath.findTextureStage('solTSNM')))
-		print(str(self.solNodePath.findAllTextures()))
+		# print(str(self.solNodePath.findAllTextureStages()))
+		# print(str(self.solNodePath.findTextureStage('0')))
+		# print(str(self.solNodePath.findTextureStage('solTS')))
+		# print(str(self.solNodePath.findTextureStage('solTSNM')))
+		# print(str(self.solNodePath.findAllTextures()))
 
 		# NormalMap https://cpetry.github.io/NormalMap-Online/
-
 
 		# create material
 		self.lowSpecMaterial = Material()
@@ -124,13 +161,14 @@ class MyApp(ShowBase):
 		self.hiSpecMaterial.setSpecular((0.9, 0.9, 0.9, 1))
 		self.hiSpecMaterial.setShininess(80) #Make this material shiny
 
+		#apply material
 		self.solNodePath.setMaterial(self.lowSpecMaterial, 1)
 		self.lignenoireNodePath.setMaterial(self.hiSpecMaterial, 1)
 		self.ligneblancheNodePath.setMaterial(self.hiSpecMaterial, 1)
 		self.bordureNodePath.setMaterial(self.lowSpecMaterial, 1)
 		self.archNodePath.setMaterial(self.lowSpecMaterial, 1)
 
-                #
+        #
 		self.circuitNodePath = NodePath('circuit')
 		self.solNodePath.reparentTo(self.circuitNodePath)
 		self.lignenoireNodePath.reparentTo(self.circuitNodePath)
@@ -144,17 +182,11 @@ class MyApp(ShowBase):
 		self.circuitNodePath.setHpr(0,90, 270)
 
         # load the environment model.
-		self.scene = self.loader.loadModel("models/environment")
+		self.scene = self.loader.loadModel("/c/tmp/media/env")
 		self.scene.reparentTo(self.render)
-		self.scene.setScale(1.25, 1.25, 1.25)
+		self.scene.setScale(100, 100, 100)
 		self.scene.setPos(0,0, -0.1)
  
-        # Load the environment model.
-		self.car = self.loader.loadModel("models/box")
-		self.car.reparentTo(self.render)
-		self.car.setScale(1.0, 1.0, 1.0)
-		self.car.setPos(0, 40, 0.0)
-
         # Lights
 		render.clearLight()
 
@@ -181,58 +213,21 @@ class MyApp(ShowBase):
 		#self.circuitNodePath.setShaderAuto()
 		render.setLight(alightNP)
 
-		# camera
-		self.camLens.setFov(80)
-		self.camLens.setNear(0.01)
-		self.camera.setPos(0.0,0.1,0.15)
-		self.camera.setHpr(0,0,0)
-		self.camera.setHpr(0,-13,0)
-		self.camera.reparentTo(self.car)
+	def update_toulouse_map(self):
+		self.sol_shadow_texture_index += 1
+		if self.sol_shadow_texture_index >= len(self.sol_shadow_textures):
+			self.sol_shadow_texture_index = 0
+		self.solNodePath.setTexture(self.ts2, self.sol_shadow_textures[self.sol_shadow_texture_index])
 
-		# # osd
-		self.dr = self.win.makeDisplayRegion()
-		self.dr.setSort(20)
-
-		# myCamera2d = NodePath(Camera('myCam2d'))
-		# lens = OrthographicLens()
-		# lens.setFilmSize(2, 2)
-		# lens.setNearFar(-1000, 1000)
-		# myCamera2d.node().setLens(lens)
-
-		# myRender2d = NodePath('myRender2d')
-		# myRender2d.setDepthTest(False)
-		# myRender2d.setDepthWrite(False)
-		# myCamera2d.reparentTo(myRender2d)
-		# self.dr.setCamera(myCamera2d)
-
-		#        lines = LineSegs()
-		#        lines.moveTo(100,0,0)
-		#        lines.drawTo(100,500,0)
-		#        lines.setThickness(4)
-		#        node = lines.create()
-		#        np = NodePath(node)
-		#        np.reparentTo(myRender2d)
-
-		# controls
-		self.quit_button = KeyboardButton.ascii_key('q')
-		self.quit = False
-		self.recording_button = KeyboardButton.ascii_key('r')
-		self.recording = False
-		self.autopilot_button = KeyboardButton.ascii_key('a')
-		self.humanpilot_button = KeyboardButton.ascii_key('m')
-		self.autopilot = True
-
-		self.autopilot_dir = 0.0 
-		self.direction = 0.0
-
-		# tasks
-		self.taskMgr.add(self.move_task, 'moveTask')
 
 	def windDown():
         # De-initialization code goes here!
 		self.quit = True
   
 	def move_task(self, task):
+
+		if task.frame % 180 == 0:
+			self.update_toulouse_map()
 
 		# Check if the player is holding keys
 		is_down = self.mouseWatcherNode.is_button_down
@@ -259,23 +254,18 @@ class MyApp(ShowBase):
 		    self.direction -= 0.38
 		    self.throttle -= 0.41
 		    
-		    print(str(self.direction) + " " + str(self.throttle))
-		    
 		    # move
-		    #y_delta = self.throttle * 1000.0 * task.getDt()
-		    #w_delta = self.direction * 10000.0 * task.getDt()
 		    y_delta = self.throttle * 100.0 * task.getDt()
 		    w_delta = self.direction * 1000.0 * task.getDt()
 		    self.car.setHpr(self.car, w_delta, 0, 0)
 		    self.car.set_y(self.car, y_delta)
 
 		if self.autopilot:
+			# AI inputs
 		    self.direction = self.direction*0.8 + 0.2*self.autopilot_dir
 		    self.throttle = autopilot_speed
 
 		    # move
-		    #y_delta = self.throttle * 1000.0 * task.getDt()
-		    #w_delta = self.direction * 10000.0 * task.getDt()
 		    y_delta = self.throttle * 1000.0 * task.getDt()
 		    w_delta = self.direction * 10000.0 * task.getDt()
 		    self.car.setHpr(self.car, w_delta, 0, 0)
