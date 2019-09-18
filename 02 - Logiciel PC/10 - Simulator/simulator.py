@@ -24,6 +24,10 @@ from os import mkdir
 #from direct.interval.IntervalGlobal import Sequence
 #from panda3d.core import Point3
 
+from panda3d.bullet import BulletWorld
+from panda3d.bullet import BulletPlaneShape
+from panda3d.bullet import BulletRigidBodyNode
+
 root_dir = 'c:/tmp'
 dataset_dir = 'dataset'
 
@@ -46,10 +50,12 @@ class MyApp(ShowBase):
         # dynamic settings
 		self.apply_ground_shadow = False
 		self.apply_side_publicity_and_shadow = False
+		self.apply_light_modifier = False
 
 		#events
 		self.accept("s",     self.setGroundShadow)
 		self.accept("p",     self.setSidePublicityAndShadow)
+		self.accept("l",     self.setLightModifier)
 
         # Check video card capabilities.
 		if not self.win.getGsg().getSupportsBasicShaders():
@@ -107,9 +113,28 @@ class MyApp(ShowBase):
 		self.autopilot_dir = 0.0 
 		self.direction = 0.0
 
+		self.taskMgr.add(self.update_toulouse_map, 'updateMap')
+
 		# tasks
 		self.taskMgr.add(self.move_task, 'moveTask')
 
+		# physics
+		self.world = BulletWorld()
+		self.world.setGravity(Vec3(0, 0, -9.81))
+		self.planePhys = BulletPlaneShape(Vec3(0, 0, 1), 1)
+		self.planePhysNode = BulletRigidBodyNode('Ground')
+		self.planePhysNode.addShape(self.planePhys)
+		self.planeNP = render.attachNewNode(self.planePhysNode)
+		self.planeNP.setPos(0, 0, 1)
+		self.world.attachRigidBody(self.planePhysNode)
+
+		self.taskMgr.add(self.physics_task, 'updatePhysics')
+
+	def physics_task(self, task):
+		dt = globalClock.getDt()
+		self.world.doPhysics(dt)
+		#world.doPhysics(dt, 10, 1.0/180.0)
+		return task.cont
 
 	def load_toulouse_map(self):
 
@@ -182,8 +207,8 @@ class MyApp(ShowBase):
 
 		# create material
 		self.lowSpecMaterial = Material()
-		self.lowSpecMaterial.setSpecular((0.05, 0.05, 0.05, 1))
-		self.lowSpecMaterial.setShininess(10) #Make this material shiny
+		self.lowSpecMaterial.setSpecular((0.02, 0.02, 0.02, 1))
+		self.lowSpecMaterial.setShininess(60) #Make this material shiny
 
 		self.hiSpecMaterial = Material()
 		self.hiSpecMaterial.setSpecular((0.9, 0.9, 0.9, 1))
@@ -216,37 +241,62 @@ class MyApp(ShowBase):
 		self.scene.setPos(0,0, -0.1)
  
         # Lights
-		render.clearLight()
+		self.render.clearLight()
 
-		alight = AmbientLight('ambientLight')
-		alight.setColor(Vec4(0.55, 0.55, 0.55, 1))
-		alightNP = render.attachNewNode(alight)
+		self.alight = AmbientLight('ambientLight')
+		self.alight.setColor(Vec4(0.4, 0.4, 0.4, 1))
+		self.alightNP = self.render.attachNewNode(self.alight)
 
-		directionalLight = DirectionalLight('directionalLight')
-		directionalLight.setDirection(Vec3(1, 1, -1))
-		directionalLight.setSpecularColor((0.8, 0.8, 0.8, 1))
-		directionalLight.setColorTemperature(6500)
-		directionalLightNP = render.attachNewNode(directionalLight)
+		self.directionalLight = DirectionalLight('directionalLight')
+		self.directionalLight.setDirection(Vec3(1, 1, -2))
+		self.directionalLight.setSpecularColor((0.8, 0.8, 0.8, 1))
+		self.temperature = 6500
+		self.temperature_step = 1
+		self.directionalLight.setColorTemperature(self.temperature)
+		self.directionalLightNP = self.render.attachNewNode(self.directionalLight)
 
-		plight = PointLight('spot1Light')
-		plight.setColor(Vec4(1.0, 1.0, 1.0, 1.0))
-		plight.setAttenuation(LVector3(0.7, 0.05, 0))
-		plnp = self.render.attachNewNode(plight)
-		plnp.setPos((0, 0, 1.0))
+		self.plight = PointLight('spot1Light')
+		self.plight.setColor(Vec4(1.0, 1.0, 1.0, 1.0))
+		self.plight.setAttenuation(LVector3(0.7, 0.05, 0))
+		self.plnp = self.render.attachNewNode(self.plight)
+		self.plnp.setPos((0, 0, 1.0))
 
         # Tell Panda that it should generate shaders performing per-pixel
         # lighting for the room.
-		self.circuitNodePath.setLight(plnp)
-		self.circuitNodePath.setLight(directionalLightNP)
+		self.circuitNodePath.setLight(self.plnp)
+		self.circuitNodePath.setLight(self.directionalLightNP)
 		#self.circuitNodePath.setShaderAuto()
-		render.setLight(alightNP)
+		self.render.setLight(self.alightNP)
 
-	def update_toulouse_map(self):
-		if self.apply_ground_shadow:
-			self.sol_shadow_texture_index += 1
-			if self.sol_shadow_texture_index >= len(self.sol_shadow_textures):
-				self.sol_shadow_texture_index = 0
-			self.solNodePath.setTexture(self.ts2, self.sol_shadow_textures[self.sol_shadow_texture_index])
+        # Per-pixel lighting and shadows are initially off
+		#self.directionalLightNP.node().setShadowCaster(True, 512, 512)
+		self.render.setShaderAuto()
+
+	def update_toulouse_map(self, task):
+
+		if task.frame % 200 == 0:
+			if self.apply_ground_shadow:
+				self.sol_shadow_texture_index += 1
+				if self.sol_shadow_texture_index >= len(self.sol_shadow_textures):
+					self.sol_shadow_texture_index = 0
+				self.solNodePath.setTexture(self.ts2, self.sol_shadow_textures[self.sol_shadow_texture_index])
+
+		print(str(self.temperature))
+		if self.apply_light_modifier:
+			if self.temperature_step > 0:
+				self.temperature += self.temperature_step*10
+				self.directionalLight.setColorTemperature(self.temperature)
+				self.plight.setColorTemperature(self.temperature)
+				if self.temperature > 11900:
+					self.temperature_step = -1
+			else:
+				self.temperature += self.temperature_step*10
+				self.directionalLight.setColorTemperature(self.temperature)
+				self.plight.setColorTemperature(self.temperature)
+				if self.temperature < 1100:
+					self.temperature_step = 1
+		
+		return Task.cont
 
 	def setGroundShadow(self):
 		if self.apply_ground_shadow:
@@ -268,14 +318,17 @@ class MyApp(ShowBase):
 			self.bordureNodePath.setTexture(self.ts3, self.side_shadow_texture)
 			self.bordureNodePath.setTexture(self.ts4, self.side_base_texture_with_publicity, 1)
 
+	def setLightModifier(self):
+		if self.apply_light_modifier:
+			self.apply_light_modifier = False
+		else:
+			self.apply_light_modifier = True
+
 	def windDown(self):
         # De-initialization code goes here!
 		self.quit = True
   
 	def move_task(self, task):
-
-		if task.frame % 180 == 0:
-			self.update_toulouse_map()
 
 		# Check if the player is holding keys
 		is_down = self.mouseWatcherNode.is_button_down
@@ -390,4 +443,5 @@ print('m:' + str(record_counter))
 
     
     
+
 
