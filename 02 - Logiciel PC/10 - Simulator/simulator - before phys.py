@@ -8,7 +8,6 @@ autopilot_speed = 0.4
 ### https://github.com/jlevy44/UnrealAI/blob/master/CarAI/joshua_work/game/src/simulation.py
 
 import numpy as np
-import math
 import cv2
 from keras import models
 from keras.models import load_model
@@ -27,11 +26,7 @@ from os import mkdir
 
 from panda3d.bullet import BulletWorld
 from panda3d.bullet import BulletPlaneShape
-from panda3d.bullet import BulletBoxShape
-from panda3d.bullet import BulletCylinderShape
 from panda3d.bullet import BulletRigidBodyNode
-from panda3d.bullet import BulletVehicle
-import panda3d.bullet as bullet
 
 root_dir = 'c:/tmp'
 dataset_dir = 'dataset'
@@ -87,12 +82,6 @@ class MyApp(ShowBase):
         # Disable the camera trackball controls.
 		self.disableMouse()
 
-        # load the environment model.
-		self.scene = self.loader.loadModel("/c/tmp/media/env")
-		self.scene.reparentTo(self.render)
-		self.scene.setScale(30, 30, 30)
-		self.scene.setPos(0,25, -0.01)
-
 		# load map
 		self.load_toulouse_map()
 
@@ -119,176 +108,30 @@ class MyApp(ShowBase):
 		# physics
 		self.world = BulletWorld()
 		self.world.setGravity(Vec3(0, 0, -9.81))
-		self.worldNP = self.render.attachNewNode('World')
-		
-		# ground physics
-		self.planePhysShape = BulletPlaneShape(Vec3(0, 0, 1), 0)
+		self.planePhys = BulletPlaneShape(Vec3(0, 0, 1), 1)
 		self.planePhysNode = BulletRigidBodyNode('Ground')
-		self.planePhysNode.addShape(self.planePhysShape)
-		self.planeNP = self.worldNP.attachNewNode(self.planePhysNode)
+		self.planePhysNode.addShape(self.planePhys)
+		self.planeNP = render.attachNewNode(self.planePhysNode)
 		self.planeNP.setPos(0, 0, 0)
 		self.world.attachRigidBody(self.planePhysNode)
 
         # make car node (no model attached)
-		self.chassisPhysShape = BulletBoxShape(Vec3(0.08, 0.18, 0.10)) # half dim in every directions
-		self.chassisTS = TransformState.makePos(Point3(0, 0, 0.10)) # bottom of the car is at 0 altitude
-		self.chassisPhysNode = BulletRigidBodyNode('Vehicle')
-		self.chassisPhysNode.addShape(self.chassisPhysShape, self.chassisTS)
-		self.chassisPhysNode.setMass(2.0)
-		self.chassisPhysNode.setDeactivationEnabled(False)
-		self.chassisNP = self.worldNP.attachNewNode(self.chassisPhysNode)
-		#self.chassisNP.setPos(0, 40.0, 0.2)
-		self.chassisNP.setPos(0, 0.0, 0.10)
-		self.world.attachRigidBody(self.chassisPhysNode)
-
-		model = loader.loadModel('models/box.egg')
-		model.setScale(0.08,0.18,0.10)
-		model.reparentTo(self.chassisNP)
-
-		self.vehicle = BulletVehicle(self.world, self.chassisPhysNode)
-		self.vehicle.setCoordinateSystem(bullet.ZUp)
-		self.world.attachVehicle(self.vehicle)
-
-		FRwheelNP = loader.loadModel('/c/tmp/media/wheel.bam')
-		FRwheelNP.reparentTo(self.worldNP)
-		self.addWheel(Point3(0.10, 0.13, 0.10), True, FRwheelNP)
-
-		FLwheelNP = loader.loadModel('/c/tmp/media/wheel.bam')
-		FLwheelNP.reparentTo(self.worldNP)
-		self.addWheel(Point3(-0.10, 0.13, 0.10), True, FLwheelNP)
-
-		RRwheelNP = loader.loadModel('/c/tmp/media/wheel.bam')
-		RRwheelNP.reparentTo(self.worldNP)
-		self.addWheel(Point3(0.10, -0.13, 0.10), False, RRwheelNP)
-
-		RLwheelNP = loader.loadModel('/c/tmp/media/wheel.bam')
-		RLwheelNP.reparentTo(self.worldNP)
-		self.addWheel(Point3(-0.10, -0.13, 0.10), False, RLwheelNP)
-
-		self.chassisNP.setPos(0, 40.0, 0.1)
-
-		# Steering info
-		self.steering = 0.0            # degree
-		self.steeringClamp = 35.0      # degree
-		self.steeringIncrement = 360.0 # degree per second
-		 
-		# Process input
-		self.engineForce = 0.0
-		self.brakeForce = 0.0
-		self.oldPos = self.chassisNP.getPos()
-		self.current_speed = 0.0
-		self.target_speed = 0.8
-
-		#self.car = NodePath('car')
-		#self.car.reparentTo(self.render)
-		#self.car.setPos(0, 40, 0.0)
+		self.car = NodePath('car')
+		self.car.reparentTo(self.render)
+		self.car.setPos(0, 40, 0.0)
 
 		# camera
 		self.camLens.setFov(90)
 		self.camLens.setNear(0.01)
 		self.camera.setPos(0.0,0.1,0.20)
-		#self.camera.setPos(0.0,-0.5,0.50)
+		self.camera.setHpr(0,0,0)
 		self.camera.setHpr(0,-15,0)
-		self.camera.reparentTo(self.chassisNP)
-
+		self.camera.reparentTo(self.car)
+		
 		self.taskMgr.add(self.physics_task, 'updatePhysics')
-
-	def addWheel(self, pos, front, np):
-		wheel = self.vehicle.createWheel()
-
-		wheel.setNode(np.node())
-		wheel.setChassisConnectionPointCs(pos)
-		wheel.setFrontWheel(front)
-
-		wheel.setWheelDirectionCs(Vec3(0, 0, -1))
-		wheel.setWheelAxleCs(Vec3(1, 0, 0))
-		wheel.setWheelRadius(0.03)
-		wheel.setMaxSuspensionTravelCm(2.0) #cm
-
-		wheel.setSuspensionStiffness(120.0)
-		wheel.setWheelsDampingRelaxation(0.1) #2.3)
-		wheel.setWheelsDampingCompression(0.1) #4.4)
-		wheel.setFrictionSlip(1000.0);
-		wheel.setRollInfluence(0.01)
 
 	def physics_task(self, task):
 		dt = globalClock.getDt()
-
-		# if gamepad detected in human mode
-		if self.gamepad and not self.autopilot:
-		    # gamepad inputs
-		    self.direction = self.gamepad.findAxis(InputDevice.Axis.right_x).value
-		    self.throttle = self.gamepad.findAxis(InputDevice.Axis.left_x ).value
-		     
-		    # center
-		    self.direction -= 0.38
-		    self.throttle -= 0.41
-		    
-		    # move
-		    y_delta = self.throttle * 100.0 * task.getDt()
-		    w_delta = self.direction * 1000.0 * task.getDt()
-		    #self.car.setHpr(self.car, w_delta, 0, 0)
-		    #self.car.set_y(self.car, y_delta)
-
-		if self.autopilot:
-			# AI inputs
-		    #self.direction = self.direction*0.8 + 0.2*self.autopilot_dir
-		    #self.throttle = autopilot_speed
-
-		    # move
-		    ##y_delta = self.throttle * 1000.0 * task.getDt()
-		    ##w_delta = self.direction * 10000.0 * task.getDt()
-		    #self.car.setHpr(self.car, w_delta, 0, 0)
-		    #self.car.set_y(self.car, y_delta)
-
-			#Speed
-			self.current_speed += dt * 0.1
-			self.current_speed = min(self.current_speed, self.target_speed)
-
-			# PID speed
-			p1 = self.oldPos
-			p2 = self.chassisNP.getPos()
-			distance = (p2-p1).length()
-			#distance=math.sqrt(((p1[0]-p2[0])*(p1[0]-p2[0]))+((p1[1]-p2[1])*(p1[1]-p2[1]))+((p1[2]-p2[2])*(p1[2]-p2[2])))
-			if( dt == 0):
-				speed = 0
-			else:
-				speed = distance/dt
-			self.oldPos = p2
-			self.engineForce = (self.current_speed-speed)*0.5
-			self.engineForce = min(self.engineForce, 0.4)
-			self.engineForce = max(self.engineForce, 0.0)
-			print(str(speed) + " m/s  " + str(self.engineForce))
-
-			self.brakeForce = 0.0
-			#self.steering += dt * self.steeringIncrement
-			self.target_steering = self.autopilot_dir * self.steeringClamp * 0.3
-			self.error_steering = self.target_steering - self.steering
-			
-			self.error_steering = min(self.error_steering, self.steeringIncrement)
-			self.error_steering = max(self.error_steering, -self.steeringIncrement)
-
-			self.steering += dt * self.error_steering
-			#self.steering = 0.0
-
-		else:
-
-			self.engineForce = 0.0
-			self.brakeForce = 0.0
-			self.steering = 0.0
-
-		# Apply steering to front wheels
-		self.vehicle.setSteeringValue(self.steering, 0);
-		self.vehicle.setSteeringValue(self.steering, 1);
-
-		# Apply engine and brake to rear wheels
-		#self.vehicle.applyEngineForce(self.engineForce, 0);
-		#self.vehicle.applyEngineForce(self.engineForce, 1);
-		self.vehicle.applyEngineForce(self.engineForce, 2);
-		self.vehicle.applyEngineForce(self.engineForce, 3);
-		self.vehicle.setBrake(self.brakeForce, 2);
-		self.vehicle.setBrake(self.brakeForce, 3);
-
 		self.world.doPhysics(dt)
 		#world.doPhysics(dt, 10, 1.0/180.0)
 		return task.cont
@@ -391,6 +234,12 @@ class MyApp(ShowBase):
 		self.circuitNodePath.setPos(1.0,-5,0)
 		self.circuitNodePath.setHpr(0,90, 270)
 
+        # load the environment model.
+		self.scene = self.loader.loadModel("/c/tmp/media/env")
+		self.scene.reparentTo(self.render)
+		self.scene.setScale(100, 100, 100)
+		self.scene.setPos(0,0, -0.1)
+ 
         # Lights
 		self.render.clearLight()
 
@@ -414,8 +263,8 @@ class MyApp(ShowBase):
 
         # Tell Panda that it should generate shaders performing per-pixel
         # lighting for the room.
-		self.render.setLight(self.plnp)
-		self.render.setLight(self.directionalLightNP)
+		self.circuitNodePath.setLight(self.plnp)
+		self.circuitNodePath.setLight(self.directionalLightNP)
 		#self.circuitNodePath.setShaderAuto()
 		self.render.setLight(self.alightNP)
 
@@ -496,8 +345,32 @@ class MyApp(ShowBase):
 		    self.autopilot  = False
 		    print('manual mode')
 
+		# if gamepad detected in human mode
+		if self.gamepad and not self.autopilot:
+		    # gamepad inputs
+		    self.direction = self.gamepad.findAxis(InputDevice.Axis.right_x).value
+		    self.throttle = self.gamepad.findAxis(InputDevice.Axis.left_x ).value
+		     
+		    # center
+		    self.direction -= 0.38
+		    self.throttle -= 0.41
+		    
+		    # move
+		    y_delta = self.throttle * 100.0 * task.getDt()
+		    w_delta = self.direction * 1000.0 * task.getDt()
+		    self.car.setHpr(self.car, w_delta, 0, 0)
+		    self.car.set_y(self.car, y_delta)
 
+		if self.autopilot:
+			# AI inputs
+		    self.direction = self.direction*0.8 + 0.2*self.autopilot_dir
+		    self.throttle = autopilot_speed
 
+		    # move
+		    y_delta = self.throttle * 1000.0 * task.getDt()
+		    w_delta = self.direction * 10000.0 * task.getDt()
+		    self.car.setHpr(self.car, w_delta, 0, 0)
+		    self.car.set_y(self.car, y_delta)
 		    
 		return Task.cont
 
