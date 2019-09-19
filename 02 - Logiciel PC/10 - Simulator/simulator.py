@@ -1,7 +1,7 @@
 ## PARAMETERS #################################################################
 
 autopilot_Kp = 50.0 #8.0 # autopilot line position (prediction) to steering angle
-autopilot_Kd = 500.0 #8.0 # autopilot line position (prediction) to steering angle
+autopilot_Kd = 100.0 #8.0 # autopilot line position (prediction) to steering angle
 autopilot_alpha = 0.4
 autopilot_beta = 1.0 - autopilot_alpha
 autopilot_speed = 2.0
@@ -54,9 +54,11 @@ class MyApp(ShowBase):
 		ShowBase.__init__(self)
         
         # OSD menu
-		self.shadowText = genLabelText("s: Ground shadows", 0)
-		self.publicityText = genLabelText("p: Side publicity and shadows", 1)
-		self.lightText = genLabelText("l: Overall Lightning", 2)
+		self.exitText = genLabelText("q: Exit", 0)
+		self.homeText = genLabelText("h: Home", 1)
+		self.shadowText = genLabelText("s: Ground shadows", 2)
+		self.publicityText = genLabelText("p: Side publicity and shadows", 3)
+		self.lightText = genLabelText("l: Overall Lightning", 4)
 
         # dynamic settings
 		self.apply_ground_shadow = False
@@ -64,6 +66,7 @@ class MyApp(ShowBase):
 		self.apply_light_modifier = False
 
 		#events
+		self.accept("h",     self.setHome)
 		self.accept("s",     self.setGroundShadow)
 		self.accept("p",     self.setSidePublicityAndShadow)
 		self.accept("l",     self.setLightModifier)
@@ -113,7 +116,7 @@ class MyApp(ShowBase):
 		self.recording = False
 		self.autopilot_button = KeyboardButton.ascii_key('a')
 		self.humanpilot_button = KeyboardButton.ascii_key('m')
-		self.autopilot = True
+		self.autopilot = False
 		self.autopilot_dir = 0.0 
 		self.last_autopilot_dir = 0.0 
 
@@ -187,8 +190,8 @@ class MyApp(ShowBase):
 		# Steering info
 		self.steering = 0.0            # degree
 		self.last_steering = 0.0       # degree
-		self.steeringClamp = 40.0      # degree
-		self.steeringIncrement = 120.0 # degree per second
+		self.steeringClamp = 45.0      # degree
+		self.steeringIncrement = 180.0 # degree per second
 		 
 		# Process input
 		self.engineForce = 0.0
@@ -235,21 +238,42 @@ class MyApp(ShowBase):
 
 		# if gamepad detected in human mode
 		if self.gamepad and not self.autopilot:
-		    # gamepad inputs
-		    self.direction = self.gamepad.findAxis(InputDevice.Axis.right_x).value
-		    self.throttle = self.gamepad.findAxis(InputDevice.Axis.left_x ).value
-		     
-		    # center
-		    self.direction -= 0.38
-		    self.throttle -= 0.41
-		    
-		    # move
-		    y_delta = self.throttle * 100.0 * task.getDt()
-		    w_delta = self.direction * 1000.0 * task.getDt()
-		    #self.car.setHpr(self.car, w_delta, 0, 0)
-		    #self.car.set_y(self.car, y_delta)
+			# gamepad inputs
+			self.direction = self.gamepad.findAxis(InputDevice.Axis.right_x).value
+			self.throttle = self.gamepad.findAxis(InputDevice.Axis.left_x ).value
 
-		if self.autopilot:
+			# center
+			self.direction -= 0.38
+			self.throttle -= 0.41
+			print(str(self.direction) + "   " + str(self.throttle))
+		    
+			# inertial
+			self.last_steering = self.steering
+			self.steering = self.direction * self.steeringClamp
+			if self.steering > self.last_steering:
+				self.steering = min(self.steering, self.last_steering+dt*self.steeringIncrement)
+			if self.steering < self.last_steering:
+				self.steering = max(self.steering, self.last_steering-dt*self.steeringIncrement)
+
+
+			# clamp
+			self.steering = min(self.steering, self.steeringClamp)
+			self.steering = max(self.steering, -self.steeringClamp)
+
+
+			if self.throttle > 0:
+				self.engineForce = self.throttle * 1.0
+				self.engineForce = min(self.engineForce, 0.6)
+				self.engineForce = max(self.engineForce, 0.0)
+				self.brakeForce = 0.0
+			else:
+				self.brakeForce = -self.throttle * 1.0
+				self.brakeForce = min(self.engineForce, 2.0)
+				self.brakeForce = max(self.engineForce, 0.0)
+				self.engineForce = 0.0
+
+
+		elif self.autopilot:
 			
 			# PID direction
 			error_dir = self.autopilot_dir # AI inputs
@@ -258,6 +282,7 @@ class MyApp(ShowBase):
 			d = derivative_error_dir * autopilot_Kd
 			o = p + d
 			#print(str(error_dir) + "    " + str(derivative_error_dir) + "    " + str(o))
+
 
 			# inertial
 			self.last_steering = self.steering
@@ -515,6 +540,10 @@ class MyApp(ShowBase):
 			self.apply_light_modifier = False
 		else:
 			self.apply_light_modifier = True
+
+	def setHome(self):
+		self.chassisNP.setPos(0, 10.0, 0.2)
+		self.chassisNP.setHpr(180, 0.0, 0.0)
 
 	def windDown(self):
         # De-initialization code goes here!
