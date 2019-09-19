@@ -1,7 +1,11 @@
 ## PARAMETERS #################################################################
 
-autopilot_Kp = 8.0 #8.0 # autopilot line position (prediction) to steering angle
-autopilot_speed = 0.4
+autopilot_Kp = 50.0 #8.0 # autopilot line position (prediction) to steering angle
+autopilot_Kd = 500.0 #8.0 # autopilot line position (prediction) to steering angle
+autopilot_alpha = 0.4
+autopilot_beta = 1.0 - autopilot_alpha
+autopilot_speed = 2.0
+autopilot_cornering_speed = 0.3
 
 ## GLOBALS ########################################################################
 
@@ -32,6 +36,7 @@ from panda3d.bullet import BulletCylinderShape
 from panda3d.bullet import BulletRigidBodyNode
 from panda3d.bullet import BulletVehicle
 import panda3d.bullet as bullet
+from panda3d.bullet import BulletDebugNode
 
 root_dir = 'c:/tmp'
 dataset_dir = 'dataset'
@@ -51,6 +56,7 @@ class MyApp(ShowBase):
         # OSD menu
 		self.shadowText = genLabelText("s: Ground shadows", 0)
 		self.publicityText = genLabelText("p: Side publicity and shadows", 1)
+		self.lightText = genLabelText("l: Overall Lightning", 2)
 
         # dynamic settings
 		self.apply_ground_shadow = False
@@ -90,7 +96,7 @@ class MyApp(ShowBase):
         # load the environment model.
 		self.scene = self.loader.loadModel("/c/tmp/media/env")
 		self.scene.reparentTo(self.render)
-		self.scene.setScale(30, 30, 30)
+		self.scene.setScale(35, 35, 35)
 		self.scene.setPos(0,25, -0.01)
 
 		# load map
@@ -109,7 +115,7 @@ class MyApp(ShowBase):
 		self.humanpilot_button = KeyboardButton.ascii_key('m')
 		self.autopilot = True
 		self.autopilot_dir = 0.0 
-		self.direction = 0.0
+		self.last_autopilot_dir = 0.0 
 
 		self.taskMgr.add(self.update_toulouse_map, 'updateMap')
 
@@ -117,10 +123,20 @@ class MyApp(ShowBase):
 		self.taskMgr.add(self.move_task, 'moveTask')
 
 		# physics
+		# debugNode = BulletDebugNode('Debug')
+		# debugNode.showWireframe(True)
+		# debugNode.showConstraints(True)
+		# debugNode.showBoundingBoxes(False)
+		# debugNode.showNormals(False)
+		# debugNP = render.attachNewNode(debugNode)
+		# debugNP.show()
+
+
 		self.world = BulletWorld()
 		self.world.setGravity(Vec3(0, 0, -9.81))
+		#self.world.setDebugNode(debugNP.node())
 		self.worldNP = self.render.attachNewNode('World')
-		
+
 		# ground physics
 		self.planePhysShape = BulletPlaneShape(Vec3(0, 0, 1), 0)
 		self.planePhysNode = BulletRigidBodyNode('Ground')
@@ -130,19 +146,18 @@ class MyApp(ShowBase):
 		self.world.attachRigidBody(self.planePhysNode)
 
         # make car node (no model attached)
-		self.chassisPhysShape = BulletBoxShape(Vec3(0.08, 0.18, 0.10)) # half dim in every directions
-		self.chassisTS = TransformState.makePos(Point3(0, 0, 0.10)) # bottom of the car is at 0 altitude
+		self.chassisPhysShape = BulletBoxShape(Vec3(0.08, 0.18, 0.02)) # half dim in every directions
+		self.chassisTS = TransformState.makePos(Point3(0, 0, 0.02)) # bottom of the car is at 0 altitude
 		self.chassisPhysNode = BulletRigidBodyNode('Vehicle')
 		self.chassisPhysNode.addShape(self.chassisPhysShape, self.chassisTS)
-		self.chassisPhysNode.setMass(2.0)
+		self.chassisPhysNode.setMass(5.0) #lbs
 		self.chassisPhysNode.setDeactivationEnabled(False)
 		self.chassisNP = self.worldNP.attachNewNode(self.chassisPhysNode)
-		#self.chassisNP.setPos(0, 40.0, 0.2)
-		self.chassisNP.setPos(0, 0.0, 0.10)
 		self.world.attachRigidBody(self.chassisPhysNode)
 
-		model = loader.loadModel('models/box.egg')
-		model.setScale(0.08,0.18,0.10)
+		model = loader.loadModel('/c/tmp/media/chassis.bam')
+		model.setHpr(0, 90, 0)
+		model.setPos(0, 0, 0.02)
 		model.reparentTo(self.chassisNP)
 
 		self.vehicle = BulletVehicle(self.world, self.chassisPhysNode)
@@ -151,50 +166,54 @@ class MyApp(ShowBase):
 
 		FRwheelNP = loader.loadModel('/c/tmp/media/wheel.bam')
 		FRwheelNP.reparentTo(self.worldNP)
-		self.addWheel(Point3(0.10, 0.13, 0.10), True, FRwheelNP)
+		self.addWheel(Point3(0.10, 0.14, 0.40), True, FRwheelNP)
 
 		FLwheelNP = loader.loadModel('/c/tmp/media/wheel.bam')
 		FLwheelNP.reparentTo(self.worldNP)
-		self.addWheel(Point3(-0.10, 0.13, 0.10), True, FLwheelNP)
+		self.addWheel(Point3(-0.10, 0.14, 0.40), True, FLwheelNP)
 
 		RRwheelNP = loader.loadModel('/c/tmp/media/wheel.bam')
 		RRwheelNP.reparentTo(self.worldNP)
-		self.addWheel(Point3(0.10, -0.13, 0.10), False, RRwheelNP)
+		self.addWheel(Point3(0.10, -0.14, 0.40), False, RRwheelNP)
 
 		RLwheelNP = loader.loadModel('/c/tmp/media/wheel.bam')
 		RLwheelNP.reparentTo(self.worldNP)
-		self.addWheel(Point3(-0.10, -0.13, 0.10), False, RLwheelNP)
+		self.addWheel(Point3(-0.10, -0.14, 0.40), False, RLwheelNP)
 
-		self.chassisNP.setPos(0, 40.0, 0.1)
+		#self.chassisNP.setPos(0, 40.0, 0.05)
+		self.chassisNP.setPos(0, 10.0, 0.2)
+		self.chassisNP.setHpr(180, 0.0, 0.0)
 
 		# Steering info
 		self.steering = 0.0            # degree
-		self.steeringClamp = 35.0      # degree
-		self.steeringIncrement = 360.0 # degree per second
+		self.last_steering = 0.0       # degree
+		self.steeringClamp = 40.0      # degree
+		self.steeringIncrement = 120.0 # degree per second
 		 
 		# Process input
 		self.engineForce = 0.0
 		self.brakeForce = 0.0
 		self.oldPos = self.chassisNP.getPos()
 		self.current_speed = 0.0
-		self.target_speed = 0.8
-
-		#self.car = NodePath('car')
-		#self.car.reparentTo(self.render)
-		#self.car.setPos(0, 40, 0.0)
+		self.target_speed = 0.0
 
 		# camera
-		self.camLens.setFov(90)
+		self.camLens.setFov(100)
 		self.camLens.setNear(0.01)
-		self.camera.setPos(0.0,0.1,0.20)
-		#self.camera.setPos(0.0,-0.5,0.50)
-		self.camera.setHpr(0,-15,0)
+		#self.camera.setPos(0.0,0.1,0.20)
+		#self.camera.setHpr(,-15,0)
+		#self.camera.setPos(0.5,-0.5,0.50)
+		#self.camera.setHpr(35,-35,0)
+		self.camera.setPos(0.0,0.05,0.22)
+		self.camera.setHpr(0,-20,0)
 		self.camera.reparentTo(self.chassisNP)
 
 		self.taskMgr.add(self.physics_task, 'updatePhysics')
 
 	def addWheel(self, pos, front, np):
 		wheel = self.vehicle.createWheel()
+
+		#http://blender3d.org.ua/forum/game/iwe/upload/Vehicle_Simulation_With_Bullet.pdf
 
 		wheel.setNode(np.node())
 		wheel.setChassisConnectionPointCs(pos)
@@ -203,13 +222,13 @@ class MyApp(ShowBase):
 		wheel.setWheelDirectionCs(Vec3(0, 0, -1))
 		wheel.setWheelAxleCs(Vec3(1, 0, 0))
 		wheel.setWheelRadius(0.03)
-		wheel.setMaxSuspensionTravelCm(2.0) #cm
+		wheel.setMaxSuspensionTravelCm(5.0) #cm
 
-		wheel.setSuspensionStiffness(120.0)
-		wheel.setWheelsDampingRelaxation(0.1) #2.3)
-		wheel.setWheelsDampingCompression(0.1) #4.4)
-		wheel.setFrictionSlip(1000.0);
-		wheel.setRollInfluence(0.01)
+		wheel.setSuspensionStiffness(90.0)
+		wheel.setWheelsDampingRelaxation(0.3)
+		wheel.setWheelsDampingCompression(0.2) 
+		wheel.setFrictionSlip(0.8);
+		wheel.setRollInfluence(0.7)
 
 	def physics_task(self, task):
 		dt = globalClock.getDt()
@@ -231,45 +250,65 @@ class MyApp(ShowBase):
 		    #self.car.set_y(self.car, y_delta)
 
 		if self.autopilot:
-			# AI inputs
-		    #self.direction = self.direction*0.8 + 0.2*self.autopilot_dir
-		    #self.throttle = autopilot_speed
+			
+			# PID direction
+			error_dir = self.autopilot_dir # AI inputs
+			derivative_error_dir = self.autopilot_dir - self.last_autopilot_dir
+			p = error_dir * autopilot_Kp
+			d = derivative_error_dir * autopilot_Kd
+			o = p + d
+			#print(str(error_dir) + "    " + str(derivative_error_dir) + "    " + str(o))
 
-		    # move
-		    ##y_delta = self.throttle * 1000.0 * task.getDt()
-		    ##w_delta = self.direction * 10000.0 * task.getDt()
-		    #self.car.setHpr(self.car, w_delta, 0, 0)
-		    #self.car.set_y(self.car, y_delta)
+			# inertial
+			self.last_steering = self.steering
+			self.steering = o
+			if self.steering > self.last_steering:
+				self.steering = min(self.steering, self.last_steering+dt*self.steeringIncrement)
+			if self.steering < self.last_steering:
+				self.steering = max(self.steering, self.last_steering-dt*self.steeringIncrement)
 
-			#Speed
-			self.current_speed += dt * 0.1
-			self.current_speed = min(self.current_speed, self.target_speed)
+			# clamp
+			self.steering = min(self.steering, self.steeringClamp)
+			self.steering = max(self.steering, -self.steeringClamp)
+
+			# speed ramp
+			if abs(error_dir) < 0.4:
+				self.target_speed = autopilot_speed
+			else:
+				self.target_speed = autopilot_cornering_speed
+			
+			if self.current_speed < self.target_speed:
+				self.current_speed += dt * 2.0
+				self.current_speed = min(self.current_speed, self.target_speed)
+			else:
+				self.current_speed -= dt * 5.0
+				self.current_speed = max(self.current_speed, self.target_speed)
+
+			print(str(self.current_speed) + " m/s  ")
 
 			# PID speed
 			p1 = self.oldPos
 			p2 = self.chassisNP.getPos()
 			distance = (p2-p1).length()
-			#distance=math.sqrt(((p1[0]-p2[0])*(p1[0]-p2[0]))+((p1[1]-p2[1])*(p1[1]-p2[1]))+((p1[2]-p2[2])*(p1[2]-p2[2])))
 			if( dt == 0):
 				speed = 0
 			else:
 				speed = distance/dt
 			self.oldPos = p2
-			self.engineForce = (self.current_speed-speed)*0.5
-			self.engineForce = min(self.engineForce, 0.4)
-			self.engineForce = max(self.engineForce, 0.0)
-			print(str(speed) + " m/s  " + str(self.engineForce))
+			force = (self.current_speed-speed)*0.6
+			if force > 0:
+				self.engineForce = force
+				self.engineForce = min(self.engineForce, 0.6)
+				self.engineForce = max(self.engineForce, 0.0)
+				self.brakeForce = 0.0
+			else:
+				self.brakeForce = -force
+				self.brakeForce = min(self.engineForce, 2.0)
+				self.brakeForce = max(self.engineForce, 0.0)
+				self.engineForce = 0.0
 
-			self.brakeForce = 0.0
-			#self.steering += dt * self.steeringIncrement
-			self.target_steering = self.autopilot_dir * self.steeringClamp * 0.3
-			self.error_steering = self.target_steering - self.steering
-			
-			self.error_steering = min(self.error_steering, self.steeringIncrement)
-			self.error_steering = max(self.error_steering, -self.steeringIncrement)
+			###print(str(speed) + " m/s  " + str(self.engineForce))
 
-			self.steering += dt * self.error_steering
-			#self.steering = 0.0
 
 		else:
 
@@ -282,10 +321,12 @@ class MyApp(ShowBase):
 		self.vehicle.setSteeringValue(self.steering, 1);
 
 		# Apply engine and brake to rear wheels
-		#self.vehicle.applyEngineForce(self.engineForce, 0);
-		#self.vehicle.applyEngineForce(self.engineForce, 1);
+		self.vehicle.applyEngineForce(self.engineForce, 0);
+		self.vehicle.applyEngineForce(self.engineForce, 1);
 		self.vehicle.applyEngineForce(self.engineForce, 2);
 		self.vehicle.applyEngineForce(self.engineForce, 3);
+		self.vehicle.setBrake(self.brakeForce, 0);
+		self.vehicle.setBrake(self.brakeForce, 1);
 		self.vehicle.setBrake(self.brakeForce, 2);
 		self.vehicle.setBrake(self.brakeForce, 3);
 
@@ -388,7 +429,7 @@ class MyApp(ShowBase):
 
 		self.circuitNodePath.reparentTo(self.render)
 		self.circuitNodePath.setScale(1.0, 1.0, 1.0)
-		self.circuitNodePath.setPos(1.0,-5,0)
+		self.circuitNodePath.setPos(1.0,-5.0,-0.01)
 		self.circuitNodePath.setHpr(0,90, 270)
 
         # Lights
@@ -537,33 +578,35 @@ app = MyApp()
 counter = 0
 record_counter = 0
 while not app.quit:
-    # game tick
-    taskMgr.step()
-    # get picture for CNN
-    frame_orign = app.get_camera_image()
-    # supress alpha channel
-    frame_orign = frame_orign[:, :, 0:3] 
-    #resize to CNN input format
-    frame_orign = cv2.resize(frame_orign, (160, 90),   interpolation = cv2.INTER_AREA)
-    # smotth and gray scale
-    frame = cv2.blur(frame_orign,(3,3))
-    frame = cv2.cvtColor(frame,cv2.COLOR_BGR2GRAY)
-    # reshape for CNN
-    frame = frame.reshape(90,160,1)
-    # use CNN
-    yprediction = model.predict(frame.reshape(1,90,160,1)).item(0)
-    ###print(str(counter) + " aiDIR:" + str(yprediction))
-    # push steering from CNN to game
-    app.autopilot_dir = -yprediction*autopilot_Kp
-    # dataset recording
-    if app.recording and counter != 0: #and not app.autopilot : # first frame buffer is empty, skip it!
-        filename = dataset_dir + '/render_' + str(record_counter) + '.jpg'
-        cv2.imwrite(root_dir + '/' + filename, frame_orign) 
-        dataset_file.write(filename +';' + str(int(128.0-app.direction*127.0*1.4)) + ';' + str(int(app.throttle*127.0*1.4+128.0)) + '\n') # *1.4 gain
-        dataset_file.flush()
-        record_counter += 1
+	# game tick
+	taskMgr.step()
+	# get picture for CNN
+	frame_orign = app.get_camera_image()
+	# supress alpha channel
+	frame_orign = frame_orign[:, :, 0:3] 
+	#resize to CNN input format
+	frame_orign = cv2.resize(frame_orign, (160, 90),   interpolation = cv2.INTER_AREA)
+	# smotth and gray scale
+	frame = cv2.blur(frame_orign,(3,3))
+	frame = cv2.cvtColor(frame,cv2.COLOR_BGR2GRAY)
+	# reshape for CNN
+	frame = frame.reshape(90,160,1)
+	# use CNN
+	yprediction = model.predict(frame.reshape(1,90,160,1)).item(0)
+	###print(str(counter) + " aiDIR:" + str(yprediction))
+	# push steering from CNN to game
+	app.last_autopilot_dir = app.autopilot_dir
+	app.autopilot_dir = autopilot_beta*app.autopilot_dir - autopilot_alpha*yprediction #filter
 
-    counter += 1
+	# dataset recording
+	if app.recording and counter != 0: #and not app.autopilot : # first frame buffer is empty, skip it!
+		filename = dataset_dir + '/render_' + str(record_counter) + '.jpg'
+		cv2.imwrite(root_dir + '/' + filename, frame_orign) 
+		dataset_file.write(filename +';' + str(int(128.0-app.direction*127.0*1.4)) + ';' + str(int(app.throttle*127.0*1.4+128.0)) + '\n') # *1.4 gain
+		dataset_file.flush()
+		record_counter += 1
+
+	counter += 1
 
 dataset_file.close()
 print('m:' + str(record_counter))
