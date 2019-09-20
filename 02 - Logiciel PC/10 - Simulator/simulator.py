@@ -1,5 +1,9 @@
 ## PARAMETERS #################################################################
 
+minimum_speed = 0.25
+maximum_speed = 2.0
+speed_Kp = 2.0
+
 autopilot_Kp = 50.0 #8.0 # autopilot line position (prediction) to steering angle
 autopilot_Kd = 100.0 #8.0 # autopilot line position (prediction) to steering angle
 autopilot_alpha = 0.4
@@ -48,28 +52,11 @@ def genLabelText(text, i):
                         fg=(1, 1, 1, 1), align=TextNode.ALeft, shadow=(0, 0, 0, 0.5), scale=.05)
 
 
-
 class MyApp(ShowBase):
+
 	def __init__(self):
+
 		ShowBase.__init__(self)
-        
-        # OSD menu
-		self.exitText = genLabelText("q: Exit", 0)
-		self.homeText = genLabelText("h: Home", 1)
-		self.shadowText = genLabelText("s: Ground shadows", 2)
-		self.publicityText = genLabelText("p: Side publicity and shadows", 3)
-		self.lightText = genLabelText("l: Overall Lightning", 4)
-
-        # dynamic settings
-		self.apply_ground_shadow = False
-		self.apply_side_publicity_and_shadow = False
-		self.apply_light_modifier = False
-
-		#events
-		self.accept("h",     self.setHome)
-		self.accept("s",     self.setGroundShadow)
-		self.accept("p",     self.setSidePublicityAndShadow)
-		self.accept("l",     self.setLightModifier)
 
         # Check video card capabilities.
 		if not self.win.getGsg().getSupportsBasicShaders():
@@ -78,11 +65,43 @@ class MyApp(ShowBase):
 			return
 
         # Window
-		winprops  = WindowProperties()
-		winprops .setSize(1280, 720)
-		base.win.requestProperties(winprops ) 
+		winprops = WindowProperties()
+		winprops.setSize(1280, 720)
+		base.win.requestProperties(winprops) 
 		base.setFrameRateMeter(True)
+
+		# OSD
+		self.dr = self.win.makeDisplayRegion()
+		self.dr.setSort(20)
         
+        # OSD menu
+		self.exitText = genLabelText("q: Exit", 0)
+		self.autoText = genLabelText("a: Autopilot", 1)
+		self.manualText = genLabelText("m: Manualpilot", 2)
+		self.recordText = genLabelText("r: Record", 3)
+		self.homeText = genLabelText("h: Home", 4)
+		self.shadowText = genLabelText("s: Ground shadows", 5)
+		self.publicityText = genLabelText("p: Side publicity and shadows", 6)
+		self.lightText = genLabelText("l: Overall Lightning", 7)
+
+        # application state
+		self.quit = False
+		self.autopilot = False
+		self.recording = False
+		self.apply_ground_shadow = False
+		self.apply_side_publicity_and_shadow = False
+		self.apply_light_modifier = False
+
+		# keyboard events
+		self.accept("q",     self.doQuit)
+		self.accept("a",     self.doAutopilot)
+		self.accept("m",     self.doManualpilot)
+		self.accept("r",     self.doRecord)
+		self.accept("h",     self.setHome)
+		self.accept("s",     self.setGroundShadow)
+		self.accept("p",     self.setSidePublicityAndShadow)
+		self.accept("l",     self.setLightModifier)
+
         # gamepad
 		self.gamepad = None
 		devices = self.devices.getDevices(InputDevice.DeviceClass.gamepad)
@@ -92,7 +111,7 @@ class MyApp(ShowBase):
 			if devices[0].device_class == InputDevice.DeviceClass.gamepad and not self.gamepad:
 				print("Found %s" % (devices[0]))
 				self.gamepad = devices[0]
-                
+
         # Disable the camera trackball controls.
 		self.disableMouse()
 
@@ -105,26 +124,6 @@ class MyApp(ShowBase):
 		# load map
 		self.load_toulouse_map()
 
-		# osd
-		self.dr = self.win.makeDisplayRegion()
-		self.dr.setSort(20)
-
-		# controls
-		self.quit_button = KeyboardButton.ascii_key('q')
-		self.quit = False
-		self.recording_button = KeyboardButton.ascii_key('r')
-		self.recording = False
-		self.autopilot_button = KeyboardButton.ascii_key('a')
-		self.humanpilot_button = KeyboardButton.ascii_key('m')
-		self.autopilot = False
-		self.autopilot_dir = 0.0 
-		self.last_autopilot_dir = 0.0 
-
-		self.taskMgr.add(self.update_toulouse_map, 'updateMap')
-
-		# tasks
-		self.taskMgr.add(self.move_task, 'moveTask')
-
 		# physics
 		# debugNode = BulletDebugNode('Debug')
 		# debugNode.showWireframe(True)
@@ -133,7 +132,6 @@ class MyApp(ShowBase):
 		# debugNode.showNormals(False)
 		# debugNP = render.attachNewNode(debugNode)
 		# debugNP.show()
-
 
 		self.world = BulletWorld()
 		self.world.setGravity(Vec3(0, 0, -9.81))
@@ -187,19 +185,6 @@ class MyApp(ShowBase):
 		self.chassisNP.setPos(0, 10.0, 0.2)
 		self.chassisNP.setHpr(180, 0.0, 0.0)
 
-		# Steering info
-		self.steering = 0.0            # degree
-		self.last_steering = 0.0       # degree
-		self.steeringClamp = 45.0      # degree
-		self.steeringIncrement = 180.0 # degree per second
-		 
-		# Process input
-		self.engineForce = 0.0
-		self.brakeForce = 0.0
-		self.oldPos = self.chassisNP.getPos()
-		self.current_speed = 0.0
-		self.target_speed = 0.0
-
 		# camera
 		self.camLens.setFov(100)
 		self.camLens.setNear(0.01)
@@ -207,12 +192,40 @@ class MyApp(ShowBase):
 		#self.camera.setHpr(,-15,0)
 		#self.camera.setPos(0.5,-0.5,0.50)
 		#self.camera.setHpr(35,-35,0)
-		####self.camera.setPos(0.0,-0.15,0.25)
-		self.camera.setPos(0.0,0.05,0.22)
+		self.camera.setPos(0.0,-0.15,0.25)
+		###self.camera.setPos(0.0,0.05,0.22)
 		self.camera.setHpr(0,-20,0)
 		self.camera.reparentTo(self.chassisNP)
 
+		# tasks
+		self.taskMgr.add(self.update_toulouse_map, 'updateMap')
 		self.taskMgr.add(self.physics_task, 'updatePhysics')
+
+		# speed control state
+		self.target_speed = 0.0
+		self.current_speed = 0.0
+		self.reduced_current_speed = 0.0
+		self.actual_speed_ms = 0.0
+		self.actual_speed_error_ms = 0.0
+		self.pid_speed = 0.0
+
+		self.oldPos = self.chassisNP.getPos()
+
+
+		self.autopilot_dir = 0.0 
+		self.last_autopilot_dir = 0.0 
+
+		# Steering info
+		self.steering = 0.0            # degree
+		self.last_steering = 0.0       # degree
+		self.steeringClamp = 35.0      # degree
+		self.steeringIncrement = 160.0 # degree per second
+		 
+		# controller output
+		self.engineForce = 0.0
+		self.brakeForce = 0.0
+		
+
 
 	def addWheel(self, pos, front, np):
 		wheel = self.vehicle.createWheel()
@@ -238,43 +251,93 @@ class MyApp(ShowBase):
 		dt = globalClock.getDt()
 
 		# if gamepad detected in human mode
-		if self.gamepad and not self.autopilot:
-			# gamepad inputs
-			self.direction = self.gamepad.findAxis(InputDevice.Axis.right_x).value
-			self.throttle = self.gamepad.findAxis(InputDevice.Axis.left_x ).value
+		# if self.gamepad and not self.autopilot:
+		# 	# gamepad inputs
+		# 	self.direction = self.gamepad.findAxis(InputDevice.Axis.right_x).value
+		# 	self.throttle = self.gamepad.findAxis(InputDevice.Axis.left_x ).value
 
-			# center
-			self.direction -= 0.38
-			self.throttle -= 0.41
-			print(str(self.direction) + "   " + str(self.throttle))
+		# 	# center
+		# 	self.direction -= 0.38
+		# 	self.throttle -= 0.41
+		# 	print(str(self.direction) + "   " + str(self.throttle))
 		    
-			# inertial
-			self.last_steering = self.steering
-			self.steering = self.direction * self.steeringClamp
-			if self.steering > self.last_steering:
-				self.steering = min(self.steering, self.last_steering+dt*self.steeringIncrement)
-			if self.steering < self.last_steering:
-				self.steering = max(self.steering, self.last_steering-dt*self.steeringIncrement)
+		# 	# inertial
+		# 	self.last_steering = self.steering
+		# 	self.steering = self.direction * self.steeringClamp
+		# 	if self.steering > self.last_steering:
+		# 		self.steering = min(self.steering, self.last_steering+dt*self.steeringIncrement)
+		# 	if self.steering < self.last_steering:
+		# 		self.steering = max(self.steering, self.last_steering-dt*self.steeringIncrement)
 
 
-			# clamp
-			self.steering = min(self.steering, self.steeringClamp)
-			self.steering = max(self.steering, -self.steeringClamp)
+		# 	# clamp
+		# 	self.steering = min(self.steering, self.steeringClamp)
+		# 	self.steering = max(self.steering, -self.steeringClamp)
 
 
-			if self.throttle > 0:
-				self.engineForce = self.throttle * 1.0
-				self.engineForce = min(self.engineForce, 0.6)
-				self.engineForce = max(self.engineForce, 0.0)
-				self.brakeForce = 0.0
-			else:
-				self.brakeForce = -self.throttle * 1.0
-				self.brakeForce = min(self.engineForce, 2.0)
-				self.brakeForce = max(self.engineForce, 0.0)
-				self.engineForce = 0.0
+		# 	if self.throttle > 0:
+		# 		self.engineForce = self.throttle * 1.0
+		# 		self.engineForce = min(self.engineForce, 0.6)
+		# 		self.engineForce = max(self.engineForce, 0.0)
+		# 		self.brakeForce = 0.0
+		# 	else:
+		# 		self.brakeForce = -self.throttle * 1.0
+		# 		self.brakeForce = min(self.engineForce, 2.0)
+		# 		self.brakeForce = max(self.engineForce, 0.0)
+		# 		self.engineForce = 0.0
+
+		# elif not self.gamepad and not self.autopilot:
+
+
+		# actual speed computation
+		p1 = self.oldPos
+		p2 = self.chassisNP.getPos()
+		distance = (p2-p1).length()
+		if( dt == 0):
+			self.actual_speed_ms = 0
+		else:
+			self.actual_speed_ms = distance/dt
+		self.oldPos = p2
+
+		if not self.autopilot:
+
+			# Check if the player is holding keys
+			self.up_button = self.mouseWatcherNode.isButtonDown(KeyboardButton.up())
+			self.down_button = self.mouseWatcherNode.isButtonDown(KeyboardButton.down())
+			self.left_button = self.mouseWatcherNode.isButtonDown(KeyboardButton.left())
+			self.right_button = self.mouseWatcherNode.isButtonDown(KeyboardButton.right())
+			if self.up_button and not self.down_button:
+				self.current_speed += dt * 0.6
+				self.current_speed = min(self.current_speed, maximum_speed)
+			if not self.up_button and self.down_button:
+				self.current_speed -= dt * 2.0
+				self.current_speed = max(self.current_speed, 0)
+			if not self.up_button and not self.down_button:
+				self.current_speed -= dt * 0.6
+				self.current_speed = max(self.current_speed, 0)
+			if self.left_button and not self.right_button:
+				self.steering += dt*self.steeringIncrement*0.4
+				self.steering = min(self.steering, self.steeringClamp)
+			if not self.left_button and self.right_button:
+				self.steering -= dt*self.steeringIncrement*0.4
+				self.steering = max(self.steering, -self.steeringClamp)
+			if not self.left_button and not self.right_button:
+				if self.steering < 0:
+					self.steering += dt*self.steeringIncrement*0.30
+					self.steering = min(self.steering, 0)
+				if self.steering > 0:
+					self.steering -= dt*self.steeringIncrement*0.30
+					self.steering = max(self.steering, 0)
+
+			self.reduced_current_speed = self.current_speed
+
 
 
 		elif self.autopilot:
+
+			# speed controller (stage 1)
+			self.target_speed = maximum_speed
+
 			
 			# PID direction
 			error_dir = self.autopilot_dir # AI inputs
@@ -333,14 +396,28 @@ class MyApp(ShowBase):
 				self.brakeForce = max(self.engineForce, 0.0)
 				self.engineForce = 0.0
 
-			###print(str(speed) + " m/s  " + str(self.engineForce))
-
+			
 
 		else:
 
-			self.engineForce = 0.0
-			self.brakeForce = 0.0
 			self.steering = 0.0
+			self.reduced_current_speed = 0.0
+
+		# PID speed
+		self.actual_speed_error_ms = self.reduced_current_speed-self.actual_speed_ms
+		self.pid_speed = self.actual_speed_error_ms*speed_Kp
+		if self.pid_speed > 0:
+			self.engineForce = self.pid_speed
+			self.engineForce = min(self.engineForce, 10.0)
+			self.engineForce = max(self.engineForce, 0.0)
+			self.brakeForce = 0.0
+		else:
+			self.brakeForce = -self.pid_speed
+			self.brakeForce = min(self.brakeForce, 2.0)
+			self.brakeForce = max(self.brakeForce, 0.0)
+			self.engineForce = 0.0
+
+		print(str(round(self.reduced_current_speed,1)) + " m/s     " + str(round(self.actual_speed_ms,1))+ " m/s     " + str(round(self.engineForce,1)))
 
 		# Apply steering to front wheels
 		self.vehicle.setSteeringValue(self.steering, 0);
@@ -516,6 +593,22 @@ class MyApp(ShowBase):
 		
 		return Task.cont
 
+	def doQuit(self):
+        # De-initialization code goes here!
+		self.quit = True
+
+	def doAutopilot(self):
+        # De-initialization code goes here!
+		self.autopilot = True
+
+	def doManualpilot(self):
+        # De-initialization code goes here!
+		self.autopilot = False
+
+	def doRecord(self):
+        # De-initialization code goes here!
+		self.recording = True
+
 	def setGroundShadow(self):
 		if self.apply_ground_shadow:
 			self.apply_ground_shadow = False
@@ -545,32 +638,6 @@ class MyApp(ShowBase):
 	def setHome(self):
 		self.chassisNP.setPos(0, 10.0, 0.2)
 		self.chassisNP.setHpr(180, 0.0, 0.0)
-
-	def windDown(self):
-        # De-initialization code goes here!
-		self.quit = True
-  
-	def move_task(self, task):
-
-		# Check if the player is holding keys
-		is_down = self.mouseWatcherNode.is_button_down
-		if is_down(self.quit_button):
-		    self.quit  = True
-		    print('quit')
-		if is_down(self.recording_button):
-		    self.recording  = True
-		    print('recording dataset')
-		if is_down(self.autopilot_button):
-		    self.autopilot  = True
-		    print('autopilot mode')
-		if is_down(self.humanpilot_button):
-		    self.autopilot  = False
-		    print('manual mode')
-
-
-
-		    
-		return Task.cont
 
 	def get_camera_image(self, requested_format=None):
 		"""
