@@ -207,6 +207,7 @@ class MyApp(ShowBase):
 		#self.camera.setHpr(,-15,0)
 		#self.camera.setPos(0.5,-0.5,0.50)
 		#self.camera.setHpr(35,-35,0)
+		####self.camera.setPos(0.0,-0.15,0.25)
 		self.camera.setPos(0.0,0.05,0.22)
 		self.camera.setHpr(0,-20,0)
 		self.camera.reparentTo(self.chassisNP)
