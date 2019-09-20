@@ -1,0 +1,13 @@
+##SPEED  MIN(M/S)  MAX(M/S)  ACC(M/S au 1/60eme) DEC(M/S au 1/60eme)  KP     KI    KD    KFF
+SPEED    0.25      1.2       0.01                0.1                  10.0   0.0   0.0   15.0
+
+##WALL_FOLLOWING KP      KI      KD    KSPEEDPOS(CM>M/S)  THRESHOLD(CM over 30 frames)
+WALL_FOLLOWING   0.0033  0.0003  0.1   0.01               350
+
+##LINE_FOLLOWING KP      KI      KD    KSPEEDDIR(1>M/S) KSPEEDSTEERING (1>M/S)
+LINE_FOLLOWING   0.8     0.0     0.0   0.5              0.5
+
+##STEERING TRIM(+/- 0..128)   D/R(%)
+STEERING   4                  0.5
+
+
