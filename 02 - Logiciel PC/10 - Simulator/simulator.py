@@ -121,8 +121,20 @@ class MyApp(ShowBase):
 		self.slider_max_speed = DirectSlider(range=(0,10), value=max_speed, pageSize=0.1, command=self.slider_max_speed_change, scale=0.5, pos = (0.0,0.0,0.9))
 		self.text_max_speed = OnscreenText(text="Vmax " + str(max_speed)+"m/s", fg=(1, 1, 1, 1), align=TextNode.ARight, shadow=(0, 0, 0, 0.5), scale=.05, pos=(-0.55,0.9))
 		
-		#self.slider_ai_direction_kp
+		self.slider_ai_direction_kp = DirectSlider(range=(0,3), value=ai_direction_kp, pageSize=0.1, command=self.slider_ai_direction_kp_change, scale=0.5, pos = (0.0,0.0,0.8))
+		self.text_ai_direction_kp = OnscreenText(text="AI Direction Kp " + str(round(ai_direction_kp,1)), fg=(1, 1, 1, 1), align=TextNode.ARight, shadow=(0, 0, 0, 0.5), scale=.05, pos=(-0.55,0.8))
 
+		self.slider_ai_direction_ki = DirectSlider(range=(0,0.2), value=ai_direction_ki, pageSize=0.01, command=self.slider_ai_direction_ki_change, scale=0.5, pos = (0.0,0.0,0.7))
+		self.text_ai_direction_ki = OnscreenText(text="AI Direction Ki " + str(round(ai_direction_ki,2)), fg=(1, 1, 1, 1), align=TextNode.ARight, shadow=(0, 0, 0, 0.5), scale=.05, pos=(-0.55,0.7))
+
+		self.slider_ai_direction_kd = DirectSlider(range=(0,30), value=ai_direction_kd, pageSize=0.1, command=self.slider_ai_direction_kd_change, scale=0.5, pos = (0.0,0.0,0.6))
+		self.text_ai_direction_kd = OnscreenText(text="AI Direction Kd " + str(round(ai_direction_kd,1)), fg=(1, 1, 1, 1), align=TextNode.ARight, shadow=(0, 0, 0, 0.5), scale=.05, pos=(-0.55,0.6))
+
+		self.slider_ai_steering_k_speed = DirectSlider(range=(0,1), value=ai_steering_k_speed, pageSize=0.1, command=self.slider_ai_steering_k_speed_change, scale=0.5, pos = (0.0,0.0,0.5))
+		self.text_ai_steering_k_speed = OnscreenText(text="AI Steering K speed " + str(round(ai_steering_k_speed,2)), fg=(1, 1, 1, 1), align=TextNode.ARight, shadow=(0, 0, 0, 0.5), scale=.05, pos=(-0.55,0.5))
+
+		self.slider_ai_direction_k_speed = DirectSlider(range=(0,1), value=ai_direction_k_speed, pageSize=0.1, command=self.slider_ai_direction_k_speed_change, scale=0.5, pos = (0.0,0.0,0.4))
+		self.text_ai_direction_k_speed = OnscreenText(text="AI Direction K speed " + str(round(ai_direction_k_speed,2)), fg=(1, 1, 1, 1), align=TextNode.ARight, shadow=(0, 0, 0, 0.5), scale=.05, pos=(-0.55,0.4))
 
         # application state
 		self.quit = False
@@ -296,6 +308,26 @@ class MyApp(ShowBase):
 	def slider_max_speed_change(self):
 		self.max_speed_ms = float(self.slider_max_speed['value'])
 		self.text_max_speed.setText("Vmax " + str(round(self.max_speed_ms,1))+"m/s")
+
+	def slider_ai_direction_kp_change(self):
+		self.ai_direction_kp = float(self.slider_ai_direction_kp['value'])
+		self.text_ai_direction_kp.setText("AI Direction Kp " + str(round(self.ai_direction_kp,1)))
+
+	def slider_ai_direction_ki_change(self):
+		self.ai_direction_ki = float(self.slider_ai_direction_ki['value'])
+		self.text_ai_direction_ki.setText("AI Direction Ki " + str(round(self.ai_direction_ki,2)))
+
+	def slider_ai_direction_kd_change(self):
+		self.ai_direction_kd = float(self.slider_ai_direction_kd['value'])
+		self.text_ai_direction_kd.setText("AI Direction Kd " + str(round(self.ai_direction_kd,1)))
+
+	def slider_ai_steering_k_speed_change(self):
+		self.ai_steering_k_speed = float(self.slider_ai_steering_k_speed['value'])
+		self.text_ai_steering_k_speed.setText("AI Steering K speed " + str(round(self.ai_steering_k_speed,2)))
+
+	def slider_ai_direction_k_speed_change(self):
+		self.ai_direction_k_speed = float(self.slider_ai_direction_k_speed['value'])
+		self.text_ai_direction_k_speed.setText("AI Direction K speed " + str(round(self.ai_direction_k_speed,2)))
 
 	def addWheel(self, pos, front, np):
 		wheel = self.vehicle.createWheel()
