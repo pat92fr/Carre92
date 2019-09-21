@@ -1,0 +1,5 @@
+model/model.h5_Sat_Sep_21_15-35-11_2019.h5
+training set scores:[0.0017061112141117125, 0.0016930513688606795]
+cross-validation set scores:[0.0018329975556460446, 0.001820413153388226]
+test set scores:[0.0019117388764655532, 0.001902721267288166]
+[('crop2D', 26), ('norm', 0), ('conv2D', 8, (5, 5), (2, 2), 'relu'), ('maxpooling2D', (2, 2), (2, 2)), ('conv2D', 16, (3, 9), (2, 2), 'relu'), ('maxpooling2D', (2, 2), (2, 2)), ('dropout', 0.2), ('flatten', 0), ('fc', 8, 'tanh', 0.0001), ('dropout', 0.2), ('fc', 1, 'linear', 0.0001)]

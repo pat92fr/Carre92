@@ -1,8 +1,8 @@
 ## PARAMETER ###################################################################
 
-dataset_list = [ "dataset_010" ] # list the dataset directory names to be labelled
+dataset_list = [ "dataset_012" ] # list the dataset directory names to be labelled
 display_ratio = 8       # picture zoom
-framerate_ratio = 0.2   # framerate slow down < 1.0
+framerate_ratio = 0.4   # framerate slow down < 1.0
 
 ## GLOBAL ######################################################################
 

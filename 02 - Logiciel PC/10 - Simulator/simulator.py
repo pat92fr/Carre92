@@ -1,7 +1,7 @@
 ## PARAMETERS #################################################################
 
-min_speed = 0.6 # m/s
-max_speed = 3.5 # m/s
+min_speed = 0.6 # 0.6 m/s
+max_speed = 7.5 # 3.5 m/s
 acceleration = 0.01 # m/s per 1/60eme
 deceleration = 0.1 # m/s per 1/60eme
 speed_kp = 2.0
@@ -9,17 +9,17 @@ speed_ki = 0.0
 speed_kd = 0.0
 speed_kff = 0.0
 
-lidar_direction_kp = 36.0
+lidar_direction_kp = 1.0
 lidar_direction_ki = 0.0
-lidar_direction_kd = 100.0
+lidar_direction_kd = 0.0
 lidar_k_speed = 0.01
 lidar_positional_error_threshold = 350
 
-ai_direction_kp = 36.0
-ai_direction_ki = 0.0
-ai_direction_kd = 100.0
-ai_steering_k_speed = 0.08
-ai_direction_k_speed = 4.6
+ai_direction_kp = 1.5
+ai_direction_ki = 0.08
+ai_direction_kd = 18.0
+ai_steering_k_speed = 0.65 #7
+ai_direction_k_speed = 0.5
 
 steering_trim = 0
 dual_rate = 0.5
@@ -34,6 +34,7 @@ steering_increment = 160.0 # degree per second
 ### https://github.com/jlevy44/UnrealAI/blob/master/CarAI/joshua_work/game/src/simulation.py
 
 import my_controller
+from my_math import *
 
 import numpy as np
 import math
@@ -114,6 +115,7 @@ class MyApp(ShowBase):
 		# OSD graphics
 		self.target_image = OnscreenImage(image = '/c/tmp/media/cross.png', pos = (-0.005, 0.0, 0.0), scale = (0.05, 0.05, 0.05), )
 		self.target_image.setTransparency(TransparencyAttrib.MAlpha)
+		self.speed_o_meter = OnscreenText(text="0km/h", pos=(1.4,0.80), fg=(1, 1, 1, 1), align=TextNode.ARight, shadow=(0, 0, 0, 0.5), scale=.25)
 
         # application state
 		self.quit = False
@@ -356,6 +358,8 @@ class MyApp(ShowBase):
 		if  dt != 0:
 			self.actual_speed_ms = self.delta_distance/dt
 		self.last_position = self.current_position
+		self.actual_speed_kmh = 0.9 * self.actual_speed_kmh + 0.1 * self.actual_speed_ms*60*60/1000
+		self.speed_o_meter.setText(str(int(self.actual_speed_kmh))+ "km/h")
 
 		# chose controller
 		if not self.autopilot: # manual controller
@@ -414,7 +418,7 @@ class MyApp(ShowBase):
 			self.steering = constraint(self.steering, -self.steering_clamp, self.steering_clamp)
 
 			# reduce current speed according lidar positional error
-			self.target_speed_ms -= ( ai_direction_k_speed*abs(self.line_pos) + ai_steering_k_speed*abs(self.steering))
+			self.target_speed_ms -= ( ai_direction_k_speed*abs(self.line_pos)*self.max_speed_ms + ai_steering_k_speed*abs(self.pid_line)*self.max_speed_ms)
 			self.target_speed_ms = constraint(self.target_speed_ms, self.min_speed_ms, self.max_speed_ms)
 
 			# do lidar
