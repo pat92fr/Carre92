@@ -1,7 +1,7 @@
 ## PARAMETERS #################################################################
 
 min_speed = 0.6 # 0.6 m/s
-max_speed = 7.5 # 3.5 m/s
+max_speed = 8.0 # 3.5 m/s
 acceleration = 0.01 # m/s per 1/60eme
 deceleration = 0.1 # m/s per 1/60eme
 speed_kp = 2.0
@@ -47,6 +47,7 @@ from direct.showbase.ShowBase import ShowBase
 from direct.filter.CommonFilters import CommonFilters
 from direct.gui.OnscreenText import OnscreenText
 from direct.gui.OnscreenImage import OnscreenImage
+from direct.gui.DirectSlider import DirectSlider
 from direct.task import Task
 
 from panda3d.core import *
@@ -116,6 +117,12 @@ class MyApp(ShowBase):
 		self.target_image = OnscreenImage(image = '/c/tmp/media/cross.png', pos = (-0.005, 0.0, 0.0), scale = (0.05, 0.05, 0.05), )
 		self.target_image.setTransparency(TransparencyAttrib.MAlpha)
 		self.speed_o_meter = OnscreenText(text="0km/h", pos=(1.4,0.80), fg=(1, 1, 1, 1), align=TextNode.ARight, shadow=(0, 0, 0, 0.5), scale=.25)
+		
+		self.slider_max_speed = DirectSlider(range=(0,10), value=max_speed, pageSize=0.1, command=self.slider_max_speed_change, scale=0.5, pos = (0.0,0.0,0.9))
+		self.text_max_speed = OnscreenText(text="Vmax " + str(max_speed)+"m/s", fg=(1, 1, 1, 1), align=TextNode.ARight, shadow=(0, 0, 0, 0.5), scale=.05, pos=(-0.55,0.9))
+		
+		#self.slider_ai_direction_kp
+
 
         # application state
 		self.quit = False
@@ -285,6 +292,10 @@ class MyApp(ShowBase):
 		self.throttle = 0.0
 		self.engineForce = 0.0
 		self.brakeForce = 0.0
+
+	def slider_max_speed_change(self):
+		self.max_speed_ms = float(self.slider_max_speed['value'])
+		self.text_max_speed.setText("Vmax " + str(round(self.max_speed_ms,1))+"m/s")
 
 	def addWheel(self, pos, front, np):
 		wheel = self.vehicle.createWheel()
@@ -498,9 +509,10 @@ class MyApp(ShowBase):
 			loader.loadTexture('/c/tmp/media/sol_shadow_1.png'),
 			loader.loadTexture('/c/tmp/media/sol_shadow_2.png'),
 			loader.loadTexture('/c/tmp/media/sol_shadow_3.png'),
-			#loader.loadTexture('/c/tmp/media/sol_shadow_4.png'),
+			loader.loadTexture('/c/tmp/media/sol_shadow_4.png'),
 			loader.loadTexture('/c/tmp/media/sol_shadow_5.png'),
-			loader.loadTexture('/c/tmp/media/sol_shadow_6.png')
+			loader.loadTexture('/c/tmp/media/sol_shadow_6.png'),
+			loader.loadTexture('/c/tmp/media/sol_shadow_7.png')
 		]
 		self.sol_shadow_texture_index = 0
 		self.ts2 = TextureStage('solTS')
