@@ -21,17 +21,20 @@ ai_direction_k_speed = 4.6
 import numpy as np
 import math
 import cv2
+from os import mkdir
 from keras import models
 from keras.models import load_model
 
 from direct.showbase.ShowBase import ShowBase
 from direct.filter.CommonFilters import CommonFilters
 from direct.gui.OnscreenText import OnscreenText
+from direct.gui.OnscreenImage import OnscreenImage
 from direct.task import Task
+
 from panda3d.core import *
 from panda3d.core import Material
 from panda3d.core import Spotlight
-from os import mkdir
+from panda3d.core import TransparencyAttrib
 #from direct.actor.Actor import Actor
 #from direct.interval.IntervalGlobal import Sequence
 #from panda3d.core import Point3
@@ -42,6 +45,7 @@ from panda3d.bullet import BulletBoxShape
 from panda3d.bullet import BulletCylinderShape
 from panda3d.bullet import BulletRigidBodyNode
 from panda3d.bullet import BulletVehicle
+
 import panda3d.bullet as bullet
 from panda3d.bullet import BulletDebugNode
 
@@ -86,6 +90,10 @@ class MyApp(ShowBase):
 		self.shadowText = genLabelText("s: Ground shadows", 5)
 		self.publicityText = genLabelText("p: Side publicity and shadows", 6)
 		self.lightText = genLabelText("l: Overall Lightning", 7)
+
+		# OSD graphics
+		self.target_image = OnscreenImage(image = '/c/tmp/media/cross.png', pos = (-0.005, 0.0, 0.0), scale = (0.05, 0.05, 0.05), )
+		self.target_image.setTransparency(TransparencyAttrib.MAlpha)
 
         # application state
 		self.quit = False
@@ -371,7 +379,7 @@ class MyApp(ShowBase):
 				self.current_speed = max(self.current_speed, self.target_speed)
 			self.current_speed = max(self.current_speed, minimum_speed)
 
-			print(str(round(self.target_speed,1)) + " m/s  " + str(round(self.current_speed,1)) + " m/s  ")
+			###print(str(round(self.target_speed,1)) + " m/s  " + str(round(self.current_speed,1)) + " m/s  ")
 
 		else:
 
@@ -668,6 +676,7 @@ while not app.quit:
 	###print(str(counter) + " aiDIR:" + str(yprediction))
 	# push steering from CNN to game
 	app.autopilot_dir = autopilot_beta*app.autopilot_dir - autopilot_alpha*yprediction #filter
+	app.target_image.setPos( (-app.autopilot_dir-0.005, 0.0, 0.0) )
 
 	# dataset recording
 	if app.recording and counter != 0: #and not app.autopilot : # first frame buffer is empty, skip it!
