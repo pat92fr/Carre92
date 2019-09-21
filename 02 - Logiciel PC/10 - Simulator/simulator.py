@@ -1,22 +1,39 @@
 ## PARAMETERS #################################################################
 
-minimum_speed = 0.6
-maximum_speed = 3.5 #2.0
-speed_Kp = 2.0
+min_speed = 0.6 # m/s
+max_speed = 3.5 # m/s
+acceleration = 0.01 # m/s per 1/60eme
+deceleration = 0.1 # m/s per 1/60eme
+speed_kp = 2.0
+speed_ki = 0.0
+speed_kd = 0.0
+speed_kff = 0.0
 
-autopilot_alpha = 0.3
-autopilot_beta = 1.0 - autopilot_alpha
+lidar_direction_kp = 36.0
+lidar_direction_ki = 0.0
+lidar_direction_kd = 100.0
+lidar_k_speed = 0.01
+lidar_positional_error_threshold = 350
 
-autopilot_Kp = 36.0
-autopilot_Ki = 0.0
-autopilot_Kd = 100.0
+ai_direction_kp = 36.0
+ai_direction_ki = 0.0
+ai_direction_kd = 100.0
 ai_steering_k_speed = 0.08
 ai_direction_k_speed = 4.6
+
+steering_trim = 0
+dual_rate = 0.5
+
+# simulator (calibrated from real world)
+steering_clamp = 35.0      # degree
+steering_increment = 160.0 # degree per second
 
 
 ## GLOBALS ########################################################################
 
 ### https://github.com/jlevy44/UnrealAI/blob/master/CarAI/joshua_work/game/src/simulation.py
+
+import my_controller
 
 import numpy as np
 import math
@@ -35,6 +52,9 @@ from panda3d.core import *
 from panda3d.core import Material
 from panda3d.core import Spotlight
 from panda3d.core import TransparencyAttrib
+from panda3d.core import CollisionTraverser, CollisionNode
+from panda3d.core import CollisionHandlerQueue, CollisionRay
+from panda3d.core import LPoint3, LVector3, BitMask32
 #from direct.actor.Actor import Actor
 #from direct.interval.IntervalGlobal import Sequence
 #from panda3d.core import Point3
@@ -210,29 +230,57 @@ class MyApp(ShowBase):
 		self.taskMgr.add(self.update_toulouse_map, 'updateMap')
 		self.taskMgr.add(self.physics_task, 'updatePhysics')
 
-		# speed control state
-		self.target_speed = 0.0
-		self.current_speed = 0.0
-		self.actual_speed_ms = 0.0
-		self.actual_speed_error_ms = 0.0
-		self.pid_speed = 0.0
-		self.oldPos = self.chassisNP.getPos()
+		# speed controller settings
+		self.min_speed_ms = min_speed # m/s
+		self.max_speed_ms = max_speed # m/s
+		self.acceleration = acceleration # m/s per 1/60eme
+		self.deceleration = deceleration # m/s per 1/60eme
+		self.pid_speed = my_controller.pid(kp=speed_kp, ki=speed_ki, kd=speed_kd, integral_max=1000, output_max=50.0, alpha=0.5) 
+		self.pid_speed_kff = speed_kff # feed forward apart from speed PID
 
-		# direction
-		self.autopilot_dir = 0.0 
+		# speed controller state
+		self.target_speed_ms = 0.0 # m/s (square)
+		self.current_speed_ms = 0.0 # m/s (trapeze)
+		self.actual_speed_ms = 0.0 # m/s from encoder (real)
+		self.actual_speed_kmh = 0.0 # km.h from encoder
+		self.actual_speed_error_ms = 0.0 # m/s
 
-		# steering control state
+		# lidar steering controller settings
+		self.pid_wall_following = my_controller.pid(kp=lidar_direction_kp, ki=lidar_direction_ki, kd=lidar_direction_kd, integral_max=1000, output_max=1.0, alpha=0.1) 
+		self.lidar_k_speed = lidar_k_speed
+		self.lidar_positional_error_threshold = lidar_positional_error_threshold
+
+		# lidar steering controller state
+		self.actual_lidar_direction_error = 0.0
+		self.lidar_positional_error = 0.0    
+		self.pid_wall = 0.0
+
+		# AI steering controller settings
+		self.pid_line_following = my_controller.pid(kp=ai_direction_kp, ki=ai_direction_ki, kd=ai_direction_kd, integral_max=1000, output_max=1.0, alpha=0.5) 
+		self.ai_direction_k_speed = ai_direction_k_speed
+		self.ai_steering_k_speed = ai_steering_k_speed
+
+		# AI steering controller state
 		self.line_pos = 0.0
-		self.line_pos_last = 0.0
-		self.line_pos_derivative = 0.0
 		self.pid_line = 0.0
 
+		# steering settings
+		self.steering_trim = steering_trim
+		self.dual_rate = dual_rate
+
+		# simulator speed control state
+		self.last_position = self.chassisNP.getPos()
+		self.current_position = self.chassisNP.getPos()
+		self.delta_distance = 0.0 # m
+
+		# simulator steering control state
 		self.last_steering = 0.0       # degree
-		self.steeringClamp = 35.0      # degree
-		self.steeringIncrement = 160.0 # degree per second
-		 
+		self.steering_clamp = steering_clamp      # degree
+		self.steering_increment = steering_increment # degree per second
+
 		# controller output
 		self.steering = 0.0
+		self.throttle = 0.0
 		self.engineForce = 0.0
 		self.brakeForce = 0.0
 
@@ -297,114 +345,112 @@ class MyApp(ShowBase):
 
 		# elif not self.gamepad and not self.autopilot:
 
+		# reset control state
+		#self.steering = 0.0
+		self.engineForce = 0.0
+		self.brakeForce = 0.0
 
 		# actual speed computation
-		p1 = self.oldPos
-		p2 = self.chassisNP.getPos()
-		distance = (p2-p1).length()
-		if( dt == 0):
-			self.actual_speed_ms = 0
-		else:
-			self.actual_speed_ms = distance/dt
-		self.oldPos = p2
+		self.current_position = self.chassisNP.getPos()
+		self.delta_distance = (self.current_position-self.last_position).length()
+		if  dt != 0:
+			self.actual_speed_ms = self.delta_distance/dt
+		self.last_position = self.current_position
 
-		if not self.autopilot:
+		# chose controller
+		if not self.autopilot: # manual controller
 
-			# Check if the player is holding keys
+			# key pressed
 			self.up_button = self.mouseWatcherNode.isButtonDown(KeyboardButton.up())
 			self.down_button = self.mouseWatcherNode.isButtonDown(KeyboardButton.down())
 			self.left_button = self.mouseWatcherNode.isButtonDown(KeyboardButton.left())
 			self.right_button = self.mouseWatcherNode.isButtonDown(KeyboardButton.right())
+
+			# keys to speed
 			if self.up_button and not self.down_button:
-				self.current_speed += dt * 0.6
-				self.current_speed = min(self.current_speed, maximum_speed)
+				self.current_speed_ms += self.acceleration
+				self.current_speed_ms = min(self.current_speed_ms, self.max_speed_ms)
 			if not self.up_button and self.down_button:
-				self.current_speed -= dt * 3.0
-				self.current_speed = max(self.current_speed, 0)
+				self.current_speed_ms -= self.deceleration
+				self.current_speed_ms = max(self.current_speed_ms, 0)
 			if not self.up_button and not self.down_button:
-				self.current_speed -= dt * 0.6
-				self.current_speed = max(self.current_speed, 0)
+				self.current_speed_ms -= self.deceleration/10.0
+				self.current_speed_ms = max(self.current_speed_ms, 0)
+			
+			# keys to steering
 			if self.left_button and not self.right_button:
-				self.steering += dt*self.steeringIncrement*0.4
-				self.steering = min(self.steering, self.steeringClamp)
+				self.steering += dt*self.steering_increment*0.3
+				self.steering = min(self.steering, self.steering_clamp)
 			if not self.left_button and self.right_button:
-				self.steering -= dt*self.steeringIncrement*0.4
-				self.steering = max(self.steering, -self.steeringClamp)
+				self.steering -= dt*self.steering_increment*0.3
+				self.steering = max(self.steering, -self.steering_clamp)
 			if not self.left_button and not self.right_button:
 				if self.steering < 0:
-					self.steering += dt*self.steeringIncrement*0.30
+					self.steering += dt*self.steering_increment*0.20
 					self.steering = min(self.steering, 0)
 				if self.steering > 0:
-					self.steering -= dt*self.steeringIncrement*0.30
+					self.steering -= dt*self.steering_increment*0.20
 					self.steering = max(self.steering, 0)
 
 
-		elif self.autopilot:
+		elif self.autopilot: # automatic controller
 
 			# speed controller (stage 1)
-			self.target_speed = maximum_speed
+			self.target_speed_ms = self.max_speed_ms
 
-			# PID direction
-			self.line_pos_last = self.line_pos
-			self.line_pos = self.autopilot_dir # AI inputs
-			self.line_pos_derivative = self.line_pos_derivative*0.8 + 0.2*(self.line_pos-self.line_pos_last)
-			p = self.line_pos * autopilot_Kp
-			d = self.line_pos_derivative * autopilot_Kd
-			self.pid_line = p+d
-			#print(str(round(self.line_pos,2)) + "    " + str(round(self.pid_line,2)) + "    ")
+			# line following PID controller
+			self.pid_line = self.pid_line_following.compute(self.line_pos)
+			###print(str(round(self.line_pos,2)) + "    " + str(round(self.pid_line,2)) + "    ")
 
-			# inertial
+			# simulator steering
 			self.last_steering = self.steering
-			self.steering = self.pid_line ###########+ self.last_steering
-			
+			self.steering = self.pid_line  * self.steering_clamp
+			# simulator steering steering inertia
 			if self.steering > self.last_steering:
-				self.steering = min(self.steering, self.last_steering+dt*self.steeringIncrement)
+				self.steering = min(self.steering, self.last_steering+dt*self.steering_increment)
 			if self.steering < self.last_steering:
-				self.steering = max(self.steering, self.last_steering-dt*self.steeringIncrement)
+				self.steering = max(self.steering, self.last_steering-dt*self.steering_increment)
+			# simulator steering steering clamp
+			self.steering = constraint(self.steering, -self.steering_clamp, self.steering_clamp)
 
-			# clamp
-			self.steering = min(self.steering, self.steeringClamp)
-			self.steering = max(self.steering, -self.steeringClamp)
+			# reduce current speed according lidar positional error
+			self.target_speed_ms -= ( ai_direction_k_speed*abs(self.line_pos) + ai_steering_k_speed*abs(self.steering))
+			self.target_speed_ms = constraint(self.target_speed_ms, self.min_speed_ms, self.max_speed_ms)
 
-			# speed ramp
-			self.target_speed -= ( ai_direction_k_speed*abs(self.line_pos) + ai_steering_k_speed*abs(self.steering))
-			
+			# do lidar
+			# do lidar
+			# do lidar
 
-			# speed controller (stage 2)
-			if self.current_speed < self.target_speed:
-				self.current_speed += dt * 0.6
-				self.current_speed = min(self.current_speed, self.target_speed)
-			if self.current_speed > self.target_speed:
-				self.current_speed -= dt * 3.0
-				self.current_speed = max(self.current_speed, self.target_speed)
-			self.current_speed = max(self.current_speed, minimum_speed)
+			# compute current speed from target and time passing (trapeze)
+			if self.current_speed_ms < self.target_speed_ms:
+				self.current_speed_ms += self.acceleration
+				self.current_speed_ms = min(self.current_speed_ms, self.target_speed_ms)
+			if self.current_speed_ms > self.target_speed_ms:
+				self.current_speed_ms -= self.deceleration
+				self.current_speed_ms = max(self.current_speed_ms, self.target_speed_ms)
+			self.current_speed_ms = constraint(self.current_speed_ms, self.min_speed_ms, self.max_speed_ms)
+			###print(str(round(self.target_speed_ms,1)) + " m/s  " + str(round(self.current_speed_ms,1)) + " m/s  ")
 
-			###print(str(round(self.target_speed,1)) + " m/s  " + str(round(self.current_speed,1)) + " m/s  ")
-
-		else:
-
-			self.steering = 0.0
-			self.current_speed = 0.0
-
-		# PID speed
-		self.actual_speed_error_ms = self.current_speed-self.actual_speed_ms
-		self.pid_speed = self.actual_speed_error_ms*speed_Kp
-		if self.pid_speed > 0:
-			self.engineForce = self.pid_speed
-			self.engineForce = min(self.engineForce, 10.0)
+		# compute throttle according actual_speed
+		self.actual_speed_error_ms = self.current_speed_ms-self.actual_speed_ms
+		self.throttle = self.pid_speed.compute(self.actual_speed_error_ms) + self.pid_speed_kff *self.current_speed_ms
+		if self.throttle > 0.0:
+			self.engineForce = self.throttle
+			self.engineForce = min(self.engineForce, 5.0)
 			self.engineForce = max(self.engineForce, 0.0)
 			self.brakeForce = 0.0
 		else:
-			self.brakeForce = -self.pid_speed
-			self.brakeForce = min(self.brakeForce, 10.0)
+			self.brakeForce = -self.throttle
+			self.brakeForce = min(self.brakeForce, 5.0)
 			self.brakeForce = max(self.brakeForce, 0.0)
 			self.engineForce = 0.0
 
+		print(str(round(self.engineForce,1)))
 		####print(str(round(self.reduced_current_speed,1)) + " m/s     " + str(round(self.actual_speed_ms,1))+ " m/s     " + str(round(self.engineForce,1)))
 
 		# Apply steering to front wheels
-		self.vehicle.setSteeringValue(self.steering, 0);
-		self.vehicle.setSteeringValue(self.steering, 1);
+		self.vehicle.setSteeringValue(self.steering + self.steering_trim, 0);
+		self.vehicle.setSteeringValue(self.steering + self.steering_trim, 1);
 
 		# Apply engine and brake to rear wheels
 		self.vehicle.applyEngineForce(self.engineForce, 0);
@@ -448,7 +494,9 @@ class MyApp(ShowBase):
 			loader.loadTexture('/c/tmp/media/sol_shadow_1.png'),
 			loader.loadTexture('/c/tmp/media/sol_shadow_2.png'),
 			loader.loadTexture('/c/tmp/media/sol_shadow_3.png'),
-			loader.loadTexture('/c/tmp/media/sol_shadow_4.png')
+			#loader.loadTexture('/c/tmp/media/sol_shadow_4.png'),
+			loader.loadTexture('/c/tmp/media/sol_shadow_5.png'),
+			loader.loadTexture('/c/tmp/media/sol_shadow_6.png')
 		]
 		self.sol_shadow_texture_index = 0
 		self.ts2 = TextureStage('solTS')
@@ -675,14 +723,13 @@ while not app.quit:
 	yprediction = model.predict(frame.reshape(1,90,160,1)).item(0)
 	###print(str(counter) + " aiDIR:" + str(yprediction))
 	# push steering from CNN to game
-	app.autopilot_dir = autopilot_beta*app.autopilot_dir - autopilot_alpha*yprediction #filter
-	app.target_image.setPos( (-app.autopilot_dir-0.005, 0.0, 0.0) )
-
+	app.line_pos = - yprediction
+	app.target_image.setPos( (-app.line_pos-0.005, 0.0, 0.0) )
 	# dataset recording
 	if app.recording and counter != 0: #and not app.autopilot : # first frame buffer is empty, skip it!
 		filename = dataset_dir + '/render_' + str(record_counter) + '.jpg'
 		cv2.imwrite(root_dir + '/' + filename, frame_orign) 
-		dataset_file.write(filename +';' + str(int(128.0-app.direction*127.0*1.4)) + ';' + str(int(app.throttle*127.0*1.4+128.0)) + '\n') # *1.4 gain
+		dataset_file.write(filename +';' + str(int(128.0-app.steering*127.0*1.4)) + ';' + str(int(app.throttle*127.0*1.4+128.0)) + '\n') # *1.4 gain
 		dataset_file.flush()
 		record_counter += 1
 
