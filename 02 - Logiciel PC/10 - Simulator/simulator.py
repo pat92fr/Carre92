@@ -461,7 +461,8 @@ class MyApp(ShowBase):
 			self.steering = constraint(self.steering, -self.steering_clamp, self.steering_clamp)
 
 			# reduce current speed according lidar positional error
-			self.target_speed_ms -= ( ai_direction_k_speed*abs(self.line_pos)*self.max_speed_ms + ai_steering_k_speed*abs(self.pid_line)*self.max_speed_ms)
+			#self.target_speed_ms -= ( ai_direction_k_speed*abs(self.line_pos)*self.max_speed_ms + ai_steering_k_speed*abs(self.pid_line)*self.max_speed_ms)
+			self.target_speed_ms -= ( ai_direction_k_speed*self.line_pos*self.line_pos*self.max_speed_ms + ai_steering_k_speed*self.pid_line*self.pid_line*self.max_speed_ms)
 			self.target_speed_ms = constraint(self.target_speed_ms, self.min_speed_ms, self.max_speed_ms)
 
 			# do lidar
