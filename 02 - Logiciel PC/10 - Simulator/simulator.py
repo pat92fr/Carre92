@@ -1,15 +1,18 @@
 ## PARAMETERS #################################################################
 
-minimum_speed = 0.25
-maximum_speed = 2.0
+minimum_speed = 0.6
+maximum_speed = 3.5 #2.0
 speed_Kp = 2.0
 
-autopilot_Kp = 50.0 #8.0 # autopilot line position (prediction) to steering angle
-autopilot_Kd = 100.0 #8.0 # autopilot line position (prediction) to steering angle
-autopilot_alpha = 0.4
+autopilot_alpha = 0.3
 autopilot_beta = 1.0 - autopilot_alpha
-autopilot_speed = 2.0
-autopilot_cornering_speed = 0.3
+
+autopilot_Kp = 36.0
+autopilot_Ki = 0.0
+autopilot_Kd = 100.0
+ai_steering_k_speed = 0.08
+ai_direction_k_speed = 4.6
+
 
 ## GLOBALS ########################################################################
 
@@ -188,12 +191,10 @@ class MyApp(ShowBase):
 		# camera
 		self.camLens.setFov(100)
 		self.camLens.setNear(0.01)
-		#self.camera.setPos(0.0,0.1,0.20)
-		#self.camera.setHpr(,-15,0)
 		#self.camera.setPos(0.5,-0.5,0.50)
 		#self.camera.setHpr(35,-35,0)
-		self.camera.setPos(0.0,-0.15,0.25)
-		###self.camera.setPos(0.0,0.05,0.22)
+		####self.camera.setPos(0.0,-0.15,0.25)
+		self.camera.setPos(0.0,0.05,0.22)
 		self.camera.setHpr(0,-20,0)
 		self.camera.reparentTo(self.chassisNP)
 
@@ -204,28 +205,28 @@ class MyApp(ShowBase):
 		# speed control state
 		self.target_speed = 0.0
 		self.current_speed = 0.0
-		self.reduced_current_speed = 0.0
 		self.actual_speed_ms = 0.0
 		self.actual_speed_error_ms = 0.0
 		self.pid_speed = 0.0
-
 		self.oldPos = self.chassisNP.getPos()
 
-
+		# direction
 		self.autopilot_dir = 0.0 
-		self.last_autopilot_dir = 0.0 
 
-		# Steering info
-		self.steering = 0.0            # degree
+		# steering control state
+		self.line_pos = 0.0
+		self.line_pos_last = 0.0
+		self.line_pos_derivative = 0.0
+		self.pid_line = 0.0
+
 		self.last_steering = 0.0       # degree
 		self.steeringClamp = 35.0      # degree
 		self.steeringIncrement = 160.0 # degree per second
 		 
 		# controller output
+		self.steering = 0.0
 		self.engineForce = 0.0
 		self.brakeForce = 0.0
-		
-
 
 	def addWheel(self, pos, front, np):
 		wheel = self.vehicle.createWheel()
@@ -310,7 +311,7 @@ class MyApp(ShowBase):
 				self.current_speed += dt * 0.6
 				self.current_speed = min(self.current_speed, maximum_speed)
 			if not self.up_button and self.down_button:
-				self.current_speed -= dt * 2.0
+				self.current_speed -= dt * 3.0
 				self.current_speed = max(self.current_speed, 0)
 			if not self.up_button and not self.down_button:
 				self.current_speed -= dt * 0.6
@@ -329,28 +330,25 @@ class MyApp(ShowBase):
 					self.steering -= dt*self.steeringIncrement*0.30
 					self.steering = max(self.steering, 0)
 
-			self.reduced_current_speed = self.current_speed
-
-
 
 		elif self.autopilot:
 
 			# speed controller (stage 1)
 			self.target_speed = maximum_speed
 
-			
 			# PID direction
-			error_dir = self.autopilot_dir # AI inputs
-			derivative_error_dir = self.autopilot_dir - self.last_autopilot_dir
-			p = error_dir * autopilot_Kp
-			d = derivative_error_dir * autopilot_Kd
-			o = p + d
-			#print(str(error_dir) + "    " + str(derivative_error_dir) + "    " + str(o))
-
+			self.line_pos_last = self.line_pos
+			self.line_pos = self.autopilot_dir # AI inputs
+			self.line_pos_derivative = self.line_pos_derivative*0.8 + 0.2*(self.line_pos-self.line_pos_last)
+			p = self.line_pos * autopilot_Kp
+			d = self.line_pos_derivative * autopilot_Kd
+			self.pid_line = p+d
+			#print(str(round(self.line_pos,2)) + "    " + str(round(self.pid_line,2)) + "    ")
 
 			# inertial
 			self.last_steering = self.steering
-			self.steering = o
+			self.steering = self.pid_line ###########+ self.last_steering
+			
 			if self.steering > self.last_steering:
 				self.steering = min(self.steering, self.last_steering+dt*self.steeringIncrement)
 			if self.steering < self.last_steering:
@@ -361,50 +359,27 @@ class MyApp(ShowBase):
 			self.steering = max(self.steering, -self.steeringClamp)
 
 			# speed ramp
-			if abs(error_dir) < 0.4:
-				self.target_speed = autopilot_speed
-			else:
-				self.target_speed = autopilot_cornering_speed
+			self.target_speed -= ( ai_direction_k_speed*abs(self.line_pos) + ai_steering_k_speed*abs(self.steering))
 			
+
+			# speed controller (stage 2)
 			if self.current_speed < self.target_speed:
-				self.current_speed += dt * 2.0
+				self.current_speed += dt * 0.6
 				self.current_speed = min(self.current_speed, self.target_speed)
-			else:
-				self.current_speed -= dt * 5.0
+			if self.current_speed > self.target_speed:
+				self.current_speed -= dt * 3.0
 				self.current_speed = max(self.current_speed, self.target_speed)
+			self.current_speed = max(self.current_speed, minimum_speed)
 
-			print(str(self.current_speed) + " m/s  ")
-
-			# PID speed
-			p1 = self.oldPos
-			p2 = self.chassisNP.getPos()
-			distance = (p2-p1).length()
-			if( dt == 0):
-				speed = 0
-			else:
-				speed = distance/dt
-			self.oldPos = p2
-			force = (self.current_speed-speed)*0.6
-			if force > 0:
-				self.engineForce = force
-				self.engineForce = min(self.engineForce, 0.6)
-				self.engineForce = max(self.engineForce, 0.0)
-				self.brakeForce = 0.0
-			else:
-				self.brakeForce = -force
-				self.brakeForce = min(self.engineForce, 2.0)
-				self.brakeForce = max(self.engineForce, 0.0)
-				self.engineForce = 0.0
-
-			
+			print(str(round(self.target_speed,1)) + " m/s  " + str(round(self.current_speed,1)) + " m/s  ")
 
 		else:
 
 			self.steering = 0.0
-			self.reduced_current_speed = 0.0
+			self.current_speed = 0.0
 
 		# PID speed
-		self.actual_speed_error_ms = self.reduced_current_speed-self.actual_speed_ms
+		self.actual_speed_error_ms = self.current_speed-self.actual_speed_ms
 		self.pid_speed = self.actual_speed_error_ms*speed_Kp
 		if self.pid_speed > 0:
 			self.engineForce = self.pid_speed
@@ -413,11 +388,11 @@ class MyApp(ShowBase):
 			self.brakeForce = 0.0
 		else:
 			self.brakeForce = -self.pid_speed
-			self.brakeForce = min(self.brakeForce, 2.0)
+			self.brakeForce = min(self.brakeForce, 10.0)
 			self.brakeForce = max(self.brakeForce, 0.0)
 			self.engineForce = 0.0
 
-		print(str(round(self.reduced_current_speed,1)) + " m/s     " + str(round(self.actual_speed_ms,1))+ " m/s     " + str(round(self.engineForce,1)))
+		####print(str(round(self.reduced_current_speed,1)) + " m/s     " + str(round(self.actual_speed_ms,1))+ " m/s     " + str(round(self.engineForce,1)))
 
 		# Apply steering to front wheels
 		self.vehicle.setSteeringValue(self.steering, 0);
@@ -692,7 +667,6 @@ while not app.quit:
 	yprediction = model.predict(frame.reshape(1,90,160,1)).item(0)
 	###print(str(counter) + " aiDIR:" + str(yprediction))
 	# push steering from CNN to game
-	app.last_autopilot_dir = app.autopilot_dir
 	app.autopilot_dir = autopilot_beta*app.autopilot_dir - autopilot_alpha*yprediction #filter
 
 	# dataset recording
