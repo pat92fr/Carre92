@@ -1,3 +1,5 @@
+## TODO : include IA into game class 
+
 ## PARAMETERS #################################################################
 
 min_speed = 0.6 # 0.6 m/s
@@ -40,6 +42,10 @@ import numpy as np
 import math
 import cv2
 from os import mkdir
+
+import socket
+import asyncore
+
 from keras import models
 from keras.models import load_model
 
@@ -73,6 +79,59 @@ from panda3d.bullet import BulletDebugNode
 
 root_dir = 'c:/tmp'
 dataset_dir = 'dataset'
+
+
+
+'''''''''''''''''''''''''''''
+    Telemetry handler
+'''''''''''''''''''''''''''
+telemetry_client_connected = False
+
+class telemetry_handler(asyncore.dispatcher_with_send):
+  
+    def handle_read(self):
+        pass
+
+    def handle_close(self):
+        global telemetry_client_connected
+        print('Telemetry> connection closed.')
+        telemetry_client_connected = False
+        self.close()
+
+'''''''''''''''''''''''
+    Telemetry server
+'''''''''''''''''''''
+class telemetry_server(asyncore.dispatcher):
+    
+    def __init__(self, host, port):
+        global telemetry_client_connected
+        telemetry_client_connected = False
+        asyncore.dispatcher.__init__(self)
+        self.create_socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.set_reuse_addr()
+        self.bind((host, port))
+        self.listen(5)
+    
+    def handle_accept(self):
+        global telemetry_client_connected
+        pair = self.accept()
+        if pair is not None:
+            sock, addr = pair
+            print('Telemetry> incoming connection from ', repr(addr))
+            self.handler = telemetry_handler(sock)
+            telemetry_client_connected = True
+
+    def sendTelemetry(self, data):
+        global telemetry_client_connected
+        if telemetry_client_connected:
+            self.handler.send(data.encode("utf-8"))
+            #self.flush()
+
+
+
+'''''''''''''''''''''''
+    Game App
+'''''''''''''''''''''
 
 # Macro-like function used to reduce the amount to code needed to create the
 # on screen instructions
@@ -272,6 +331,9 @@ class MyApp(ShowBase):
 		self.lidar_positional_error_threshold = lidar_positional_error_threshold
 
 		# lidar steering controller state
+		self.lidar_distance_droit = 150
+		self.lidar_distance_gauche = 150
+		self.lidar_distance_haut = 150
 		self.actual_lidar_direction_error = 0.0
 		self.lidar_positional_error = 0.0    
 		self.pid_wall = 0.0
@@ -493,7 +555,7 @@ class MyApp(ShowBase):
 			self.brakeForce = max(self.brakeForce, 0.0)
 			self.engineForce = 0.0
 
-		print(str(round(self.engineForce,1)))
+		#print(str(round(self.engineForce,1)))
 		####print(str(round(self.reduced_current_speed,1)) + " m/s     " + str(round(self.actual_speed_ms,1))+ " m/s     " + str(round(self.engineForce,1)))
 
 		# Apply steering to front wheels
@@ -740,6 +802,7 @@ class MyApp(ShowBase):
 
 ## MAIN ########################################################################
 
+tserver = telemetry_server("192.168.1.34", 7001)
 # open model
 print("Load model from disk ...")
 model = load_model("model/model.h5")
@@ -755,6 +818,8 @@ app = MyApp()
 counter = 0
 record_counter = 0
 while not app.quit:
+	# Non blocking call
+	asyncore.loop(timeout=0, count=1)
 	# game tick
 	taskMgr.step()
 	# get picture for CNN
@@ -781,8 +846,33 @@ while not app.quit:
 		dataset_file.write(filename +';' + str(int(128.0-app.steering*127.0*1.4)) + ';' + str(int(app.throttle*127.0*1.4+128.0)) + '\n') # *1.4 gain
 		dataset_file.flush()
 		record_counter += 1
+	# Telemetry
+	msg = str(counter) + ';'
+	msg += str( float(app.lidar_distance_gauche) ) + ';' #cm
+	msg += str( float(app.lidar_distance_droit) ) + ';'  #cm
+	msg += str( float(app.lidar_distance_haut) ) + ';'  #cm
 
+	msg += str( float(app.actual_lidar_direction_error) ) + ';'
+	msg += str( float(app.lidar_positional_error) ) + ';'  
+	msg += str( float(app.pid_wall) ) + ';'
+
+	msg += str( float(app.target_speed_ms) ) + ';'
+	msg += str( float(app.current_speed_ms) ) + ';'
+	msg += str( float(app.actual_speed_ms) ) + ';' 
+	msg += str( float(app.actual_speed_error_ms) ) + ';'
+	msg += str( float(app.throttle) ) + ';' 
+
+	msg += str( float(app.line_pos) ) + ';'
+	msg += str( float(app.pid_line) ) + ';' 
+
+	msg += str( float(app.steering) ) + ';' 
+	#msg += str( float(app.autopilot) ) 
+
+	msg_length = str(len(msg)).ljust(4)
+	tserver.sendTelemetry(msg_length)
+	tserver.sendTelemetry(msg)
 	counter += 1
+	print(telemetry_client_connected)
 
 dataset_file.close()
 print('m:' + str(record_counter))
