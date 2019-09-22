@@ -2,8 +2,8 @@
 
 ## PARAMETERS #################################################################
 
-min_speed = 0.6 # 0.6 m/s
-max_speed = 8.0 # 3.5 m/s
+min_speed = 0.5 # 0.5 m/s
+max_speed = 5.5 # 3.5 m/s
 acceleration = 0.01 # m/s per 1/60eme
 deceleration = 0.1 # m/s per 1/60eme
 speed_kp = 2.0
@@ -17,11 +17,12 @@ lidar_direction_kd = 0.0
 lidar_k_speed = 0.01
 lidar_positional_error_threshold = 350
 
-ai_direction_kp = 1.5
-ai_direction_ki = 0.08
-ai_direction_kd = 18.0
-ai_steering_k_speed = 0.65 #7
-ai_direction_k_speed = 0.5
+ai_direction_alpha = 0.3
+ai_direction_kp = 1.2
+ai_direction_ki = 0.0
+ai_direction_kd = 12.0
+ai_steering_k_speed = 0.2 
+ai_direction_k_speed = 1.0
 
 steering_trim = 0
 dual_rate = 0.5
@@ -177,23 +178,26 @@ class MyApp(ShowBase):
 		self.target_image.setTransparency(TransparencyAttrib.MAlpha)
 		self.speed_o_meter = OnscreenText(text="0km/h", pos=(1.4,0.80), fg=(1, 1, 1, 1), align=TextNode.ARight, shadow=(0, 0, 0, 0.5), scale=.25)
 		
-		self.slider_max_speed = DirectSlider(range=(0,10), value=max_speed, pageSize=0.1, command=self.slider_max_speed_change, scale=0.5, pos = (0.0,0.0,0.9))
-		self.text_max_speed = OnscreenText(text="Vmax " + str(max_speed)+"m/s", fg=(1, 1, 1, 1), align=TextNode.ARight, shadow=(0, 0, 0, 0.5), scale=.05, pos=(-0.55,0.9))
+		self.slider_max_speed = DirectSlider(range=(0,10), value=max_speed, pageSize=0.1, command=self.slider_max_speed_change, scale=0.4, pos = (0.0,0.0,0.9))
+		self.text_max_speed = OnscreenText(text="Vmax " + str(max_speed)+"m/s", fg=(1, 1, 1, 1), align=TextNode.ARight, shadow=(0, 0, 0, 0.5), scale=.04, pos=(-0.55,0.9))
 		
-		self.slider_ai_direction_kp = DirectSlider(range=(0,3), value=ai_direction_kp, pageSize=0.1, command=self.slider_ai_direction_kp_change, scale=0.5, pos = (0.0,0.0,0.8))
-		self.text_ai_direction_kp = OnscreenText(text="AI Direction Kp " + str(round(ai_direction_kp,1)), fg=(1, 1, 1, 1), align=TextNode.ARight, shadow=(0, 0, 0, 0.5), scale=.05, pos=(-0.55,0.8))
+		self.slider_ai_direction_kp = DirectSlider(range=(0,3), value=ai_direction_kp, pageSize=0.1, command=self.slider_ai_direction_kp_change, scale=0.4, pos = (0.0,0.0,0.85))
+		self.text_ai_direction_kp = OnscreenText(text="AI Direction Kp " + str(round(ai_direction_kp,1)), fg=(1, 1, 1, 1), align=TextNode.ARight, shadow=(0, 0, 0, 0.5), scale=.04, pos=(-0.55,0.85))
 
-		self.slider_ai_direction_ki = DirectSlider(range=(0,0.2), value=ai_direction_ki, pageSize=0.01, command=self.slider_ai_direction_ki_change, scale=0.5, pos = (0.0,0.0,0.7))
-		self.text_ai_direction_ki = OnscreenText(text="AI Direction Ki " + str(round(ai_direction_ki,2)), fg=(1, 1, 1, 1), align=TextNode.ARight, shadow=(0, 0, 0, 0.5), scale=.05, pos=(-0.55,0.7))
+		self.slider_ai_direction_ki = DirectSlider(range=(0,0.2), value=ai_direction_ki, pageSize=0.01, command=self.slider_ai_direction_ki_change, scale=0.4, pos = (0.0,0.0,0.8))
+		self.text_ai_direction_ki = OnscreenText(text="AI Direction Ki " + str(round(ai_direction_ki,2)), fg=(1, 1, 1, 1), align=TextNode.ARight, shadow=(0, 0, 0, 0.5), scale=.04, pos=(-0.55,0.8))
 
-		self.slider_ai_direction_kd = DirectSlider(range=(0,30), value=ai_direction_kd, pageSize=0.1, command=self.slider_ai_direction_kd_change, scale=0.5, pos = (0.0,0.0,0.6))
-		self.text_ai_direction_kd = OnscreenText(text="AI Direction Kd " + str(round(ai_direction_kd,1)), fg=(1, 1, 1, 1), align=TextNode.ARight, shadow=(0, 0, 0, 0.5), scale=.05, pos=(-0.55,0.6))
+		self.slider_ai_direction_kd = DirectSlider(range=(0,30), value=ai_direction_kd, pageSize=0.1, command=self.slider_ai_direction_kd_change, scale=0.4, pos = (0.0,0.0,0.75))
+		self.text_ai_direction_kd = OnscreenText(text="AI Direction Kd " + str(round(ai_direction_kd,1)), fg=(1, 1, 1, 1), align=TextNode.ARight, shadow=(0, 0, 0, 0.5), scale=.04, pos=(-0.55,0.75))
 
-		self.slider_ai_steering_k_speed = DirectSlider(range=(0,1), value=ai_steering_k_speed, pageSize=0.1, command=self.slider_ai_steering_k_speed_change, scale=0.5, pos = (0.0,0.0,0.5))
-		self.text_ai_steering_k_speed = OnscreenText(text="AI Steering K speed " + str(round(ai_steering_k_speed,2)), fg=(1, 1, 1, 1), align=TextNode.ARight, shadow=(0, 0, 0, 0.5), scale=.05, pos=(-0.55,0.5))
+		self.slider_ai_steering_k_speed = DirectSlider(range=(0,1), value=ai_steering_k_speed, pageSize=0.1, command=self.slider_ai_steering_k_speed_change, scale=0.4, pos = (0.0,0.0,0.7))
+		self.text_ai_steering_k_speed = OnscreenText(text="AI Steering K speed " + str(round(ai_steering_k_speed,2)), fg=(1, 1, 1, 1), align=TextNode.ARight, shadow=(0, 0, 0, 0.5), scale=.04, pos=(-0.55,0.7))
 
-		self.slider_ai_direction_k_speed = DirectSlider(range=(0,1), value=ai_direction_k_speed, pageSize=0.1, command=self.slider_ai_direction_k_speed_change, scale=0.5, pos = (0.0,0.0,0.4))
-		self.text_ai_direction_k_speed = OnscreenText(text="AI Direction K speed " + str(round(ai_direction_k_speed,2)), fg=(1, 1, 1, 1), align=TextNode.ARight, shadow=(0, 0, 0, 0.5), scale=.05, pos=(-0.55,0.4))
+		self.slider_ai_direction_k_speed = DirectSlider(range=(0,1), value=ai_direction_k_speed, pageSize=0.1, command=self.slider_ai_direction_k_speed_change, scale=0.4, pos = (0.0,0.0,0.65))
+		self.text_ai_direction_k_speed = OnscreenText(text="AI Direction K speed " + str(round(ai_direction_k_speed,2)), fg=(1, 1, 1, 1), align=TextNode.ARight, shadow=(0, 0, 0, 0.5), scale=.04, pos=(-0.55,0.65))
+
+		self.slider_ai_direction_alpha = DirectSlider(range=(0,1), value=ai_direction_alpha, pageSize=0.01, command=self.slider_ai_direction_alpha_change, scale=0.4, pos = (0.0,0.0,0.60))
+		self.text_ai_direction_alpha = OnscreenText(text="AI Direction K speed " + str(round(ai_direction_alpha,2)), fg=(1, 1, 1, 1), align=TextNode.ARight, shadow=(0, 0, 0, 0.5), scale=.04, pos=(-0.55,0.60))
 
         # application state
 		self.quit = False
@@ -339,11 +343,13 @@ class MyApp(ShowBase):
 		self.pid_wall = 0.0
 
 		# AI steering controller settings
-		self.pid_line_following = my_controller.pid(kp=ai_direction_kp, ki=ai_direction_ki, kd=ai_direction_kd, integral_max=1000, output_max=1.0, alpha=0.5) 
+		self.pid_line_following = my_controller.pid(kp=ai_direction_kp, ki=ai_direction_ki, kd=ai_direction_kd, integral_max=1000, output_max=1.0, alpha=0.2) 
 		self.ai_direction_k_speed = ai_direction_k_speed
 		self.ai_steering_k_speed = ai_steering_k_speed
+		self.ai_direction_alpha = ai_direction_alpha
 
 		# AI steering controller state
+		self.line_pos_unfiltered = 0.0
 		self.line_pos = 0.0
 		self.pid_line = 0.0
 
@@ -372,16 +378,16 @@ class MyApp(ShowBase):
 		self.text_max_speed.setText("Vmax " + str(round(self.max_speed_ms,1))+"m/s")
 
 	def slider_ai_direction_kp_change(self):
-		self.ai_direction_kp = float(self.slider_ai_direction_kp['value'])
-		self.text_ai_direction_kp.setText("AI Direction Kp " + str(round(self.ai_direction_kp,1)))
+		self.pid_line_following.kp = float(self.slider_ai_direction_kp['value'])
+		self.text_ai_direction_kp.setText("AI Direction Kp " + str(round(self.pid_line_following.kp,1)))
 
 	def slider_ai_direction_ki_change(self):
-		self.ai_direction_ki = float(self.slider_ai_direction_ki['value'])
-		self.text_ai_direction_ki.setText("AI Direction Ki " + str(round(self.ai_direction_ki,2)))
+		self.pid_line_following.ki = float(self.slider_ai_direction_ki['value'])
+		self.text_ai_direction_ki.setText("AI Direction Ki " + str(round(self.pid_line_following.ki,2)))
 
 	def slider_ai_direction_kd_change(self):
-		self.ai_direction_kd = float(self.slider_ai_direction_kd['value'])
-		self.text_ai_direction_kd.setText("AI Direction Kd " + str(round(self.ai_direction_kd,1)))
+		self.pid_line_following.kd = float(self.slider_ai_direction_kd['value'])
+		self.text_ai_direction_kd.setText("AI Direction Kd " + str(round(self.pid_line_following.kd,1)))
 
 	def slider_ai_steering_k_speed_change(self):
 		self.ai_steering_k_speed = float(self.slider_ai_steering_k_speed['value'])
@@ -390,6 +396,10 @@ class MyApp(ShowBase):
 	def slider_ai_direction_k_speed_change(self):
 		self.ai_direction_k_speed = float(self.slider_ai_direction_k_speed['value'])
 		self.text_ai_direction_k_speed.setText("AI Direction K speed " + str(round(self.ai_direction_k_speed,2)))
+
+	def slider_ai_direction_alpha_change(self):
+		self.ai_direction_alpha = float(self.slider_ai_direction_alpha['value'])
+		self.text_ai_direction_alpha.setText("AI Direction Alpha " + str(round(self.ai_direction_alpha,2)))
 
 	def addWheel(self, pos, front, np):
 		wheel = self.vehicle.createWheel()
@@ -461,7 +471,7 @@ class MyApp(ShowBase):
 		self.current_position = self.chassisNP.getPos()
 		self.delta_distance = (self.current_position-self.last_position).length()
 		if  dt != 0:
-			self.actual_speed_ms = self.delta_distance/dt
+			self.actual_speed_ms = self.actual_speed_ms * 0.8 + 0.2 * (self.delta_distance/dt)
 		self.last_position = self.current_position
 		self.actual_speed_kmh = 0.9 * self.actual_speed_kmh + 0.1 * self.actual_speed_ms*60*60/1000
 		self.speed_o_meter.setText(str(int(self.actual_speed_kmh))+ "km/h")
@@ -508,6 +518,7 @@ class MyApp(ShowBase):
 			self.target_speed_ms = self.max_speed_ms
 
 			# line following PID controller
+			self.line_pos = self.line_pos * (1.0-self.ai_direction_alpha) + self.ai_direction_alpha * self.line_pos_unfiltered
 			self.pid_line = self.pid_line_following.compute(self.line_pos)
 			###print(str(round(self.line_pos,2)) + "    " + str(round(self.pid_line,2)) + "    ")
 
@@ -524,7 +535,7 @@ class MyApp(ShowBase):
 
 			# reduce current speed according lidar positional error
 			#self.target_speed_ms -= ( ai_direction_k_speed*abs(self.line_pos)*self.max_speed_ms + ai_steering_k_speed*abs(self.pid_line)*self.max_speed_ms)
-			self.target_speed_ms -= ( ai_direction_k_speed*self.line_pos*self.line_pos*self.max_speed_ms + ai_steering_k_speed*self.pid_line*self.pid_line*self.max_speed_ms)
+			self.target_speed_ms -= ( self.ai_direction_k_speed*abs(self.line_pos_unfiltered)*self.max_speed_ms + self.ai_steering_k_speed*abs(self.pid_line)*self.max_speed_ms)
 			self.target_speed_ms = constraint(self.target_speed_ms, self.min_speed_ms, self.max_speed_ms)
 
 			# do lidar
@@ -837,7 +848,7 @@ while not app.quit:
 	yprediction = model.predict(frame.reshape(1,90,160,1)).item(0)
 	###print(str(counter) + " aiDIR:" + str(yprediction))
 	# push steering from CNN to game
-	app.line_pos = - yprediction
+	app.line_pos_unfiltered = - yprediction
 	app.target_image.setPos( (-app.line_pos-0.005, 0.0, 0.0) )
 	# dataset recording
 	if app.recording and counter != 0: #and not app.autopilot : # first frame buffer is empty, skip it!
@@ -865,7 +876,7 @@ while not app.quit:
 	msg += str( float(app.line_pos) ) + ';'
 	msg += str( float(app.pid_line) ) + ';' 
 
-	msg += str( float(app.steering) ) + ';' 
+	msg += str( float(app.steering) ) #+ ';' 
 	#msg += str( float(app.autopilot) ) 
 
 	msg_length = str(len(msg)).ljust(4)
