@@ -177,7 +177,10 @@ class MyApp(ShowBase):
 		self.target_image = OnscreenImage(image = '/c/tmp/media/cross.png', pos = (-0.005, 0.0, 0.0), scale = (0.05, 0.05, 0.05), )
 		self.target_image.setTransparency(TransparencyAttrib.MAlpha)
 		self.speed_o_meter = OnscreenText(text="0km/h", pos=(1.4,0.80), fg=(1, 1, 1, 1), align=TextNode.ARight, shadow=(0, 0, 0, 0.5), scale=.25)
-		
+		self.lap_timer = globalClock.getFrameTime()
+		self.lap_timer_text = OnscreenText(text=str(round(globalClock.getFrameTime(),1)) +"s", pos=(1.4,0.60), fg=(1, 1, 1, 1), align=TextNode.ARight, shadow=(0, 0, 0, 0.5), scale=.15)
+
+
 		self.slider_max_speed = DirectSlider(range=(0,10), value=max_speed, pageSize=0.1, command=self.slider_max_speed_change, scale=0.4, pos = (0.0,0.0,0.9))
 		self.text_max_speed = OnscreenText(text="Vmax " + str(max_speed)+"m/s", fg=(1, 1, 1, 1), align=TextNode.ARight, shadow=(0, 0, 0, 0.5), scale=.04, pos=(-0.55,0.9))
 		
@@ -296,6 +299,15 @@ class MyApp(ShowBase):
 		RLwheelNP.reparentTo(self.worldNP)
 		self.addWheel(Point3(-0.10, -0.14, 0.40), False, RLwheelNP)
 
+		# Collision solids/nodes for arch
+		self.chassisCN = CollisionNode('chassisCS')
+		self.chassisCS = CollisionBox((0,0,0), 0.1, 0.2, 0.1) # largeur x longeur x hauteur
+		self.chassisCN.addSolid(self.chassisCS)
+		self.chassisCN.setIntoCollideMask(BitMask32.allOff())
+		self.chassisCN.setFromCollideMask(BitMask32.bit(1))
+		self.chassisCNP = self.chassisNP.attachNewNode(self.chassisCN,1)
+		#self.chassisCNP.show()
+
 		#self.chassisNP.setPos(0, 40.0, 0.05)
 		self.chassisNP.setPos(0, 10.0, 0.2)
 		self.chassisNP.setHpr(180, 0.0, 0.0)
@@ -306,6 +318,7 @@ class MyApp(ShowBase):
 		#self.camera.setPos(0.5,-0.5,0.50)
 		#self.camera.setHpr(35,-35,0)
 		####self.camera.setPos(0.0,-0.15,0.25)
+		#self.camera.setPos(0.0,-2.0,2.0)
 		self.camera.setPos(0.0,0.05,0.22)
 		self.camera.setHpr(0,-20,0)
 		self.camera.reparentTo(self.chassisNP)
@@ -313,6 +326,12 @@ class MyApp(ShowBase):
 		# tasks
 		self.taskMgr.add(self.update_toulouse_map, 'updateMap')
 		self.taskMgr.add(self.physics_task, 'updatePhysics')
+
+		# Collisions
+		self.ctraverser = CollisionTraverser()  # Make a traverser
+		self.cqueue = CollisionHandlerQueue()  # Make a handler
+		self.ctraverser.addCollider(self.chassisCNP, self.cqueue)
+		
 
 		# speed controller settings
 		self.min_speed_ms = min_speed # m/s
@@ -373,6 +392,8 @@ class MyApp(ShowBase):
 		self.engineForce = 0.0
 		self.brakeForce = 0.0
 
+		
+
 	def slider_max_speed_change(self):
 		self.max_speed_ms = float(self.slider_max_speed['value'])
 		self.text_max_speed.setText("Vmax " + str(round(self.max_speed_ms,1))+"m/s")
@@ -422,6 +443,17 @@ class MyApp(ShowBase):
 		wheel.setRollInfluence(0.7)
 
 	def physics_task(self, task):
+
+		self.ctraverser.traverse(render)
+		#self.ctraverser.showCollisions(render)
+		for entry in self.cqueue.getEntries():
+			#print("."+ str(entry))
+			if entry.getIntoNodePath() == self.archCNP:
+				if globalClock.getFrameTime() > self.lap_timer + 3.0:
+					print(str(round(globalClock.getFrameTime()-self.lap_timer,1)) +"s")
+					self.lap_timer = globalClock.getFrameTime()
+		self.lap_timer_text.setText(text=str(round(globalClock.getFrameTime()-self.lap_timer,1)) +"s")
+
 		dt = globalClock.getDt()
 
 		# if gamepad detected in human mode
@@ -475,6 +507,7 @@ class MyApp(ShowBase):
 		self.last_position = self.current_position
 		self.actual_speed_kmh = 0.9 * self.actual_speed_kmh + 0.1 * self.actual_speed_ms*60*60/1000
 		self.speed_o_meter.setText(str(int(self.actual_speed_kmh))+ "km/h")
+		
 
 		# chose controller
 		if not self.autopilot: # manual controller
@@ -594,6 +627,7 @@ class MyApp(ShowBase):
 		self.lignenoireNodePath = self.loader.loadModel("/c/tmp/media/lignenoire.bam")
 		self.ligneblancheNodePath = self.loader.loadModel("/c/tmp/media/ligneblanche.bam")
 		self.bordureNodePath = self.loader.loadModel("/c/tmp/media/bordure.bam")
+		self.bordureNodePath.node().setIntoCollideMask(BitMask32.bit(1))
 		self.archNodePath = self.loader.loadModel("/c/tmp/media/arch.bam")
 
 		# print(str(TextureStage.getDefault()))
@@ -687,6 +721,16 @@ class MyApp(ShowBase):
 		self.circuitNodePath.setScale(1.0, 1.0, 1.0)
 		self.circuitNodePath.setPos(1.0,-5.0,-0.01)
 		self.circuitNodePath.setHpr(0,90, 270)
+
+		# Collision solids/nodes for arch
+		self.archCN = CollisionNode('archCNP')
+		self.archCS = CollisionBox((-9.0,0.0,1.0), 0.2, 1.0, 1.0)
+		self.archCN.addSolid(self.archCS)
+		#self.archCN.show()
+		self.archCN.setIntoCollideMask(BitMask32.bit(1))
+		self.archCN.setFromCollideMask(BitMask32.allOff())
+		self.archCNP = self.archNodePath.attachNewNode(self.archCN)
+		#self.archCNP.show()
 
         # Lights
 		self.render.clearLight()
@@ -883,7 +927,7 @@ while not app.quit:
 	tserver.sendTelemetry(msg_length)
 	tserver.sendTelemetry(msg)
 	counter += 1
-	print(telemetry_client_connected)
+	#print(telemetry_client_connected)
 
 dataset_file.close()
 print('m:' + str(record_counter))
