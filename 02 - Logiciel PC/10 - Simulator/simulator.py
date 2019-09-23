@@ -11,11 +11,11 @@ speed_ki = 0.0
 speed_kd = 0.0
 speed_kff = 0.0
 
-lidar_direction_kp = 1.0
-lidar_direction_ki = 0.0
-lidar_direction_kd = 0.0
-lidar_k_speed = 0.01
-lidar_positional_error_threshold = 350
+lidar_direction_kp = 0.033
+lidar_direction_ki = 0.0003
+lidar_direction_kd = 0.1
+lidar_k_speed = 0.003
+lidar_positional_error_threshold = 250
 
 ai_direction_alpha = 0.3
 ai_direction_kp = 1.2
@@ -299,14 +299,33 @@ class MyApp(ShowBase):
 		RLwheelNP.reparentTo(self.worldNP)
 		self.addWheel(Point3(-0.10, -0.14, 0.40), False, RLwheelNP)
 
-		# Collision solids/nodes for arch
-		self.chassisCN = CollisionNode('chassisCS')
+		# Collision solids/nodes for chassis
+		self.chassisCN = CollisionNode('chassisCN')
 		self.chassisCS = CollisionBox((0,0,0), 0.1, 0.2, 0.1) # largeur x longeur x hauteur
 		self.chassisCN.addSolid(self.chassisCS)
 		self.chassisCN.setIntoCollideMask(BitMask32.allOff())
 		self.chassisCN.setFromCollideMask(BitMask32.bit(1))
-		self.chassisCNP = self.chassisNP.attachNewNode(self.chassisCN,1)
+		self.chassisCNP = self.chassisNP.attachNewNode(self.chassisCN)
 		#self.chassisCNP.show()
+
+		# Collision solids/nodes for Lidar
+		self.LidarLeftCN = CollisionNode('LidarLeftCN')
+		self.LidarLeftCS = CollisionSegment((-0.1,0.1,0.05),(-1.5*math.sin(math.radians(60)),1.5*math.cos(math.radians(60)),0.0)) 
+		self.LidarLeftCN.addSolid(self.LidarLeftCS)
+		self.LidarLeftCN.setIntoCollideMask(BitMask32.allOff())
+		self.LidarLeftCN.setFromCollideMask(BitMask32.bit(2))
+		self.LidarLeftCNP = self.chassisNP.attachNewNode(self.LidarLeftCN)
+		self.LidarLeftCNP.show()
+
+		# Collision solids/nodes for Lidar
+		self.LidarRightCN = CollisionNode('LidarRightCN')
+		self.LidarRightCS = CollisionSegment((0.1,0.1,0.05),(1.5*math.sin(math.radians(60)),1.5*math.cos(math.radians(60)),0.0)) 
+		self.LidarRightCN.addSolid(self.LidarRightCS)
+		self.LidarRightCN.setIntoCollideMask(BitMask32.allOff())
+		self.LidarRightCN.setFromCollideMask(BitMask32.bit(2))
+		self.LidarRightCNP = self.chassisNP.attachNewNode(self.LidarRightCN)
+		self.LidarRightCNP.show()
+
 
 		#self.chassisNP.setPos(0, 40.0, 0.05)
 		self.chassisNP.setPos(0, 10.0, 0.2)
@@ -318,8 +337,9 @@ class MyApp(ShowBase):
 		#self.camera.setPos(0.5,-0.5,0.50)
 		#self.camera.setHpr(35,-35,0)
 		####self.camera.setPos(0.0,-0.15,0.25)
-		#self.camera.setPos(0.0,-2.0,2.0)
-		self.camera.setPos(0.0,0.05,0.22)
+		###self.camera.setPos(0.0,-2.0,2.0)
+		self.camera.setPos(0.0,-0.5,0.5)
+		#self.camera.setPos(0.0,0.05,0.22) # REFERENCE
 		self.camera.setHpr(0,-20,0)
 		self.camera.reparentTo(self.chassisNP)
 
@@ -331,6 +351,8 @@ class MyApp(ShowBase):
 		self.ctraverser = CollisionTraverser()  # Make a traverser
 		self.cqueue = CollisionHandlerQueue()  # Make a handler
 		self.ctraverser.addCollider(self.chassisCNP, self.cqueue)
+		self.ctraverser.addCollider(self.LidarRightCNP, self.cqueue)
+		self.ctraverser.addCollider(self.LidarLeftCNP, self.cqueue)
 		
 
 		# speed controller settings
@@ -444,17 +466,35 @@ class MyApp(ShowBase):
 
 	def physics_task(self, task):
 
+		dt = globalClock.getDt()
+
+		# reset wall following state
+		self.lidar_distance_gauche = 150
+		self.lidar_distance_droit = 150
+		self.lidar_distance_haut = 150
+
 		self.ctraverser.traverse(render)
 		#self.ctraverser.showCollisions(render)
+		self.cqueue.sortEntries()
 		for entry in self.cqueue.getEntries():
 			#print("."+ str(entry))
+			if entry.getFromNodePath() == self.LidarLeftCNP and self.lidar_distance_gauche == 150:
+				point = entry.getSurfacePoint(render)
+				current = self.chassisNP.getPos()
+				distance = (point-current).length()
+				self.lidar_distance_gauche = distance
+				#print("lidar_distance_gauche:"+ str(self.lidar_distance_gauche))
+			if entry.getFromNodePath() == self.LidarRightCNP  and self.lidar_distance_droit == 150:
+				point = entry.getSurfacePoint(render)
+				current = self.chassisNP.getPos()
+				distance = (point-current).length()
+				self.lidar_distance_droit = distance
+				#print("lidar_distance_droit:"+ str(self.lidar_distance_droit))
 			if entry.getIntoNodePath() == self.archCNP:
 				if globalClock.getFrameTime() > self.lap_timer + 3.0:
 					print(str(round(globalClock.getFrameTime()-self.lap_timer,1)) +"s")
 					self.lap_timer = globalClock.getFrameTime()
 		self.lap_timer_text.setText(text=str(round(globalClock.getFrameTime()-self.lap_timer,1)) +"s")
-
-		dt = globalClock.getDt()
 
 		# if gamepad detected in human mode
 		# if self.gamepad and not self.autopilot:
@@ -547,17 +587,44 @@ class MyApp(ShowBase):
 
 		elif self.autopilot: # automatic controller
 
+			# simulator steering
+			self.last_steering = self.steering
+
 			# speed controller (stage 1)
 			self.target_speed_ms = self.max_speed_ms
 
-			# line following PID controller
-			self.line_pos = self.line_pos * (1.0-self.ai_direction_alpha) + self.ai_direction_alpha * self.line_pos_unfiltered
-			self.pid_line = self.pid_line_following.compute(self.line_pos)
-			###print(str(round(self.line_pos,2)) + "    " + str(round(self.pid_line,2)) + "    ")
+			# wall following PID controller
+			self.actual_lidar_direction_error = -constraint(self.lidar_distance_droit - self.lidar_distance_gauche, -150, 150)
+			self.pid_wall = self.pid_wall_following.compute(self.actual_lidar_direction_error)
+			self.lidar_positional_error = abs(self.pid_wall_following.integral_error)
 
-			# simulator steering
-			self.last_steering = self.steering
-			self.steering = self.pid_line  * self.steering_clamp
+			# direction and throttle, control with threshold
+			if self.lidar_positional_error > self.lidar_positional_error_threshold:
+
+				# high positional error             
+				###print("high positional error")
+
+				# direction normal rate
+				self.steering = self.pid_wall * self.steering_clamp
+
+				# reduce current speed according lidar positional error
+				self.target_speed_ms -= (self.lidar_positional_error - self.lidar_positional_error_threshold)*self.lidar_k_speed 
+
+			else:
+
+				# low positional error             
+				###print("low positional error")
+
+				# direction low rate
+				self.steering = self.pid_wall * self.dual_rate * self.steering_clamp
+
+			# # line following PID controller
+			# self.line_pos = self.line_pos * (1.0-self.ai_direction_alpha) + self.ai_direction_alpha * self.line_pos_unfiltered
+			# self.pid_line = self.pid_line_following.compute(self.line_pos)
+			# ###print(str(round(self.line_pos,2)) + "    " + str(round(self.pid_line,2)) + "    ")
+
+			# # simulator steering
+			# self.steering = self.pid_line  * self.steering_clamp
 			# simulator steering steering inertia
 			if self.steering > self.last_steering:
 				self.steering = min(self.steering, self.last_steering+dt*self.steering_increment)
@@ -566,14 +633,10 @@ class MyApp(ShowBase):
 			# simulator steering steering clamp
 			self.steering = constraint(self.steering, -self.steering_clamp, self.steering_clamp)
 
-			# reduce current speed according lidar positional error
-			#self.target_speed_ms -= ( ai_direction_k_speed*abs(self.line_pos)*self.max_speed_ms + ai_steering_k_speed*abs(self.pid_line)*self.max_speed_ms)
-			self.target_speed_ms -= ( self.ai_direction_k_speed*abs(self.line_pos_unfiltered)*self.max_speed_ms + self.ai_steering_k_speed*abs(self.pid_line)*self.max_speed_ms)
+			# # reduce current speed according lidar positional error
+			# #self.target_speed_ms -= ( ai_direction_k_speed*abs(self.line_pos)*self.max_speed_ms + ai_steering_k_speed*abs(self.pid_line)*self.max_speed_ms)
+			# self.target_speed_ms -= ( self.ai_direction_k_speed*abs(self.line_pos_unfiltered)*self.max_speed_ms + self.ai_steering_k_speed*abs(self.pid_line)*self.max_speed_ms)
 			self.target_speed_ms = constraint(self.target_speed_ms, self.min_speed_ms, self.max_speed_ms)
-
-			# do lidar
-			# do lidar
-			# do lidar
 
 			# compute current speed from target and time passing (trapeze)
 			if self.current_speed_ms < self.target_speed_ms:
@@ -627,7 +690,7 @@ class MyApp(ShowBase):
 		self.lignenoireNodePath = self.loader.loadModel("/c/tmp/media/lignenoire.bam")
 		self.ligneblancheNodePath = self.loader.loadModel("/c/tmp/media/ligneblanche.bam")
 		self.bordureNodePath = self.loader.loadModel("/c/tmp/media/bordure.bam")
-		self.bordureNodePath.node().setIntoCollideMask(BitMask32.bit(1))
+		self.bordureNodePath.setCollideMask(BitMask32.bit(2))
 		self.archNodePath = self.loader.loadModel("/c/tmp/media/arch.bam")
 
 		# print(str(TextureStage.getDefault()))
