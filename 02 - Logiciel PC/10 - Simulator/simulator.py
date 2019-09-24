@@ -534,7 +534,6 @@ class MyApp(ShowBase):
 		self.lap_timer_text.setText(text=str(round(globalClock.getFrameTime()-self.lap_timer,1)) +"s")
 
 
-		print("liG:"+ str(self.lidar_distance_gauche) + "   liD:" + str(self.lidar_distance_droit))
 
 		# if gamepad detected in human mode
 		# if self.gamepad and not self.autopilot:
@@ -636,7 +635,30 @@ class MyApp(ShowBase):
 			# wall following PID controller
 			self.actual_lidar_direction_error = -constraint(self.lidar_distance_droit - self.lidar_distance_gauche, -1.5, 1.5)/1.5
 			self.pid_wall = self.pid_wall_following.compute(self.actual_lidar_direction_error)
-			self.lidar_positional_error = abs(self.pid_wall_following.integral_error)
+
+			# line following PID controller
+			self.line_pos = self.line_pos * (1.0-self.ai_direction_alpha) + self.ai_direction_alpha * self.line_pos_unfiltered
+			self.pid_line = self.pid_line_following.compute(self.line_pos)
+
+			if abs(self.actual_lidar_direction_error) < 0.33:
+				self.steering = self.pid_line
+				print("......................")
+
+			elif abs(self.actual_lidar_direction_error) > 0.66:
+				self.steering = 2.0 * self.pid_wall + self.pid_line
+				print("oooooooooooooooooooooo")
+
+			else:
+				coef = ( abs(self.actual_lidar_direction_error) - 0.33 ) / 0.33
+				#self.steering = coef * self.pid_wall + (1.0-coef) * self.pid_line
+				self.steering = 2.0* coef * self.pid_wall + self.pid_line
+				print( str(round(coef,2)) )
+
+			
+			#self.lidar_positional_error = abs(self.pid_wall_following.integral_error)
+
+			#print("liG:"+ str(self.lidar_distance_gauche) + "   liD:" + str(self.lidar_distance_droit))
+
 
 			# direction and throttle, control with threshold
 			#if self.lidar_positional_error > self.lidar_positional_error_threshold:
@@ -645,7 +667,7 @@ class MyApp(ShowBase):
 				###print("high positional error")
 
 				# direction normal rate
-			self.steering = self.pid_wall
+			#self.steering = self.pid_wall
 
 				# reduce current speed according lidar positional error
 				#self.target_speed_ms -= (self.lidar_positional_error - self.lidar_positional_error_threshold)*self.lidar_k_speed 
@@ -659,10 +681,8 @@ class MyApp(ShowBase):
 				# direction low rate
 				#self.steering = self.pid_wall * self.dual_rate 
 
-			# line following PID controller
-			self.line_pos = self.line_pos * (1.0-self.ai_direction_alpha) + self.ai_direction_alpha * self.line_pos_unfiltered
-			self.pid_line = self.pid_line_following.compute(self.line_pos)
-			self.steering += self.pid_line
+
+			#self.steering += self.pid_line
 			###print(str(round(self.line_pos,2)) + "    " + str(round(self.pid_line,2)) + "    ")
 
 			# simulator steering
@@ -678,7 +698,7 @@ class MyApp(ShowBase):
 			# reduce current speed according lidar positional error
 			self.target_speed_ms -= self.ai_direction_k_speed*abs(self.line_pos_unfiltered)*self.max_speed_ms 
 			self.target_speed_ms -= self.ai_steering_k_speed*abs(self.pid_line)*self.max_speed_ms
-			self.target_speed_ms -= self.lidar_k_speed*abs(self.actual_lidar_direction_error)*self.max_speed_ms
+			#self.target_speed_ms -= self.lidar_k_speed*abs(self.actual_lidar_direction_error)*self.max_speed_ms
 			self.target_speed_ms = constraint(self.target_speed_ms, self.min_speed_ms, self.max_speed_ms)
 
 			# compute current speed from target and time passing (trapeze)
@@ -963,7 +983,8 @@ class MyApp(ShowBase):
 
 ## MAIN ########################################################################
 
-tserver = telemetry_server("192.168.1.34", 7001)
+#tserver = telemetry_server("192.168.1.34", 7001)
+tserver = telemetry_server("192.168.43.5", 7001)
 # open model
 print("Load model from disk ...")
 model = load_model("model/model.h5")
