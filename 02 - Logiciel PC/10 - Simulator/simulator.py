@@ -1,3 +1,4 @@
+## TODO : Panda3D uses a configuration file named Config.prc.
 ## TODO : include IA into game class 
 
 ## PARAMETERS #################################################################
@@ -202,6 +203,21 @@ class MyApp(ShowBase):
 		self.slider_ai_direction_alpha = DirectSlider(range=(0,1), value=ai_direction_alpha, pageSize=0.01, command=self.slider_ai_direction_alpha_change, scale=0.4, pos = (0.0,0.0,0.60))
 		self.text_ai_direction_alpha = OnscreenText(text="AI Direction K speed " + str(round(ai_direction_alpha,2)), fg=(1, 1, 1, 1), align=TextNode.ARight, shadow=(0, 0, 0, 0.5), scale=.04, pos=(-0.55,0.60))
 
+		self.slider_lidar_direction_kp = DirectSlider(range=(0,1), value=lidar_direction_kp, pageSize=0.01, command=self.slider_lidar_direction_kp_change, scale=0.4, pos = (0.0,0.0,0.55))
+		self.text_lidar_direction_kp = OnscreenText(text="AI Direction K speed " + str(round(lidar_direction_kp,3)), fg=(1, 1, 1, 1), align=TextNode.ARight, shadow=(0, 0, 0, 0.5), scale=.04, pos=(-0.55,0.55))
+
+		self.slider_lidar_direction_ki = DirectSlider(range=(0,0.1), value=lidar_direction_ki, pageSize=0.0001, command=self.slider_lidar_direction_ki_change, scale=0.4, pos = (0.0,0.0,0.50))
+		self.text_lidar_direction_ki = OnscreenText(text="AI Direction K speed " + str(round(lidar_direction_ki,3)), fg=(1, 1, 1, 1), align=TextNode.ARight, shadow=(0, 0, 0, 0.5), scale=.04, pos=(-0.55,0.50))
+
+		self.slider_lidar_direction_kd = DirectSlider(range=(0,0.1), value=lidar_direction_kd, pageSize=0.01, command=self.slider_lidar_direction_kd_change, scale=0.4, pos = (0.0,0.0,0.45))
+		self.text_lidar_direction_kd = OnscreenText(text="AI Direction K speed " + str(round(lidar_direction_kd,3)), fg=(1, 1, 1, 1), align=TextNode.ARight, shadow=(0, 0, 0, 0.5), scale=.04, pos=(-0.55,0.45))
+
+		self.slider_lidar_k_speed = DirectSlider(range=(0,0.1), value=lidar_k_speed, pageSize=0.001, command=self.slider_lidar_k_speed_change, scale=0.4, pos = (0.0,0.0,0.40))
+		self.text_lidar_k_speed = OnscreenText(text="AI Direction K speed " + str(round(lidar_k_speed,3)), fg=(1, 1, 1, 1), align=TextNode.ARight, shadow=(0, 0, 0, 0.5), scale=.04, pos=(-0.55,0.40))
+
+		self.slider_lidar_positional_error_threshold = DirectSlider(range=(0,350), value=lidar_positional_error_threshold, pageSize=.0, command=self.slider_lidar_positional_error_threshold_change, scale=0.4, pos = (0.0,0.0,0.35))
+		self.text_lidar_positional_error_threshold = OnscreenText(text="AI Direction K speed " + str(round(lidar_positional_error_threshold,1)), fg=(1, 1, 1, 1), align=TextNode.ARight, shadow=(0, 0, 0, 0.5), scale=.04, pos=(-0.55,0.35))
+
         # application state
 		self.quit = False
 		self.autopilot = False
@@ -338,8 +354,8 @@ class MyApp(ShowBase):
 		#self.camera.setHpr(35,-35,0)
 		####self.camera.setPos(0.0,-0.15,0.25)
 		###self.camera.setPos(0.0,-2.0,2.0)
-		self.camera.setPos(0.0,-0.5,0.5)
-		#self.camera.setPos(0.0,0.05,0.22) # REFERENCE
+		#self.camera.setPos(0.0,-0.5,0.5)
+		self.camera.setPos(0.0,0.05,0.22) # REFERENCE
 		self.camera.setHpr(0,-20,0)
 		self.camera.reparentTo(self.chassisNP)
 
@@ -443,6 +459,27 @@ class MyApp(ShowBase):
 	def slider_ai_direction_alpha_change(self):
 		self.ai_direction_alpha = float(self.slider_ai_direction_alpha['value'])
 		self.text_ai_direction_alpha.setText("AI Direction Alpha " + str(round(self.ai_direction_alpha,2)))
+
+	def slider_lidar_direction_kp_change(self):
+		self.pid_wall_following.kp = float(self.slider_lidar_direction_kp['value'])
+		self.text_lidar_direction_kp.setText("LIDAR Direction Kp " + str(round(self.pid_wall_following.kp,3)))
+
+	def slider_lidar_direction_ki_change(self):
+		self.pid_wall_following.ki = float(self.slider_lidar_direction_ki['value'])
+		self.text_lidar_direction_ki.setText("LIDAR Direction Ki " + str(round(self.pid_wall_following.ki,3)))
+
+	def slider_lidar_direction_kd_change(self):
+		self.pid_wall_following.kd = float(self.slider_lidar_direction_kd['value'])
+		self.text_lidar_direction_kd.setText("LIDAR Direction Kd " + str(round(self.pid_wall_following.kd,3)))
+
+	def slider_lidar_k_speed_change(self):
+		self.lidar_k_speed = float(self.slider_lidar_k_speed['value'])
+		self.text_lidar_k_speed.setText("LIDAR Direction K speed " + str(round(self.lidar_k_speed,3)))
+
+	def slider_lidar_positional_error_threshold_change(self):
+		self.lidar_positional_error_threshold = float(self.slider_lidar_positional_error_threshold['value'])
+		self.text_lidar_positional_error_threshold.setText("LIDAR Direction Threshold " + str(round(self.lidar_positional_error_threshold,1)))
+
 
 	def addWheel(self, pos, front, np):
 		wheel = self.vehicle.createWheel()
@@ -605,7 +642,7 @@ class MyApp(ShowBase):
 				###print("high positional error")
 
 				# direction normal rate
-				self.steering = self.pid_wall * self.steering_clamp
+				self.steering = self.pid_wall
 
 				# reduce current speed according lidar positional error
 				self.target_speed_ms -= (self.lidar_positional_error - self.lidar_positional_error_threshold)*self.lidar_k_speed 
@@ -616,15 +653,16 @@ class MyApp(ShowBase):
 				###print("low positional error")
 
 				# direction low rate
-				self.steering = self.pid_wall * self.dual_rate * self.steering_clamp
+				self.steering = self.pid_wall * self.dual_rate 
 
-			# # line following PID controller
-			# self.line_pos = self.line_pos * (1.0-self.ai_direction_alpha) + self.ai_direction_alpha * self.line_pos_unfiltered
-			# self.pid_line = self.pid_line_following.compute(self.line_pos)
-			# ###print(str(round(self.line_pos,2)) + "    " + str(round(self.pid_line,2)) + "    ")
+			# line following PID controller
+			self.line_pos = self.line_pos * (1.0-self.ai_direction_alpha) + self.ai_direction_alpha * self.line_pos_unfiltered
+			self.pid_line = self.pid_line_following.compute(self.line_pos)
+			self.steering += self.pid_line
+			###print(str(round(self.line_pos,2)) + "    " + str(round(self.pid_line,2)) + "    ")
 
-			# # simulator steering
-			# self.steering = self.pid_line  * self.steering_clamp
+			# simulator steering
+			self.steering *= self.steering_clamp
 			# simulator steering steering inertia
 			if self.steering > self.last_steering:
 				self.steering = min(self.steering, self.last_steering+dt*self.steering_increment)
@@ -633,9 +671,9 @@ class MyApp(ShowBase):
 			# simulator steering steering clamp
 			self.steering = constraint(self.steering, -self.steering_clamp, self.steering_clamp)
 
-			# # reduce current speed according lidar positional error
+			# reduce current speed according lidar positional error
 			# #self.target_speed_ms -= ( ai_direction_k_speed*abs(self.line_pos)*self.max_speed_ms + ai_steering_k_speed*abs(self.pid_line)*self.max_speed_ms)
-			# self.target_speed_ms -= ( self.ai_direction_k_speed*abs(self.line_pos_unfiltered)*self.max_speed_ms + self.ai_steering_k_speed*abs(self.pid_line)*self.max_speed_ms)
+			self.target_speed_ms -= ( self.ai_direction_k_speed*abs(self.line_pos_unfiltered)*self.max_speed_ms + self.ai_steering_k_speed*abs(self.pid_line)*self.max_speed_ms)
 			self.target_speed_ms = constraint(self.target_speed_ms, self.min_speed_ms, self.max_speed_ms)
 
 			# compute current speed from target and time passing (trapeze)
