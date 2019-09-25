@@ -16,7 +16,7 @@ speed_kff = 0.0
 lidar_direction_kp = 1.2
 lidar_direction_ki = 0.0
 lidar_direction_kd = 12.0
-lidar_k_speed = 0.15
+lidar_direction_k_speed = 0.15
 
 ai_direction_alpha = 0.3
 ai_direction_kp = 1.2
@@ -236,8 +236,8 @@ class MyApp(ShowBase):
 		self.slider_lidar_direction_kd = DirectSlider(range=(0,30), value=lidar_direction_kd, pageSize=0.1, command=self.slider_lidar_direction_kd_change, scale=0.4, pos = (0.0,0.0,0.45))
 		self.text_lidar_direction_kd = OnscreenText(text="Lidar Direction Kd " + str(round(lidar_direction_kd,1)), fg=(1, 1, 1, 1), align=TextNode.ARight, shadow=(0, 0, 0, 0.5), scale=.04, pos=(-0.55,0.45))
 
-		self.slider_lidar_k_speed = DirectSlider(range=(0,2), value=lidar_k_speed, pageSize=0.1, command=self.slider_lidar_k_speed_change, scale=0.4, pos = (0.0,0.0,0.40))
-		self.text_lidar_k_speed = OnscreenText(text="Lidar Direction K speed " + str(round(lidar_k_speed,2)), fg=(1, 1, 1, 1), align=TextNode.ARight, shadow=(0, 0, 0, 0.5), scale=.04, pos=(-0.55,0.40))
+		self.slider_lidar_direction_k_speed = DirectSlider(range=(0,2), value=lidar_direction_k_speed, pageSize=0.1, command=self.slider_lidar_direction_k_speed_change, scale=0.4, pos = (0.0,0.0,0.40))
+		self.text_lidar_direction_k_speed = OnscreenText(text="Lidar Direction K speed " + str(round(lidar_direction_k_speed,2)), fg=(1, 1, 1, 1), align=TextNode.ARight, shadow=(0, 0, 0, 0.5), scale=.04, pos=(-0.55,0.40))
 
         # application state
 		self.quit = False
@@ -409,7 +409,7 @@ class MyApp(ShowBase):
 
 		# lidar steering controller settings
 		self.pid_wall_following = my_controller.pid(kp=lidar_direction_kp, ki=lidar_direction_ki, kd=lidar_direction_kd, integral_max=1000, output_max=1.0, alpha=0.2) 
-		self.lidar_k_speed = lidar_k_speed
+		self.lidar_direction_k_speed = lidar_direction_k_speed
 
 		# lidar steering controller state
 		self.lidar_distance_droit = lidar_maximum_distance
@@ -492,9 +492,9 @@ class MyApp(ShowBase):
 		self.pid_wall_following.kd = float(self.slider_lidar_direction_kd['value'])
 		self.text_lidar_direction_kd.setText("LIDAR Direction Kd " + str(round(self.pid_wall_following.kd,1)))
 
-	def slider_lidar_k_speed_change(self):
-		self.lidar_k_speed = float(self.slider_lidar_k_speed['value'])
-		self.text_lidar_k_speed.setText("LIDAR Direction K speed " + str(round(self.lidar_k_speed,2)))
+	def slider_lidar_direction_k_speed_change(self):
+		self.lidar_direction_k_speed = float(self.slider_lidar_direction_k_speed['value'])
+		self.text_lidar_direction_k_speed.setText("LIDAR Direction K speed " + str(round(self.lidar_direction_k_speed,2)))
 
 	def addWheel(self, pos, front, np):
 		wheel = self.vehicle.createWheel()
@@ -671,9 +671,10 @@ class MyApp(ShowBase):
 				self.ratio_ai = ( abs(self.actual_lidar_direction_error) - ration_ai_x1 ) / (ration_ai_x2-ration_ai_x1)
 			self.steering = self.ratio_ai * self.pid_wall + (1.0-self.ratio_ai) * self.pid_line
 			print('+'  * int(self.ratio_ai*10.0))
+			self.steering = constraint(self.steering, -1.0, 1.0)
 
 			# reduce current speed according lidar positional error
-			self.target_speed_ms -= ( self.ratio_ai * self.lidar_k_speed * abs(self.actual_lidar_direction_error) + (1.0 - self.ratio_ai) *self.ai_direction_k_speed*abs(self.line_pos_unfiltered) )*self.max_speed_ms 
+			self.target_speed_ms -= ( self.ratio_ai * self.lidar_direction_k_speed * abs(self.actual_lidar_direction_error) + (1.0 - self.ratio_ai) *self.ai_direction_k_speed*abs(self.line_pos_unfiltered) )*self.max_speed_ms 
 			self.target_speed_ms -= self.steering_k_speed*abs(self.steering)*self.max_speed_ms
 			self.target_speed_ms = constraint(self.target_speed_ms, self.min_speed_ms, self.max_speed_ms)
 

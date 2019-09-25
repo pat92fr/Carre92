@@ -27,6 +27,7 @@ global remote_configuration_command_id # received command from client
 
 # global (for settings)
 global param_min_speed
+global param_cornering_speed
 global param_max_speed
 global param_acceleration
 global param_deceleration
@@ -35,24 +36,46 @@ global param_speed_ki
 global param_speed_kd
 global param_speed_kff
 
-global param_lidar_direction_kp # from position error (cm) to steering (-1..+1)
+global param_lidar_direction_kp # from position error (-1..+1) to steering (-1..+1)
 global param_lidar_direction_ki
 global param_lidar_direction_kd
-global param_lidar_k_speed # proportional coef . Input is sum of position error (cm). Output is delta speed (m/s) summed to max speed (m/s)
-global param_lidar_positional_error_threshold # sum of position error (cm over 30 frames) threshold to activate proportional speed  limiting
+global param_lidar_direction_k_speed # proportional coef . Input is direction error (-1..+1). Output is delta speed (m/s) summed to max speed (m/s)
 
 global param_ai_direction_alpha
 global param_ai_direction_kp # from direction error (-1..+1) to steering (-1..+1)
 global param_ai_direction_ki
 global param_ai_direction_kd
 global param_ai_direction_k_speed # proportional coef . Input is direction error (-1..+1). Output is delta speed (m/s) summed to max speed (m/s)
-global param_ai_steering_k_speed # proportional coef . Input is steering (-1..+1). Output is delta speed (m/s) summed to max speed (m/s)
 
-global param_dual_rate
+global param_steering_k_speed # proportional coef . Input is steering (-1..+1). Output is delta speed (m/s) summed to max speed (m/s)
+global param_steering_dual_rate
 global param_steering_trim
 
+## CONSTANTS ######################################################################
+
+lidar_maximum_distance = 200.0 #cm
+ration_ai_x1 = 0.3 #
+ration_ai_x2 = 0.5 #
+
+## GLOBALS ########################################################################
+
+# speed strategy
+def max_speed_from_distance(distance):
+	if distance > 0.0 and distance < 4.0:
+		return param_max_speed
+	elif distance > 15.0 and distance < 25.0:
+		return param_max_speed
+	elif distance > 45.0 and distance < 55.0:
+		return param_max_speed
+	elif distance > 65.0 and distance < 120.0:
+		return param_max_speed
+	else:
+		return param_cornering_speed
+
 def load_configuration_file():
-    global param_min_speed      
+
+    global param_min_speed    
+    global param_cornering_speed  
     global param_max_speed       
     global param_acceleration
     global param_deceleration
@@ -64,18 +87,17 @@ def load_configuration_file():
     global param_lidar_direction_kp
     global param_lidar_direction_ki
     global param_lidar_direction_kd        
-    global param_lidar_k_speed      
-    global param_lidar_positional_error_threshold 
+    global param_lidar_direction_k_speed      
 
     global param_ai_direction_alpha
     global param_ai_direction_kp
     global param_ai_direction_ki
     global param_ai_direction_kd
     global param_ai_direction_k_speed
-    global param_ai_steering_k_speed
- 
+
+    global param_steering_k_speed
     global param_steering_trim
-    global param_dual_rate
+    global param_steering_dual_rate
 
     file = open('config.txt', 'r')
     for line in file:
@@ -85,20 +107,20 @@ def load_configuration_file():
 
         if fields[0] == "SPEED":
             param_min_speed =  float(fields[1])
-            param_max_speed =  float(fields[2])
-            param_acceleration =  float(fields[3])
-            param_deceleration =  float(fields[4])
-            param_speed_kp = float(fields[5])
-            param_speed_ki = float(fields[6])
-            param_speed_kd = float(fields[7])
-            param_speed_kff = float(fields[8])
+            param_cornering_speed =  float(fields[2])
+            param_max_speed =  float(fields[3])
+            param_acceleration =  float(fields[4])
+            param_deceleration =  float(fields[5])
+            param_speed_kp = float(fields[6])
+            param_speed_ki = float(fields[7])
+            param_speed_kd = float(fields[8])
+            param_speed_kff = float(fields[9])
 
         if fields[0] == "WALL_FOLLOWING":
             param_lidar_direction_kp = float(fields[1])
             param_lidar_direction_ki = float(fields[2])
             param_lidar_direction_kd = float(fields[3])
-            param_lidar_k_speed =  float(fields[4])
-            param_lidar_positional_error_threshold =  int(fields[5])
+            param_lidar_direction_k_speed =  float(fields[4])
 
         if fields[0] == "LINE_FOLLOWING":
             param_ai_direction_alpha = float(fields[1])
@@ -106,11 +128,12 @@ def load_configuration_file():
             param_ai_direction_ki = float(fields[3])
             param_ai_direction_kd = float(fields[4])
             param_ai_direction_k_speed = float(fields[5])
-            param_ai_steering_k_speed = float(fields[6])
-            
+
         if fields[0] == "STEERING":
-            param_steering_trim =  int(fields[1])
-            param_dual_rate =  float(fields[2])
+            param_steering_k_speed = float(fields[1])        	
+            param_steering_trim =  int(fields[2])
+            param_steering_dual_rate =  float(fields[3])
+
     file.close()
 
 '''''''''''''''''''''''''''''
@@ -173,8 +196,10 @@ class remote_configuration_handler(asyncore.dispatcher_with_send):
         self.close()
         
     def handle_read(self):
+
         global param_min_speed      
-        global param_max_speed       
+        global param_cornering_speed      
+        global param_max_speed     
         global param_acceleration
         global param_deceleration
         global param_speed_kp
@@ -185,18 +210,17 @@ class remote_configuration_handler(asyncore.dispatcher_with_send):
         global param_lidar_direction_kp
         global param_lidar_direction_ki
         global param_lidar_direction_kd        
-        global param_lidar_k_speed      
-        global param_lidar_positional_error_threshold 
+        global param_lidar_direction_k_speed      
 
         global param_ai_direction_alpha
         global param_ai_direction_kp
         global param_ai_direction_ki
         global param_ai_direction_kd
         global param_ai_direction_k_speed
-        global param_ai_steering_k_speed
-     
+        
+        global param_steering_k_speed
         global param_steering_trim
-        global param_dual_rate
+        global param_steering_dual_rate
 
         global remote_configuration_command_id
 
@@ -207,7 +231,7 @@ class remote_configuration_handler(asyncore.dispatcher_with_send):
             print(res)
 
             if (res[0] == CMD_GET_API):
-                resp = "GET_API;min_speed;max_speed;acceleration;deceleration;speed_kp;speed_ki;speed_kd;speed_kff;lidar_direction_kp;lidar_direction_ki;lidar_direction_kd;lidar_k_speed;lidar_positional_error_threshold;ai_direction_alpha;ai_direction_kp;ai_direction_ki;ai_direction_kd;ai_direction_k_speed;ai_steering_k_speed;steering_trim;dual_rate"
+                resp = "GET_API;min_speed;cornering_speed;max_speed;acceleration;deceleration;speed_kp;speed_ki;speed_kd;speed_kff;lidar_direction_kp;lidar_direction_ki;lidar_direction_kd;lidar_direction_k_speed;ai_direction_alpha;ai_direction_kp;ai_direction_ki;ai_direction_kd;ai_direction_k_speed;steering_k_speed;steering_trim;steering_dual_rate"
                 print(resp)
                 self.send(resp.encode("utf-8"))
                 print('Response sent.')
@@ -216,6 +240,7 @@ class remote_configuration_handler(asyncore.dispatcher_with_send):
             if (res[0] == CMD_GET):
                 resp = "GET;" + \
                     str(param_min_speed) + ";"  +  \
+                    str(param_cornering_speed) + ";"  +  \
                     str(param_max_speed) + ";"  +  \
                     str(param_acceleration) + ";" +  \
                     str(param_deceleration) + ";" +  \
@@ -226,16 +251,15 @@ class remote_configuration_handler(asyncore.dispatcher_with_send):
                     str(param_lidar_direction_kp) + ";" +  \
                     str(param_lidar_direction_ki) + ";"  +  \
                     str(param_lidar_direction_kd) + ";"  +  \
-                    str(param_lidar_k_speed) + ";"  +  \
-                    str(param_lidar_positional_error_threshold) + ";"  +  \
+                    str(param_lidar_direction_k_speed) + ";"  +  \
                     str(param_ai_direction_alpha) + ";" +  \
                     str(param_ai_direction_kp) + ";" +  \
                     str(param_ai_direction_ki) + ";"  +  \
                     str(param_ai_direction_kd) + ";"  +  \
                     str(param_ai_direction_k_speed) + ";"  +  \
-                    str(param_ai_steering_k_speed) + ";"  +  \
+                    str(param_steering_k_speed) + ";"  +  \
                     str(param_steering_trim) + ";"  +  \
-                    str(param_dual_rate)
+                    str(param_steering_dual_rate)
                     
                 print(resp)
                 self.send(resp.encode("utf-8"))
@@ -243,27 +267,32 @@ class remote_configuration_handler(asyncore.dispatcher_with_send):
                 return
 
             if (res[0] == CMD_SET):
+
                 param_min_speed = float(res[1])
-                param_max_speed = float(res[2])
-                param_acceleration = float(res[3])
-                param_deceleration = float(res[4])
-                param_speed_kp = float(res[5])
-                param_speed_ki = float(res[6])
-                param_speed_kd = float(res[7])
-                param_speed_kff = float(res[8])
-                param_lidar_direction_kp = float(res[9])
-                param_lidar_direction_ki = float(res[10])
-                param_lidar_direction_kd = float(res[11])
-                param_lidar_k_speed = float(res[12])
-                param_lidar_positional_error_threshold = int(res[13])
+                param_cornering_speed = float(res[2])
+                param_max_speed = float(res[3])
+                param_acceleration = float(res[4])
+                param_deceleration = float(res[5])
+                param_speed_kp = float(res[6])
+                param_speed_ki = float(res[7])
+                param_speed_kd = float(res[8])
+                param_speed_kff = float(res[9])
+
+                param_lidar_direction_kp = float(res[10])
+                param_lidar_direction_ki = float(res[11])
+                param_lidar_direction_kd = float(res[12])
+                param_lidar_direction_k_speed = float(res[13])
+
                 param_ai_direction_alpha = float(res[14])
                 param_ai_direction_kp = float(res[15])
                 param_ai_direction_ki = float(res[16])
                 param_ai_direction_kd = float(res[17])
                 param_ai_direction_k_speed = float(res[18])
-                param_ai_steering_k_speed = float(res[19])
+
+                param_steering_k_speed = float(res[19])
                 param_steering_trim = int(res[20])
-                param_dual_rate = float(res[21])
+                param_steering_dual_rate = float(res[21])
+
                 remote_configuration_command_id = 10
                 return        
 
@@ -343,9 +372,10 @@ class main_controller():
     def __init__(self):
         
         # speed controller settings
-        self.min_speed = 0.25 # m/s
-        self.max_speed = 1.2 # m/s
-        self.acceleration = 0.01 # m/s per 1/60eme
+        self.min_speed = 0.3 # m/s    
+        self.cornering_speed = 1.0 # m/s
+        self.max_speed = 2.0 # m/s
+        self.acceleration = 0.02 # m/s per 1/60eme
         self.deceleration = 0.1 # m/s per 1/60eme
         self.pid_speed = my_controller.pid(kp=10.0, ki=0.0, kd=100.0, integral_max=1000, output_max=50.0, alpha=0.2) 
         self.pid_speed_kff = 15.0 # feed forward apart from speed PID
@@ -356,33 +386,33 @@ class main_controller():
         self.actual_speed_ms = 0.0 # m/s from encoder (real)
         self.actual_speed_kmh = 0.0 # km.h from encoder
         self.actual_speed_error_ms = 0.0 # m/s
+        self.lap_distance = 0.0 # m
 
         # lidar steering controller settings
-        self.pid_wall_following = my_controller.pid(kp=0.0033, ki=0.0003, kd=0.1, integral_max=1000, output_max=1.0, alpha=0.2) 
-        self.lidar_k_speed = 0.01
-        self.lidar_positional_error_threshold = 350
+        self.pid_wall_following = my_controller.pid(kp=1.0, ki=0.0, kd=10.0, integral_max=1000, output_max=1.0, alpha=0.2) 
+        self.lidar_k_speed = 0.15
 
         # lidar steering controller state
         self.lidar_distance_gauche = 0
         self.lidar_distance_droit = 0
         self.lidar_distance_haut = 0        
-        self.actual_lidar_direction_error = 0.0
-        self.lidar_positional_error = 0.0    
+        self.actual_lidar_direction_error = 0.0  
         self.pid_wall = 0.0
 
         # AI steering controller settings
-        self.pid_line_following = my_controller.pid(kp=0.8, ki=0.0, kd=0.0, integral_max=1000, output_max=1.0, alpha=0.2) 
-        self.ai_direction_k_speed = 1.0
-        self.ai_steering_k_speed = 0.2
+        self.pid_line_following = my_controller.pid(kp=1.0, ki=0.0, kd=10.0, integral_max=1000, output_max=1.0, alpha=0.2) 
+        self.ai_direction_k_speed = 0.15
         
         # AI steering controller state
         self.line_pos_unfiltered = 0.0
         self.line_pos = 0.0
         self.pid_line = 0.0
+        self.ratio_ai = 0.0
 
         # steering settings
+        self.steering_k_speed = 0.05
         self.steering_trim = 4
-        self.dual_rate = 0.5
+        self.steering_dual_rate = 0.5
         
         # controller state to STM32 
         self.steering = 128
@@ -396,6 +426,7 @@ class main_controller():
         self.telemetry_auto_dir = 0
         self.telemetry_auto_thr = 0
         self.telemetry_start_button = 0  
+        self.telemetry_distance = 0
         # serial port for STM32 data link 
         self.port = serial.Serial("/dev/ttyUSB0",baudrate=115200,timeout=3.0)
 
@@ -495,73 +526,64 @@ class main_controller():
         # speed control (stage 1)
         if self.running:
             # fix target speed
-            self.target_speed_ms = self.max_speed # default is maximum speed when running
+            #self.target_speed_ms = self.max_speed # default is maximum speed when running
+            self.target_speed_ms = max_speed_from_distance(self.lap_distance)
         else:
             self.target_speed_ms = 0.0 # enforce 0 speed when halted
 
         # steering control...
   
         if self.ia: # steering computed from AI (line position estimation)
+            
             # process current picture and predict line position
             self.ai_processing()
             
-            # line following PID controller
-            self.line_pos = self.line_pos * (1.0-self.ai_direction_alpha) + self.ai_direction_alpha * self.line_pos_unfiltered            
-            self.pid_line = self.pid_line_following.compute(self.line_pos)
-            
-            ###print(str(self.pid_line) + ';' + str(self.pid_line_following.kp) + ';' + str(self.pid_line_following.ki) + ';' + str(self.pid_line_following.kd))
+		# line following PID controller (with or without data from AI)
+		self.line_pos = self.line_pos * (1.0-self.ai_direction_alpha) + self.ai_direction_alpha * self.line_pos_unfiltered
+		self.pid_line = self.pid_line_following.compute(self.line_pos)
+		###print(str(self.pid_line) + ';' + str(self.pid_line_following.kp) + ';' + str(self.pid_line_following.ki) + ';' + str(self.pid_line_following.kd))
 
-            # steering using normal rate
-            self.steering = int(((self.pid_line+1.0)/2.0*255.0))
-            
-            # reduce current speed according line position error and steering force
-            self.target_speed_ms -= ( abs(self.line_pos)*self.ai_direction_k_speed + abs(self.pid_line)*self.ai_steering_k_speed )
-            self.target_speed_ms = max(self.target_speed_ms,self.min_speed) # limit to minimum speed
-            
-        else: # steering computed from LIDAR (wall following)
-        
-            # compute lidar positionnal error
-            lid = constraint(self.lidar_distance_droit, 0, 150)
-            lig = constraint(self.lidar_distance_gauche, 0, 150)
-            self.actual_lidar_direction_error = constraint(lid - lig, -150, 150)
-            
-            # wall following PID controller
-            self.pid_wall = self.pid_wall_following.compute(self.actual_lidar_direction_error)
-            self.lidar_positional_error = abs(self.pid_wall_following.integral_error)
-            ###print("actual_error: " + str(actual_error) + " positional_error: " + str(positional_error) )
+		# process LIDAR distances
+		lid = constraint(self.lidar_distance_droit, 0, lidar_maximum_distance)
+		lig = constraint(self.lidar_distance_gauche, 0, lidar_maximum_distance)
+		
+		# wall following PID controller
+		self.actual_lidar_direction_error = constraint(lid - lig, -lidar_maximum_distance, lidar_maximum_distance)/lidar_maximum_distance
+		self.pid_wall = self.pid_wall_following.compute(self.actual_lidar_direction_error)
+        ###print("actual_error: " + str(actual_error) + " positional_error: " + str(positional_error) )
 
-            # direction and throttle, control with threshold
-            if self.lidar_positional_error > self.lidar_positional_error_threshold:
-                
-                # high positional error             
-                ###print("high positional error")
-                
-                # direction normal rate
-                self.steering = int(((self.pid_wall+1.0)/2.0*255.0))
+		# blending PID
+		self.ratio_ai = 0.0
+		if abs(self.actual_lidar_direction_error) < ration_ai_x1:
+			self.ratio_ai = 0.0
+		elif abs(self.actual_lidar_direction_error) > ration_ai_x2:
+			self.ratio_ai = 1.0
+		else:
+			self.ratio_ai = ( abs(self.actual_lidar_direction_error) - ration_ai_x1 ) / (ration_ai_x2-ration_ai_x1)
+			self.steering = self.ratio_ai * self.pid_wall + (1.0-self.ratio_ai) * self.pid_line
+		self.steering = constraint(self.steering, -1.0, 1.0)
+		
+		###print('+'  * int(self.ratio_ai*10.0))
 
-                # reduce current speed according lidar positional error
-                self.target_speed_ms -= (self.lidar_positional_error - self.lidar_positional_error_threshold)*self.lidar_k_speed 
-                self.target_speed_ms = max(self.target_speed_ms,self.min_speed) # limit to minimum speed
-                
-            else:
-            
-                # low positional error             
-                ###print("low positional error")
+		# reduce current speed according lidar positional error
+		self.target_speed_ms -= ( self.ratio_ai * self.lidar_direction_k_speed * abs(self.actual_lidar_direction_error) + (1.0 - self.ratio_ai) *self.ai_direction_k_speed*abs(self.line_pos_unfiltered) )*self.max_speed_ms 
+		self.target_speed_ms -= self.steering_k_speed*abs(self.steering)*self.max_speed_ms
+		# clamp max speed
+		self.target_speed_ms = constraint(self.target_speed_ms, self.min_speed_ms, self.max_speed_ms)
 
-                # direction low rate
-                self.steering = int(((self.pid_wall*self.dual_rate+1.0)/2.0*255.0))
+		# compute current speed from target and time passing (trapeze)
+		if self.current_speed_ms < self.target_speed_ms:
+			self.current_speed_ms += self.acceleration
+			self.current_speed_ms = min(self.current_speed_ms, self.target_speed_ms)
+		if self.current_speed_ms > self.target_speed_ms:
+			self.current_speed_ms -= self.deceleration
+			self.current_speed_ms = max(self.current_speed_ms, self.target_speed_ms)
+		# clamp current speed
+		self.current_speed_ms = constraint(self.current_speed_ms, self.min_speed_ms, self.max_speed_ms)
+		###print(str(round(self.target_speed_ms,1)) + " m/s  " + str(round(self.current_speed_ms,1)) + " m/s  ")
 
-        # clamp max speed
-        self.target_speed_ms = constraint(self.target_speed_ms,  self.min_speed,  self.max_speed)
-
-        # compute current speed from target and time passing (trapeze)
-        if self.current_speed_ms < self.target_speed_ms:
-            self.current_speed_ms += self.acceleration
-            self.current_speed_ms = min(self.current_speed_ms,self.max_speed) # limit to maximum speed
-        if self.current_speed_ms > self.target_speed_ms:
-            self.current_speed_ms -= self.deceleration
-            self.current_speed_ms = max(self.current_speed_ms,self.min_speed) # limit to minimum speed
-        self.current_speed_ms = constraint(self.current_speed_ms,  self.min_speed,  self.max_speed)
+        # steering using normal rate
+        self.steering = int(((self.steering+1.0)/2.0*255.0))
         
          # compute throttle according actual_speed
         self.actual_speed_error_ms = self.current_speed_ms - self.actual_speed_ms
@@ -595,7 +617,8 @@ class main_controller():
            self.telemetry_manual_thr = int(fields[5])
            self.telemetry_auto_dir = int(fields[6])
            self.telemetry_auto_thr = int(fields[7])
-           self.telemetry_start_button = int(fields[8])   
+           self.telemetry_start_button = int(fields[8]) 
+           #self.telemetry_distance = int(fields[9])  
         # start condition ==> release  start button ('0' > '1' from STM32)
         if self.telemetry_start_button == 1 and not self.running:
             print("Start condition detected!")
@@ -662,57 +685,59 @@ class main_controller():
         self.video_broadcast.write(self.image)
         
     def reload_settings(self):
-        global param_min_speed      
-        global param_max_speed       
-        global param_acceleration
-        global param_deceleration
-        global param_speed_kp
-        global param_speed_ki
-        global param_speed_kd        
-        global param_speed_kff        
+		global param_min_speed     
+		global param_cornering_speed 
+		global param_max_speed       
+		global param_acceleration
+		global param_deceleration
+		global param_speed_kp
+		global param_speed_ki
+		global param_speed_kd        
+		global param_speed_kff        
 
-        global param_lidar_direction_kp
-        global param_lidar_direction_ki
-        global param_lidar_direction_kd        
-        global param_lidar_k_speed      
-        global param_lidar_positional_error_threshold 
+		global param_lidar_direction_kp
+		global param_lidar_direction_ki
+		global param_lidar_direction_kd        
+		global param_lidar_direction_k_speed      
+		global param_lidar_positional_error_threshold 
 
-        global param_ai_direction_alpha
-        global param_ai_direction_kp
-        global param_ai_direction_ki
-        global param_ai_direction_kd
-        global param_ai_direction_k_speed
-        global param_ai_steering_k_speed
-     
-        global param_steering_trim
-        global param_dual_rate
+		global param_ai_direction_alpha
+		global param_ai_direction_kp
+		global param_ai_direction_ki
+		global param_ai_direction_kd
+		global param_ai_direction_k_speed
+		global param_ai_steering_k_speed
 
-        self.min_speed = param_min_speed
-        self.max_speed = param_max_speed
-        self.acceleration = param_acceleration
-        self.deceleration = param_deceleration
-        self.pid_speed.kp = param_speed_kp
-        self.pid_speed.ki = param_speed_ki
-        self.pid_speed.kd = param_speed_kd
-        self.pid_speed_kff = param_speed_kff
+		global param_steering_trim
+		global param_steering_dual_rate
 
-        self.pid_wall_following.kp = param_lidar_direction_kp
-        self.pid_wall_following.ki = param_lidar_direction_ki
-        self.pid_wall_following.kd = param_lidar_direction_kd
-        self.lidar_k_speed = param_lidar_k_speed
-        self.lidar_positional_error_threshold = param_lidar_positional_error_threshold
+		self.min_speed = param_min_speed
+		self.cornering_speed = param_cornering_speed
+		self.max_speed = param_max_speed
+		self.acceleration = param_acceleration
+		self.deceleration = param_deceleration
+		self.pid_speed.kp = param_speed_kp
+		self.pid_speed.ki = param_speed_ki
+		self.pid_speed.kd = param_speed_kd
+		self.pid_speed_kff = param_speed_kff
 
-        self.ai_direction_alpha = param_ai_direction_alpha
-        self.pid_line_following.kp = param_ai_direction_kp
-        self.pid_line_following.ki = param_ai_direction_ki
-        self.pid_line_following.kd = param_ai_direction_kd
-        self.ai_direction_k_speed = param_ai_direction_k_speed
-        self.ai_steering_k_speed = param_ai_steering_k_speed
-        
-        self.steering_trim = param_steering_trim
-        self.dual_rate = param_dual_rate
+		self.pid_wall_following.kp = param_lidar_direction_kp
+		self.pid_wall_following.ki = param_lidar_direction_ki
+		self.pid_wall_following.kd = param_lidar_direction_kd
+		self.lidar_k_speed = param_lidar_direction_k_speed
+		self.lidar_positional_error_threshold = param_lidar_positional_error_threshold
 
-    def start_running(self):
+		self.ai_direction_alpha = param_ai_direction_alpha
+		self.pid_line_following.kp = param_ai_direction_kp
+		self.pid_line_following.ki = param_ai_direction_ki
+		self.pid_line_following.kd = param_ai_direction_kd
+		self.ai_direction_k_speed = param_ai_direction_k_speed
+		self.ai_steering_k_speed = param_ai_steering_k_speed
+
+		self.steering_trim = param_steering_trim
+		self.steering_dual_rate = param_steering_dual_rate
+
+	def start_running(self):
         if not self.running:
             self.running = True
             self.datalogger.start()
@@ -802,31 +827,32 @@ def main():
         # Process
         controller.process()
         # Telemetry
+        if counter % 2 == 0:
+	        msg = str(int(counter/2)) + ';'
+	        msg += str( float(controller.lidar_distance_gauche) ) + ';' #cm
+	        msg += str( float(controller.lidar_distance_droit) ) + ';'  #cm
+	        msg += str( float(controller.lidar_distance_haut) ) + ';'  #cm
+	        
+	        msg += str( float(controller.actual_lidar_direction_error) ) + ';' 
+	        msg += str( float(controller.pid_wall) ) + ';'
+
+	        msg += str( float(controller.target_speed_ms) ) + ';'
+	        msg += str( float(controller.current_speed_ms) ) + ';'
+	        msg += str( float(controller.actual_speed_ms) ) + ';' 
+	        msg += str( float(controller.actual_speed_error_ms) ) + ';'
+	        msg += str( float(controller.throttle) )  + ';'
+	        
+	        msg += str( float(controller.line_pos) ) + ';'
+	        msg += str( float(controller.pid_line) ) + ';' 
+
+	        msg += str( float(controller.ratio_ai*10) ) + ';' 
+
+	        msg += str( float(controller.steering) )
+
+	        msg_length = str(len(msg)).ljust(4)
+	        tserver.sendTelemetry(msg_length)
+	        tserver.sendTelemetry(msg)
         counter += 1
-        msg = str(counter) + ';'
-        msg += str( float(controller.lidar_distance_gauche) ) + ';' #cm
-        msg += str( float(controller.lidar_distance_droit) ) + ';'  #cm
-        msg += str( float(controller.lidar_distance_haut) ) + ';'  #cm
-        
-        msg += str( float(controller.actual_lidar_direction_error) ) + ';'
-        msg += str( float(controller.lidar_positional_error) ) + ';'  
-        msg += str( float(controller.pid_wall) ) + ';'
-
-        msg += str( float(controller.target_speed_ms) ) + ';'
-        msg += str( float(controller.current_speed_ms) ) + ';'
-        msg += str( float(controller.actual_speed_ms) ) + ';' 
-        msg += str( float(controller.actual_speed_error_ms) ) + ';'
-        msg += str( float(controller.throttle) )  + ';'
-        
-        msg += str( float(controller.line_pos) ) + ';'
-        msg += str( float(controller.pid_line) ) + ';' 
-        msg += str( float(controller.steering) )
-        
-        #msg += str( float(controller.mode) ) 
-
-        msg_length = str(len(msg)).ljust(4)
-        tserver.sendTelemetry(msg_length)
-        tserver.sendTelemetry(msg)
         # FPS debug
         frame_counter += 1
         if time.time()>=last_time+1.0:
