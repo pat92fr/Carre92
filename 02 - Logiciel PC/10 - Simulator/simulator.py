@@ -5,7 +5,7 @@
 
 min_speed = 1.5 # 0.5 m/s
 cornering_speed = 4.5
-max_speed = 6.0 # 3.5 m/s
+max_speed = 7.2 # 3.5 m/s
 acceleration = 0.05 # m/s per 1/60eme
 deceleration = 0.15 # m/s per 1/60eme
 speed_kp = 2.0
@@ -16,7 +16,7 @@ speed_kff = 0.0
 lidar_direction_kp = 1.2
 lidar_direction_ki = 0.0
 lidar_direction_kd = 12.0
-lidar_k_speed = 0.9
+lidar_k_speed = 0.15
 
 ai_direction_alpha = 0.3
 ai_direction_kp = 1.2
@@ -673,7 +673,7 @@ class MyApp(ShowBase):
 			print('+'  * int(self.ratio_ai*10.0))
 
 			# reduce current speed according lidar positional error
-			self.target_speed_ms -= ( (1.0-self.ratio_ai) * self.lidar_k_speed * abs(self.actual_lidar_direction_error) + self.ratio_ai *self.ai_direction_k_speed*abs(self.line_pos_unfiltered) )*self.max_speed_ms 
+			self.target_speed_ms -= ( self.ratio_ai * self.lidar_k_speed * abs(self.actual_lidar_direction_error) + (1.0 - self.ratio_ai) *self.ai_direction_k_speed*abs(self.line_pos_unfiltered) )*self.max_speed_ms 
 			self.target_speed_ms -= self.steering_k_speed*abs(self.steering)*self.max_speed_ms
 			self.target_speed_ms = constraint(self.target_speed_ms, self.min_speed_ms, self.max_speed_ms)
 
