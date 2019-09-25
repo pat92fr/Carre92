@@ -3,10 +3,11 @@
 
 ## PARAMETERS #################################################################
 
-min_speed = 0.5 # 0.5 m/s
-max_speed = 5.5 # 3.5 m/s
-acceleration = 0.01 # m/s per 1/60eme
-deceleration = 0.1 # m/s per 1/60eme
+min_speed = 1.5 # 0.5 m/s
+cornering_speed = 4.5
+max_speed = 6.0 # 3.5 m/s
+acceleration = 0.05 # m/s per 1/60eme
+deceleration = 0.15 # m/s per 1/60eme
 speed_kp = 2.0
 speed_ki = 0.0
 speed_kd = 0.0
@@ -15,23 +16,42 @@ speed_kff = 0.0
 lidar_direction_kp = 1.2
 lidar_direction_ki = 0.0
 lidar_direction_kd = 12.0
-lidar_k_speed = 0.7
+lidar_k_speed = 0.9
 
 ai_direction_alpha = 0.3
 ai_direction_kp = 1.2
 ai_direction_ki = 0.0
 ai_direction_kd = 12.0
-ai_direction_k_speed = 0.7
+ai_direction_k_speed = 0.0
 
-ai_steering_k_speed = 0.1 
+steering_k_speed = 0.05 
 
 steering_trim = 0
 dual_rate = 0.5
 
+# speed strategy
+def max_speed_from_distance(distance):
+	if distance > 0.0 and distance < 4.0:
+		return max_speed
+	elif distance > 15.0 and distance < 25.0:
+		return max_speed
+	elif distance > 45.0 and distance < 55.0:
+		return max_speed
+	elif distance > 65.0 and distance < 120.0:
+		return max_speed
+	else:
+		return cornering_speed
+
+
 # simulator (calibrated from real world)
 steering_clamp = 35.0      # degree
-steering_increment = 160.0 # degree per second
+steering_increment = 360.0 # 160 degree per second
 
+## CONSTANTS ######################################################################
+
+lidar_maximum_distance = 2.0 #m
+ration_ai_x1 = 0.3 #
+ration_ai_x2 = 0.5 #
 
 ## GLOBALS ########################################################################
 
@@ -182,6 +202,9 @@ class MyApp(ShowBase):
 		self.best_lap_timer = 999.9
 		self.best_lap_timer_text = OnscreenText(text=str(round(self.best_lap_timer,1)) +"s", pos=(1.4,0.50), fg=(1, 1, 1, 1), align=TextNode.ARight, shadow=(0, 0, 0, 0.5), scale=.05)
 		self.lap_counter = 0
+		
+		self.lap_distance = 0.0
+		self.lap_distance_text = OnscreenText(text=str(round(self.lap_distance,1)) +"m", pos=(1.7,0.50), fg=(1, 1, 1, 1), align=TextNode.ARight, shadow=(0, 0, 0, 0.5), scale=.05)
 
 		self.slider_max_speed = DirectSlider(range=(0,10), value=max_speed, pageSize=0.1, command=self.slider_max_speed_change, scale=0.4, pos = (0.0,0.0,0.9))
 		self.text_max_speed = OnscreenText(text="Vmax " + str(max_speed)+"m/s", fg=(1, 1, 1, 1), align=TextNode.ARight, shadow=(0, 0, 0, 0.5), scale=.04, pos=(-0.55,0.9))
@@ -195,8 +218,8 @@ class MyApp(ShowBase):
 		self.slider_ai_direction_kd = DirectSlider(range=(0,30), value=ai_direction_kd, pageSize=0.1, command=self.slider_ai_direction_kd_change, scale=0.4, pos = (0.0,0.0,0.75))
 		self.text_ai_direction_kd = OnscreenText(text="AI Direction Kd " + str(round(ai_direction_kd,1)), fg=(1, 1, 1, 1), align=TextNode.ARight, shadow=(0, 0, 0, 0.5), scale=.04, pos=(-0.55,0.75))
 
-		self.slider_ai_steering_k_speed = DirectSlider(range=(0,2), value=ai_steering_k_speed, pageSize=0.1, command=self.slider_ai_steering_k_speed_change, scale=0.4, pos = (0.0,0.0,0.7))
-		self.text_ai_steering_k_speed = OnscreenText(text="AI Steering K speed " + str(round(ai_steering_k_speed,2)), fg=(1, 1, 1, 1), align=TextNode.ARight, shadow=(0, 0, 0, 0.5), scale=.04, pos=(-0.55,0.7))
+		self.slider_steering_k_speed = DirectSlider(range=(0,2), value=steering_k_speed, pageSize=0.1, command=self.slider_steering_k_speed_change, scale=0.4, pos = (0.0,0.0,0.7))
+		self.text_steering_k_speed = OnscreenText(text="AI Steering K speed " + str(round(steering_k_speed,2)), fg=(1, 1, 1, 1), align=TextNode.ARight, shadow=(0, 0, 0, 0.5), scale=.04, pos=(-0.55,0.7))
 
 		self.slider_ai_direction_k_speed = DirectSlider(range=(0,2), value=ai_direction_k_speed, pageSize=0.1, command=self.slider_ai_direction_k_speed_change, scale=0.4, pos = (0.0,0.0,0.65))
 		self.text_ai_direction_k_speed = OnscreenText(text="AI Direction K speed " + str(round(ai_direction_k_speed,2)), fg=(1, 1, 1, 1), align=TextNode.ARight, shadow=(0, 0, 0, 0.5), scale=.04, pos=(-0.55,0.65))
@@ -324,7 +347,7 @@ class MyApp(ShowBase):
 
 		# Collision solids/nodes for Lidar
 		self.LidarLeftCN = CollisionNode('LidarLeftCN')
-		self.LidarLeftCS = CollisionSegment((-0.1,0.1,0.05),(-1.5*math.sin(math.radians(60)),1.5*math.cos(math.radians(60)),0.0)) 
+		self.LidarLeftCS = CollisionSegment((-0.1,0.1,0.05),(-lidar_maximum_distance*math.sin(math.radians(60)),lidar_maximum_distance*math.cos(math.radians(60)),0.0)) 
 		self.LidarLeftCN.addSolid(self.LidarLeftCS)
 		self.LidarLeftCN.setIntoCollideMask(BitMask32.allOff())
 		self.LidarLeftCN.setFromCollideMask(BitMask32.bit(2))
@@ -333,7 +356,7 @@ class MyApp(ShowBase):
 
 		# Collision solids/nodes for Lidar
 		self.LidarRightCN = CollisionNode('LidarRightCN')
-		self.LidarRightCS = CollisionSegment((0.1,0.1,0.05),(1.5*math.sin(math.radians(60)),1.5*math.cos(math.radians(60)),0.0)) 
+		self.LidarRightCS = CollisionSegment((0.1,0.1,0.05),(lidar_maximum_distance*math.sin(math.radians(60)),lidar_maximum_distance*math.cos(math.radians(60)),0.0)) 
 		self.LidarRightCN.addSolid(self.LidarRightCS)
 		self.LidarRightCN.setIntoCollideMask(BitMask32.allOff())
 		self.LidarRightCN.setFromCollideMask(BitMask32.bit(2))
@@ -385,26 +408,27 @@ class MyApp(ShowBase):
 		self.actual_speed_error_ms = 0.0 # m/s
 
 		# lidar steering controller settings
-		self.pid_wall_following = my_controller.pid(kp=lidar_direction_kp, ki=lidar_direction_ki, kd=lidar_direction_kd, integral_max=1000, output_max=1.0, alpha=0.1) 
+		self.pid_wall_following = my_controller.pid(kp=lidar_direction_kp, ki=lidar_direction_ki, kd=lidar_direction_kd, integral_max=1000, output_max=1.0, alpha=0.2) 
 		self.lidar_k_speed = lidar_k_speed
 
 		# lidar steering controller state
-		self.lidar_distance_droit = 150.0
-		self.lidar_distance_gauche = 150.0
-		self.lidar_distance_haut = 150.0
+		self.lidar_distance_droit = lidar_maximum_distance
+		self.lidar_distance_gauche = lidar_maximum_distance
+		self.lidar_distance_haut = lidar_maximum_distance
 		self.actual_lidar_direction_error = 0.0
 		self.pid_wall = 0.0
 
 		# AI steering controller settings
 		self.pid_line_following = my_controller.pid(kp=ai_direction_kp, ki=ai_direction_ki, kd=ai_direction_kd, integral_max=1000, output_max=1.0, alpha=0.2) 
 		self.ai_direction_k_speed = ai_direction_k_speed
-		self.ai_steering_k_speed = ai_steering_k_speed
+		self.steering_k_speed = steering_k_speed
 		self.ai_direction_alpha = ai_direction_alpha
 
 		# AI steering controller state
 		self.line_pos_unfiltered = 0.0
 		self.line_pos = 0.0
 		self.pid_line = 0.0
+		self.ratio_ai = 1.0
 
 		# steering settings
 		self.steering_trim = steering_trim
@@ -444,9 +468,9 @@ class MyApp(ShowBase):
 		self.pid_line_following.kd = float(self.slider_ai_direction_kd['value'])
 		self.text_ai_direction_kd.setText("AI Direction Kd " + str(round(self.pid_line_following.kd,1)))
 
-	def slider_ai_steering_k_speed_change(self):
-		self.ai_steering_k_speed = float(self.slider_ai_steering_k_speed['value'])
-		self.text_ai_steering_k_speed.setText("AI Steering K speed " + str(round(self.ai_steering_k_speed,2)))
+	def slider_steering_k_speed_change(self):
+		self.steering_k_speed = float(self.slider_steering_k_speed['value'])
+		self.text_steering_k_speed.setText("AI Steering K speed " + str(round(self.steering_k_speed,2)))
 
 	def slider_ai_direction_k_speed_change(self):
 		self.ai_direction_k_speed = float(self.slider_ai_direction_k_speed['value'])
@@ -497,22 +521,22 @@ class MyApp(ShowBase):
 		dt = globalClock.getDt()
 
 		# reset wall following state
-		self.lidar_distance_gauche = 1.5
-		self.lidar_distance_droit = 1.5
-		self.lidar_distance_haut = 1.5
+		self.lidar_distance_gauche = lidar_maximum_distance
+		self.lidar_distance_droit = lidar_maximum_distance
+		self.lidar_distance_haut = lidar_maximum_distance
 
 		self.ctraverser.traverse(render)
 		#self.ctraverser.showCollisions(render)
 		self.cqueue.sortEntries()
 		for entry in self.cqueue.getEntries():
 			#print("."+ str(entry))
-			if entry.getFromNodePath() == self.LidarLeftCNP and self.lidar_distance_gauche == 1.5:
+			if entry.getFromNodePath() == self.LidarLeftCNP and self.lidar_distance_gauche == lidar_maximum_distance:
 				point = entry.getSurfacePoint(render)
 				current = self.chassisNP.getPos()
 				distance = (point-current).length()
 				self.lidar_distance_gauche = distance
 				#print("lidar_distance_gauche:"+ str(self.lidar_distance_gauche))
-			if entry.getFromNodePath() == self.LidarRightCNP  and self.lidar_distance_droit == 1.5:
+			if entry.getFromNodePath() == self.LidarRightCNP  and self.lidar_distance_droit == lidar_maximum_distance:
 				point = entry.getSurfacePoint(render)
 				current = self.chassisNP.getPos()
 				distance = (point-current).length()
@@ -525,8 +549,10 @@ class MyApp(ShowBase):
 						self.best_lap_timer = min(globalClock.getFrameTime()-self.lap_timer,self.best_lap_timer)
 					self.lap_timer = globalClock.getFrameTime()
 					self.lap_counter += 1
+					self.lap_distance = 0.0
 		self.lap_timer_text.setText(text=str(round(globalClock.getFrameTime()-self.lap_timer,1)) +"s")
 		self.best_lap_timer_text.setText(text=str(round(self.best_lap_timer,1)) +"s")
+
 
 		# if gamepad detected in human mode
 		# if self.gamepad and not self.autopilot:
@@ -574,12 +600,13 @@ class MyApp(ShowBase):
 		# actual speed computation
 		self.current_position = self.chassisNP.getPos()
 		self.delta_distance = (self.current_position-self.last_position).length()
+		self.lap_distance += self.delta_distance
 		if  dt != 0:
 			self.actual_speed_ms = self.actual_speed_ms * 0.8 + 0.2 * (self.delta_distance/dt)
 		self.last_position = self.current_position
 		self.actual_speed_kmh = 0.9 * self.actual_speed_kmh + 0.1 * self.actual_speed_ms*60*60/1000
 		self.speed_o_meter.setText(str(int(self.actual_speed_kmh))+ "km/h")
-		
+		self.lap_distance_text.setText(str(int(self.lap_distance))+ "m")
 
 		# chose controller
 		if not self.autopilot: # manual controller
@@ -623,10 +650,11 @@ class MyApp(ShowBase):
 			self.last_steering = self.steering
 
 			# speed controller (stage 1)
-			self.target_speed_ms = self.max_speed_ms
+			#self.target_speed_ms = self.max_speed_ms
+			self.target_speed_ms = max_speed_from_distance(self.lap_distance)
 
 			# wall following PID controller
-			self.actual_lidar_direction_error = -constraint(self.lidar_distance_droit - self.lidar_distance_gauche, -1.5, 1.5)/1.5
+			self.actual_lidar_direction_error = -constraint(self.lidar_distance_droit - self.lidar_distance_gauche, -lidar_maximum_distance, lidar_maximum_distance)/lidar_maximum_distance
 			self.pid_wall = self.pid_wall_following.compute(self.actual_lidar_direction_error)
 
 			# line following PID controller
@@ -634,19 +662,19 @@ class MyApp(ShowBase):
 			self.pid_line = self.pid_line_following.compute(self.line_pos)
 
 			# blending PID
-			self.ratio_ai = 1.0
-			if abs(self.actual_lidar_direction_error) < 0.33:
-				self.ratio_ai = 1.0
-			elif abs(self.actual_lidar_direction_error) > 0.66:
+			self.ratio_ai = 0.0
+			if abs(self.actual_lidar_direction_error) < ration_ai_x1:
 				self.ratio_ai = 0.0
+			elif abs(self.actual_lidar_direction_error) > ration_ai_x2:
+				self.ratio_ai = 1.0
 			else:
-				self.ratio_ai = ( abs(self.actual_lidar_direction_error) - 0.33 ) / 0.33
-			self.steering = (1.0-self.ratio_ai) * self.pid_wall + self.ratio_ai * self.pid_line
+				self.ratio_ai = ( abs(self.actual_lidar_direction_error) - ration_ai_x1 ) / (ration_ai_x2-ration_ai_x1)
+			self.steering = self.ratio_ai * self.pid_wall + (1.0-self.ratio_ai) * self.pid_line
 			print('+'  * int(self.ratio_ai*10.0))
 
 			# reduce current speed according lidar positional error
 			self.target_speed_ms -= ( (1.0-self.ratio_ai) * self.lidar_k_speed * abs(self.actual_lidar_direction_error) + self.ratio_ai *self.ai_direction_k_speed*abs(self.line_pos_unfiltered) )*self.max_speed_ms 
-			self.target_speed_ms -= self.ai_steering_k_speed*abs(self.steering)*self.max_speed_ms
+			self.target_speed_ms -= self.steering_k_speed*abs(self.steering)*self.max_speed_ms
 			self.target_speed_ms = constraint(self.target_speed_ms, self.min_speed_ms, self.max_speed_ms)
 
 			# compute current speed from target and time passing (trapeze)
@@ -916,6 +944,7 @@ class MyApp(ShowBase):
 	def setHome(self):
 		self.chassisNP.setPos(0, 10.0, 0.2)
 		self.chassisNP.setHpr(180, 0.0, 0.0)
+		self.lap_counter = 0
 
 	def get_camera_image(self, requested_format=None):
 		"""
@@ -984,29 +1013,33 @@ while not app.quit:
 		dataset_file.flush()
 		record_counter += 1
 	# Telemetry
-	msg = str(counter) + ';'
-	msg += str( float(app.lidar_distance_gauche) ) + ';' #cm
-	msg += str( float(app.lidar_distance_droit) ) + ';'  #cm
-	msg += str( float(app.lidar_distance_haut) ) + ';'  #cm
+	if counter % 2 == 0:
+		msg = str(int(counter/2)) + ';'
+		msg += str( float(app.lidar_distance_gauche) ) + ';' #cm
+		msg += str( float(app.lidar_distance_droit) ) + ';'  #cm
+		msg += str( float(app.lidar_distance_haut) ) + ';'  #cm
 
-	msg += str( float(app.actual_lidar_direction_error) ) + ';'
-	msg += str( float(app.pid_wall) ) + ';'
+		msg += str( float(app.actual_lidar_direction_error) ) + ';'
+		msg += str( float(app.pid_wall) ) + ';'
 
-	msg += str( float(app.target_speed_ms) ) + ';'
-	msg += str( float(app.current_speed_ms) ) + ';'
-	msg += str( float(app.actual_speed_ms) ) + ';' 
-	msg += str( float(app.actual_speed_error_ms) ) + ';'
-	msg += str( float(app.throttle) ) + ';' 
+		msg += str( float(app.target_speed_ms) ) + ';'
+		msg += str( float(app.current_speed_ms) ) + ';'
+		msg += str( float(app.actual_speed_ms) ) + ';' 
+		msg += str( float(app.actual_speed_error_ms) ) + ';'
+		msg += str( float(app.throttle) ) + ';' 
 
-	msg += str( float(app.line_pos) ) + ';'
-	msg += str( float(app.pid_line) ) + ';' 
+		msg += str( float(app.line_pos) ) + ';'
+		msg += str( float(app.pid_line) ) + ';' 
 
-	msg += str( float(app.steering) ) #+ ';' 
-	#msg += str( float(app.autopilot) ) 
+		msg += str( float(app.ratio_ai*10) ) + ';' 
 
-	msg_length = str(len(msg)).ljust(4)
-	tserver.sendTelemetry(msg_length)
-	tserver.sendTelemetry(msg)
+
+		msg += str( float(app.steering) ) #+ ';' 
+		#msg += str( float(app.autopilot) ) 
+
+		msg_length = str(len(msg)).ljust(4)
+		tserver.sendTelemetry(msg_length)
+		tserver.sendTelemetry(msg)
 	counter += 1
 	#print(telemetry_client_connected)
 
