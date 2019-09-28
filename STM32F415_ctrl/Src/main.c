@@ -51,6 +51,7 @@
 #include "stdio.h"
 #include "string.h"
 #include <stdlib.h>     /* atoi */
+#include "imu.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -69,6 +70,8 @@
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
+I2C_HandleTypeDef hi2c1;
+
 TIM_HandleTypeDef htim1;
 TIM_HandleTypeDef htim3;
 TIM_HandleTypeDef htim4;
@@ -150,6 +153,7 @@ static void MX_UART4_Init(void);
 static void MX_UART5_Init(void);
 static void MX_TIM12_Init(void);
 static void MX_USART2_UART_Init(void);
+static void MX_I2C1_Init(void);
 static void MX_TIM4_Init(void);
 /* USER CODE BEGIN PFP */
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
@@ -257,6 +261,7 @@ int main(void)
   MX_UART5_Init();
   MX_TIM12_Init();
   MX_USART2_UART_Init();
+  MX_I2C1_Init();
   MX_TIM4_Init();
   /* USER CODE BEGIN 2 */
   HAL_TIM_PWM_Start(&htim1,TIM_CHANNEL_1); // Start PWM outputs
@@ -296,6 +301,8 @@ int main(void)
   HAL_GPIO_WritePin(LED4_GPIO_Port,LED4_Pin,GPIO_PIN_SET);
   HAL_GPIO_WritePin(LED5_GPIO_Port,LED5_Pin,GPIO_PIN_SET);
   tfminiplus_init();   // Initialisation des Lidars
+  uint32_t gyro_err = gyro_init();
+  uint32_t gyro_last_time = HAL_GetTick();
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -434,6 +441,8 @@ int main(void)
 	pwm_auto_thr = pwm_ai_thr; // no other source of automatic control, then auto controller use AI
 	pwm_auto_dir = pwm_ai_dir;
 
+	gyro_auto_calibrate();
+
 	if(telemetry_stop_and_wait==1) // TELEMETRY (simple stop & wait protocol)
 	{
 		telemetry_stop_and_wait=0; // reset stop and wait protocol
@@ -442,6 +451,9 @@ int main(void)
 		tfminiplus_getLastAcquisition(MINILIDAR_DROIT, &lidar_distance_droit, &lidar_strength_droit, &lidar_temp_droit);
 		tfminiplus_getLastAcquisition(MINILIDAR_HAUT, &lidar_distance_haut, &lidar_strength_haut, &lidar_temp_haut);
 		// query other sensors
+		float duration_s = (float)(current_time-gyro_last_time)/1000.0;
+		gyro_last_time = current_time;
+		gyro_update(duration_s);
 		// Capteur de vitesse
 		// Si nous avons eu une mesure il y a plus de 1 seconde, on renvoie un code d'erreur
 		if(RC4_last_time + 650 > HAL_GetTick())
@@ -455,7 +467,7 @@ int main(void)
 		uint32_t telemetry_auto_thr = pwm_to_int(pwm_auto_thr);
 		int32_t telemetry_speed = vitesse_mesuree;
 		// send telemetry frame
-		HAL_Serial_Print(&ai_com, "%d;%d;%d;%d;%d;%d;%d;%d;%d;%d\r\n",
+		HAL_Serial_Print(&ai_com, "%d;%d;%d;%d;%d;%d;%d;%d;%d;%d;%d;%d\r\n",
 				lidar_distance_gauche,
 				lidar_distance_droit,
 				lidar_distance_haut,
@@ -465,7 +477,10 @@ int main(void)
 				telemetry_auto_dir,
 				telemetry_auto_thr,
 				start_countdown,
-				nb_impulsions_aimants
+				nb_impulsions_aimants,
+				(int32_t)gyro_get_dps(),
+				(int32_t)gyro_get_heading()
+
 			);
 		if(start_countdown>0)
 			--start_countdown;
@@ -607,6 +622,40 @@ void SystemClock_Config(void)
   {
     Error_Handler();
   }
+}
+
+/**
+  * @brief I2C1 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_I2C1_Init(void)
+{
+
+  /* USER CODE BEGIN I2C1_Init 0 */
+
+  /* USER CODE END I2C1_Init 0 */
+
+  /* USER CODE BEGIN I2C1_Init 1 */
+
+  /* USER CODE END I2C1_Init 1 */
+  hi2c1.Instance = I2C1;
+  hi2c1.Init.ClockSpeed = 100000;
+  hi2c1.Init.DutyCycle = I2C_DUTYCYCLE_2;
+  hi2c1.Init.OwnAddress1 = 0;
+  hi2c1.Init.AddressingMode = I2C_ADDRESSINGMODE_7BIT;
+  hi2c1.Init.DualAddressMode = I2C_DUALADDRESS_DISABLE;
+  hi2c1.Init.OwnAddress2 = 0;
+  hi2c1.Init.GeneralCallMode = I2C_GENERALCALL_DISABLE;
+  hi2c1.Init.NoStretchMode = I2C_NOSTRETCH_DISABLE;
+  if (HAL_I2C_Init(&hi2c1) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN I2C1_Init 2 */
+
+  /* USER CODE END I2C1_Init 2 */
+
 }
 
 /**
