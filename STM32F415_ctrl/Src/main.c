@@ -441,8 +441,6 @@ int main(void)
 	pwm_auto_thr = pwm_ai_thr; // no other source of automatic control, then auto controller use AI
 	pwm_auto_dir = pwm_ai_dir;
 
-	gyro_auto_calibrate();
-
 	if(telemetry_stop_and_wait==1) // TELEMETRY (simple stop & wait protocol)
 	{
 		telemetry_stop_and_wait=0; // reset stop and wait protocol
@@ -453,7 +451,11 @@ int main(void)
 		// query other sensors
 		float duration_s = (float)(current_time-gyro_last_time)/1000.0;
 		gyro_last_time = current_time;
-		gyro_update(duration_s);
+		if(vitesse_mesuree == 65535)
+			gyro_auto_calibrate(duration_s);
+		else
+			gyro_update(duration_s);
+
 		// Capteur de vitesse
 		// Si nous avons eu une mesure il y a plus de 1 seconde, on renvoie un code d'erreur
 		if(RC4_last_time + 650 > HAL_GetTick())

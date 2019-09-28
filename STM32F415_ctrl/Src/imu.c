@@ -12,6 +12,7 @@
 #include <string.h>
 #include <math.h>
 
+// HW : https://www.pololu.com/product/2468
 // DS : https://www.st.com/resource/en/datasheet/l3gd20h.pdf
 // AN : https://www.pololu.com/file/0J1088/LSM6DS33-AN4682.pdf
 
@@ -187,24 +188,19 @@ float alpha_mean_update = 0.01;
 float alpha_variance_update = 0.05;
 float alpha_bias_update = 0.01;
 
-void gyro_auto_calibrate()
+void gyro_auto_calibrate(float duration_s)
 {
-	static uint32_t time = 0;
-	if(HAL_GetTick() > time + 20)
+	gyro_update(duration_s);
+	// update mean and variance
+	mean = alpha_mean_update *ctx.rate + (1.0-alpha_mean_update) * mean;
+	variance = alpha_variance_update * pow( ctx.rate-mean,2)  + (1.0-alpha_variance_update) * variance;
+	// if mean stable, update bias
+	if(variance<GYRO_AUTOCAL_VARIANCE_THRESHOLD)
 	{
-		time = HAL_GetTick();
-		gyro_update(0.02);
-		// update mean and variance
-		mean = alpha_mean_update *ctx.rate + (1.0-alpha_mean_update) * mean;
-		variance = alpha_variance_update * pow( ctx.rate-mean,2)  + (1.0-alpha_variance_update) * variance;
-		// if mean stable, update bias
-		if(variance<GYRO_AUTOCAL_VARIANCE_THRESHOLD)
-		{
-			ctx.bias = alpha_bias_update*mean + (1.0-alpha_bias_update)* ctx.bias;
-			if(ctx.locked<1024)
-				++ctx.locked;
-		}
-
+		ctx.bias = alpha_bias_update*mean + (1.0-alpha_bias_update)* ctx.bias;
+		if(ctx.locked<1024)
+			++ctx.locked;
+	}
 #ifdef IMU_TRACE
 		if((time%500)==0)
 			HAL_Serial_Print(&ai_com,"dps=%d m=%d v=%d b=%d h=%d rate=%d\r\n",
@@ -216,5 +212,4 @@ void gyro_auto_calibrate()
 				(int32_t)(gyro_get_dps()*1000.0)
 								  );
 #endif
-	}
 }
