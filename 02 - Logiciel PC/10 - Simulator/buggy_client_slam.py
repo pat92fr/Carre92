@@ -37,6 +37,8 @@ class occupancy_map:
     def load(self,filename):
         img = Image.open(filename)
         self.carto = np.array(img)
+        self.carto = cv2.GaussianBlur(self.carto,(5,5),0)
+        self.carto = cv2.GaussianBlur(self.carto,(5,5),0)
 
     def plot(self):
         plt.imshow(self.carto)
@@ -79,13 +81,13 @@ class particle_filter:
         print("Done!")
 
     def fill(self,carto):
-        print("PAF fill...")
+        print("PAF fill..." + str(len(self.particle_list)))
         while len(self.particle_list) < self.particle_count:
             particle = (
                 random.randrange(0,carto.carto_size,1), # pose x
                 random.randrange(0,carto.carto_size,1), # pose y
                 random.randrange(0,360,1), # orientation
-                0.0 # weight
+                0.5 # weight
                 )
             if carto.valid_position(particle):
                 xn,yn,an,wn = particle
@@ -98,7 +100,7 @@ class particle_filter:
                     self.particle_list.append(particle)
                     ###print(particle)
             ###print(str(len(self.particle_list)))
-        print("Done!")
+        print("Done! " + str(len(self.particle_list)))
 
     def plot(self,carto):
         # plot particules over carto and usine line for orientation and circle for position
@@ -115,23 +117,23 @@ class particle_filter:
                 carto_picture,
                 (int(origin[1]),int(origin[0])),
                 (int(target[1]),int(target[0])),
-                int(100+w*150),
+                128,
                 1)
             cv2.circle(
                 carto_picture,
                 (int(origin[1]),int(origin[0])),
                 3, 
-                int(100+w*150), 
+                max(int(100+w*250),255), 
                 -1)
         print("Drawing")
         img = Image.fromarray(carto_picture, 'L')
         img.save('particle_map.png')
-        plt.imshow(carto_picture) #np.transpose(npimg, (1, 2, 0)))
+        #plt.imshow(carto_picture) #np.transpose(npimg, (1, 2, 0)))
         #plt.show()
-        plt.pause(0.01)
-        print("show!")            
+        #plt.pause(0.01)
+        #print("show!")            
 
-    def update_weight(self,observation_list,carto):
+    def sensor_update_weight(self,observation_list,carto):
         new_particle_list = []
         for p in self.particle_list:
             px,py,pa,pw = p
@@ -162,7 +164,93 @@ class particle_filter:
             new_particle_list.append( (px,py,pa,pw) )
         self.particle_list = new_particle_list  
 
+    def normalize_weight(self):
+        sum_of_weight = 0.0
+        for p in self.particle_list:
+            px,py,pa,pw = p
+            sum_of_weight += pw
+        new_particle_list = []
+        for p in self.particle_list:
+            px,py,pa,pw = p
+            pw /= sum_of_weight
+            new_particle_list.append( (px,py,pa,pw) )
+        self.particle_list = new_particle_list  
 
+
+    def resampling_and_motion(self,v,da,dt,carto):
+
+        #sort by weight
+        def getKey(item):
+            return item[3]
+        sorted(self.particle_list, key=getKey, reverse=True)
+
+        new_particle_list = []
+        # double best particles
+        for p in self.particle_list[0:50]:
+            px,py,pa,pw = p
+            # perfect move update
+            pa1 = pa + da
+            px1 = int( px + v*dt * math.cos(math.radians(pa1))*carto.carto_scale )
+            py1 = int( py + v*dt * math.sin(math.radians(pa1))*carto.carto_scale )
+            np1 = (px1,py1,pa1,pw)
+            if carto.valid_position( np1 ):
+                new_particle_list.append( np1 )
+
+            pa2 = pa + da + random.uniform(-1.0,1.0)
+            dx2 = random.uniform(-0.2,0.2)
+            px2 = int( px + (v*dt+dx2) * math.cos(math.radians(pa2))*carto.carto_scale )
+            py2 = int( py + (v*dt+dx2) * math.sin(math.radians(pa2))*carto.carto_scale )
+            np2 = (px2,py2,pa2,pw)
+            if carto.valid_position( np2 ):
+                new_particle_list.append( np2 )
+
+            pa3 = pa + da + random.uniform(-1.0,1.0)
+            dx3 = random.uniform(-0.2,0.2)
+            px3 = int( px + (v*dt+dx3) * math.cos(math.radians(pa3))*carto.carto_scale )
+            py3 = int( py + (v*dt+dx3) * math.sin(math.radians(pa3))*carto.carto_scale )
+            np3 = (px3,py3,pa3,pw)
+            if carto.valid_position( np3 ):
+                new_particle_list.append( np3 )
+        
+        # copy plain particles
+        for p in self.particle_list[50:280]:
+            px,py,pa,pw = p
+            # perfect move update
+            pa0 = pa + da + random.uniform(-1.0,1.0)
+            dx0 = random.uniform(-0.2,0.2)
+            px0 = int( px + (v*dt+dx0) * math.cos(math.radians(pa0))*carto.carto_scale )
+            py0 = int( py + (v*dt+dx0) * math.sin(math.radians(pa0))*carto.carto_scale )
+            np0 = (px0,py0,pa0,pw)
+            if carto.valid_position( np0 ):
+                new_particle_list.append( np0 )
+
+        #print("resampled particles:" + str(len(new_particle_list)))
+
+        self.particle_list = new_particle_list  
+        while len(new_particle_list) < self.particle_count:
+            particle = (
+                random.randrange(0,carto.carto_size,1), # pose x
+                random.randrange(0,carto.carto_size,1), # pose y
+                random.randrange(0,360,1), # orientation
+                0.0 # weight
+                )
+            if carto.valid_position(particle):
+                xn,yn,an,wn = particle
+                collision = False
+                for p in self.particle_list:
+                    x,y,a,w = p
+                    if x == xn and y == yn:
+                        collision = True
+                if not collision:
+                    new_particle_list.append(particle)
+        self.particle_list = new_particle_list  
+        #print("adding particles:" + str(len(self.particle_list)))
+
+
+
+
+    def refill(self,carto):
+        self.fill(carto)
 
 # Main procedure
 ################
@@ -172,7 +260,7 @@ def main():
 
     # parameters
     learning = False
-    particle_count = 1000
+    particle_count = 300
 
     # constants
     carto_size = 4086
@@ -216,6 +304,7 @@ def main():
     # Main while loop
     x = 0.0 #m
     y = 0.0 #m    
+    last_heading = 0.0
     loop_counter = 1
     while True:
     
@@ -236,6 +325,8 @@ def main():
                 left_lidar = float(res[1])
                 speed = float(res[8])
                 heading = float(res[15])
+                delta_heading = heading-last_heading
+                last_heading = heading
                 #print("right_lidar:" + str(round(right_lidar,2)) + " left_lidar:" + str(round(left_lidar,2)) + " speed:" + str(round(speed,2)) + " heading:" + str(int(heading)) )
 
                 if learning:
@@ -260,13 +351,21 @@ def main():
                     if loop_counter % (60*30) == 0:
                         carto.save()
 
-                else:
+                elif loop_counter>1: # we need dw
 
+                    paf.resampling_and_motion(speed,delta_heading,1/60.0,carto)
                     observation_list = []
                     observation_list.append((left_lidar,60,left_lidar<1.9))
                     observation_list.append((right_lidar,-60,right_lidar<1.9))
-                    paf.update_weight(observation_list,carto)
-                    paf.plot(carto)
+                    paf.sensor_update_weight(observation_list,carto)
+                    paf.normalize_weight()
+
+                    if loop_counter % (60*10) == 0:
+                        paf.plot(carto)
+
+
+
+
 
 
                 loop_counter += 1
