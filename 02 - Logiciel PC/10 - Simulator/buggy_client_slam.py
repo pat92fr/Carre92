@@ -306,6 +306,7 @@ def main():
     y = 0.0 #m    
     last_heading = 0.0
     loop_counter = 1
+    file_dataset = open('dataset.txt','w')
     while True:
     
         # Wait for length
@@ -329,6 +330,12 @@ def main():
                 last_heading = heading
                 #print("right_lidar:" + str(round(right_lidar,2)) + " left_lidar:" + str(round(left_lidar,2)) + " speed:" + str(round(speed,2)) + " heading:" + str(int(heading)) )
 
+
+                if loop_counter>1: # we need dw
+                    file_dataset.write( str(round(right_lidar,3)) +';' +str(round(left_lidar,3)) +';' +str(round(speed,4)) +';' +str(round(delta_heading,4)) + "\n")
+                    file_dataset.flush()
+
+
                 if learning:
 
                     # estimate position
@@ -351,17 +358,17 @@ def main():
                     if loop_counter % (60*30) == 0:
                         carto.save()
 
-                elif loop_counter>1: # we need dw
+                # elif loop_counter>1: # we need dw
 
-                    paf.resampling_and_motion(speed,delta_heading,1/60.0,carto)
-                    observation_list = []
-                    observation_list.append((left_lidar,60,left_lidar<1.9))
-                    observation_list.append((right_lidar,-60,right_lidar<1.9))
-                    paf.sensor_update_weight(observation_list,carto)
-                    paf.normalize_weight()
+                #     paf.resampling_and_motion(speed,delta_heading,1/60.0,carto)
+                #     observation_list = []
+                #     observation_list.append((left_lidar,60,left_lidar<1.9))
+                #     observation_list.append((right_lidar,-60,right_lidar<1.9))
+                #     paf.sensor_update_weight(observation_list,carto)
+                #     paf.normalize_weight()
 
-                    if loop_counter % (60*10) == 0:
-                        paf.plot(carto)
+                #     if loop_counter % (60*10) == 0:
+                #         paf.plot(carto)
 
 
 
