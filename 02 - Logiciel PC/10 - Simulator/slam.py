@@ -14,7 +14,7 @@ from PIL import Image
 
 
 class occupancy_map:
-    def __init__(self,size,scale):
+    def __init__(self,size,scale,ax,ay,bx,by):
         self.carto_size = size
         self.carto = np.zeros((self.carto_size,self.carto_size), dtype=np.uint8)
         self.carto.fill(125)
@@ -22,15 +22,17 @@ class occupancy_map:
         self.carto_offset_y = int(size/2)
         self.carto_offset = np.array([self.carto_offset_x,self.carto_offset_y])
         self.carto_scale = scale
+        self.ax = ax
+        self.ay = ay
+        self.bx = bx
+        self.by = by
 
     def load(self,filename):
         img = Image.open(filename)
         self.carto = np.array(img)
         self.carto = cv2.GaussianBlur(self.carto,(5,5),0)
         self.carto = cv2.GaussianBlur(self.carto,(3,3),0)
-        self.carto = cv2.GaussianBlur(self.carto,(3,3),0)
-        self.carto = cv2.blur(self.carto,(3,3))
-        self.carto = cv2.blur(self.carto,(5,5))
+
 
     def plot(self):
         plt.imshow(self.carto)
@@ -77,8 +79,8 @@ class particle_filter:
         print("PAF fill..." + str(len(self.particle_list)))
         while len(self.particle_list) < self.particle_count:
             particle = (
-                random.randrange(0,carto.carto_size,1), # pose x
-                random.randrange(0,carto.carto_size,1), # pose y
+                random.randrange(carto.ax,carto.bx,1), # pose x
+                random.randrange(carto.ay,carto.by,1), # pose y
                 random.uniform(0.0,360.0), # orientation
                 1.0/self.particle_count # weight
                 )
@@ -95,11 +97,10 @@ class particle_filter:
             ###print(str(len(self.particle_list)))
         print("Done! " + str(len(self.particle_list)))
 
-    def plot(self,carto):
+    def plot(self,carto,observation_list,pos,counter):
         # plot particules over carto and usine line for orientation and circle for position
         carto_picture = np.copy(carto.carto)
         print(str(carto_picture.shape))
-        print(str(carto_picture[0,0]))
         print(str(len(self.particle_list)))
         for p in self.particle_list:
             #print(".")
@@ -115,15 +116,60 @@ class particle_filter:
             cv2.circle(
                 carto_picture,
                 (int(origin[1]),int(origin[0])),
-                3, 
-                min(int(50+w*self.particle_count*100),255), 
+                10, #3, 
+                min(int(50+w*self.particle_count*200),255), 
                 -1)
+            # for o in observation_list:
+            #     od, oa, ocollision = o
+            #     ###print(o)
+
+            #     # compute target point
+            #     ox = int(x + od * math.cos(math.radians(a+oa)) * carto.carto_scale )
+            #     oy = int(y + od * math.sin(math.radians(a+oa)) * carto.carto_scale)
+
+            #     op = np.array([ox,oy])
+            #     cv2.line(
+	           #      carto_picture,
+	           #      (int(origin[1]),int(origin[0])),
+	           #      (int(op[1]),int(op[0])),
+	           #      100,
+	           #      1)
+
+            #     # get occupancy map value
+            #     occup = carto.carto[ox,oy]
+            #     #print(str(occup))
+            #     # define weight
+            #     if ocollision:
+            #         # expected occ is 255 ==> w = 1.0
+            #         # occ < 127 ==> w = 0.0
+            #         opw = max(occup - 127.0,0.0)/128.0
+            #     else:
+            #         # expected occ is 0 ==> w = 1.0
+            #         # occ = 124 ==> w = 0.0
+            #         opw = (124.0-min(occup,124.0))/124.0          
+            #     cv2.circle(
+	           #      carto_picture,
+	           #      (int(op[1]),int(op[0])),
+	           #      2, 
+	           #      int(20+opw*200), 
+	           #      1)   
+        for p in pos:
+            x,y = p
+            px = int(x* carto.carto_scale)+1000 #carto.carto_offset_x
+            py = int(y* carto.carto_scale)+1000 #carto.carto_offset_y
+            p = [px,py]
+            cv2.circle(
+				carto_picture,
+				(int(p[1]),int(p[0])),
+				2, 
+				255, 
+				-1)  
         print("Drawing")
         img = Image.fromarray(carto_picture, 'L')
-        img.save('particle_map.png')
-        plt.imshow(carto_picture) #np.transpose(npimg, (1, 2, 0)))
+        img.save(counter + 'particle_map.png')
+        #plt.imshow(carto_picture) #np.transpose(npimg, (1, 2, 0)))
         #plt.show()
-        plt.pause(0.001)
+        #plt.pause(0.001)
         #print("show!")            
 
     def sensor_update_weight(self,observation_list,carto):
@@ -137,11 +183,11 @@ class particle_filter:
                 ###print(o)
 
                 # compute target point
-                tx = int(px + od * math.cos(math.radians(pa+oa)))
-                ty = int(py + od * math.sin(math.radians(pa+oa)))
+                tx = int(px + od * math.cos(math.radians(pa+oa)) * carto.carto_scale )
+                ty = int(py + od * math.sin(math.radians(pa+oa)) * carto.carto_scale)
 
                 # get occupancy map value
-                occup = carto.carto[ty,tx]
+                occup = carto.carto[tx,ty]
                 #print(str(occup))
                 # define weight
                 if ocollision:
@@ -204,7 +250,7 @@ random.seed(time.time())
 
 # parameters
 learning = False
-particle_count = 4000
+particle_count = 1000
 
 # constants
 carto_size = 4086
@@ -212,7 +258,7 @@ carto_scale = 50
 
 # cartograph
 carto_filename = 'occupancy_map01.png'
-carto = occupancy_map(carto_size,carto_scale)
+carto = occupancy_map(carto_size,carto_scale,500,1800,3000,2100)
 
 # load if already done
 if not learning:
@@ -224,7 +270,7 @@ paf = particle_filter(particle_count)
 
 if not learning:
     paf.fill(carto)
-    paf.plot(carto)
+    paf.plot(carto,[],[],"init_")
 
 # read file
 print("Loading dataset file...")
@@ -243,6 +289,10 @@ print("Done.")
 # for each entry (picture,linepos) of current dataset
 print("Building dataset...")
 counter = 0
+x = 0.0
+y = 0.0
+w = 0.0
+pos = []
 for l in lines[1:-1]:
 	fields = l.split(';')
 	right_lidar = float(fields[0])
@@ -252,6 +302,11 @@ for l in lines[1:-1]:
 	print(str(right_lidar) + ' ' + str(left_lidar) + ' ' + str(speed) + ' ' + str(delta_heading) )
 
 
+	w += delta_heading
+	x += speed/60.0 * math.cos(math.radians(w))
+	y += speed/60.0 * math.sin(math.radians(w))
+	pos.append( (x,y) )
+
 	paf.resampling_and_motion(speed,delta_heading,1/60.0,carto)
 	observation_list = []
 	observation_list.append((left_lidar,60,left_lidar<1.9))
@@ -259,9 +314,9 @@ for l in lines[1:-1]:
 	paf.sensor_update_weight(observation_list,carto)
 	paf.normalize_weight()
 
-	if counter % 180 == 0:
+	if counter % 60 == 0:
 	#if True:
-		paf.plot(carto)
+		paf.plot(carto,observation_list,pos,str(counter)+'_')
 	counter += 1
 
 print("Done.")
