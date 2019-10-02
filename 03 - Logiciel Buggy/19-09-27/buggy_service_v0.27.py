@@ -13,12 +13,12 @@ import my_datalogger
 
 # global (for client-server communication)
 global telemetry_client_connected
-global remote_configuration_command_id # received command from client 
+global remote_configuration_command_id # received command from client
     # CID =  0 : default/idle
     # CID =  1 : kill buggy server
     # CID =  2 : start Line Following with CNN
     # CID =  3 : start recording video and data
-    # CID =  4 : stop recording video and data 
+    # CID =  4 : stop recording video and data
     # CID =  5 : start run
     # CID =  6 : stop run
     # CID =  7 : start recording dataset
@@ -75,20 +75,20 @@ def max_speed_from_distance(distance):
 
 def load_configuration_file():
 
-    global param_minimum_speed   
-    global param_cornering_speed  
-    global param_maximum_speed       
+    global param_minimum_speed
+    global param_cornering_speed
+    global param_maximum_speed
     global param_acceleration
     global param_deceleration
     global param_speed_kp
     global param_speed_ki
-    global param_speed_kd        
-    global param_speed_kff        
+    global param_speed_kd
+    global param_speed_kff
 
     global param_lidar_direction_kp
     global param_lidar_direction_ki
-    global param_lidar_direction_kd        
-    global param_lidar_direction_k_speed      
+    global param_lidar_direction_kd
+    global param_lidar_direction_k_speed
 
     global param_ai_direction_alpha
     global param_ai_direction_kp
@@ -131,7 +131,7 @@ def load_configuration_file():
             param_ai_direction_k_speed = float(fields[5])
 
         if fields[0] == "STEERING":
-            param_steering_k_speed = float(fields[1])            
+            param_steering_k_speed = float(fields[1])
             param_steering_trim =  int(fields[2])
             param_steering_dual_rate =  float(fields[3])
 
@@ -141,7 +141,7 @@ def load_configuration_file():
     Telemetry handler
 '''''''''''''''''''''''''''
 class telemetry_handler(asyncore.dispatcher_with_send):
-  
+
     def handle_read(self):
         pass
 
@@ -155,7 +155,7 @@ class telemetry_handler(asyncore.dispatcher_with_send):
     Telemetry server
 '''''''''''''''''''''
 class telemetry_server(asyncore.dispatcher):
-    
+
     def __init__(self, host, port):
         global telemetry_client_connected
         telemetry_client_connected = False
@@ -164,7 +164,7 @@ class telemetry_server(asyncore.dispatcher):
         self.set_reuse_addr()
         self.bind((host, port))
         self.listen(5)
-    
+
     def handle_accept(self):
         global telemetry_client_connected
         pair = self.accept()
@@ -191,34 +191,34 @@ CMD_SET         = 'SET'
 CMD_SPLIT      = ';'
 
 class remote_configuration_handler(asyncore.dispatcher_with_send):
-    
+
     def handle_close(self):
         print('Remote configuration> connection closed.')
         self.close()
-        
+
     def handle_read(self):
 
-        global param_minimum_speed     
-        global param_cornering_speed      
-        global param_maximum_speed     
+        global param_minimum_speed
+        global param_cornering_speed
+        global param_maximum_speed
         global param_acceleration
         global param_deceleration
         global param_speed_kp
         global param_speed_ki
-        global param_speed_kd        
-        global param_speed_kff        
+        global param_speed_kd
+        global param_speed_kff
 
         global param_lidar_direction_kp
         global param_lidar_direction_ki
-        global param_lidar_direction_kd        
-        global param_lidar_direction_k_speed      
+        global param_lidar_direction_kd
+        global param_lidar_direction_k_speed
 
         global param_ai_direction_alpha
         global param_ai_direction_kp
         global param_ai_direction_ki
         global param_ai_direction_kd
         global param_ai_direction_k_speed
-        
+
         global param_steering_k_speed
         global param_steering_trim
         global param_steering_dual_rate
@@ -261,7 +261,7 @@ class remote_configuration_handler(asyncore.dispatcher_with_send):
                     str(param_steering_k_speed) + ";"  +  \
                     str(param_steering_trim) + ";"  +  \
                     str(param_steering_dual_rate)
-                    
+
                 print(resp)
                 self.send(resp.encode("utf-8"))
                 print('Response sent.')
@@ -295,7 +295,7 @@ class remote_configuration_handler(asyncore.dispatcher_with_send):
                 param_steering_dual_rate = float(res[21])
 
                 remote_configuration_command_id = 10
-                return        
+                return
 
             if (res[0] == "KILL"):
                 remote_configuration_command_id = 1
@@ -333,7 +333,7 @@ class remote_configuration_handler(asyncore.dispatcher_with_send):
                 remote_configuration_command_id = 9
                 return
 
-                
+
 '''''''''''''''''''''''
     Remote configuration server
 '''''''''''''''''''''
@@ -347,7 +347,7 @@ class remote_configuration_server(asyncore.dispatcher):
         self.set_reuse_addr()
         self.bind((host, port))
         self.listen(5)
-        
+
     def handle_accept(self):
         pair = self.accept()
         if pair is not None:
@@ -358,9 +358,9 @@ class remote_configuration_server(asyncore.dispatcher):
 '''''''''''''''''''''''
     Camera helpers
 '''''''''''''''''''''
-        
-def gstreamer_pipeline (capture_width=1280, capture_height=720, display_width=160, display_height=90, framerate=60, flip_method=2) :   
-    return ('nvarguscamerasrc ! ' 
+
+def gstreamer_pipeline (capture_width=1280, capture_height=720, display_width=160, display_height=90, framerate=60, flip_method=2) :
+    return ('nvarguscamerasrc ! '
     'video/x-raw(memory:NVMM), '
     'width=(int)%d, height=(int)%d, '
     'format=(string)NV12, framerate=(fraction)%d/1 ! '
@@ -368,23 +368,23 @@ def gstreamer_pipeline (capture_width=1280, capture_height=720, display_width=16
     'video/x-raw, width=(int)%d, height=(int)%d, format=(string)BGRx ! '
     'videoconvert ! '
     'video/x-raw, format=(string)BGR ! appsink'  % (capture_width,capture_height,framerate,flip_method,display_width,display_height))
-        
+
 '''''''''''''''''''''''
     Controller
 '''''''''''''''''''''
 class main_controller():
 
     def __init__(self):
-        
+
         # speed controller settings
-        self.minimum_speed_ms = 0.3 # m/s    
+        self.minimum_speed_ms = 0.3 # m/s
         self.cornering_speed_ms = 1.0 # m/s
         self.maximum_speed_ms = 2.0 # m/s
         self.acceleration = 0.02 # m/s per 1/60eme
         self.deceleration = 0.1 # m/s per 1/60eme
-        self.pid_speed = my_controller.pid(kp=10.0, ki=0.0, kd=100.0, integral_max=1000, output_max=50.0, alpha=0.2) 
+        self.pid_speed = my_controller.pid(kp=10.0, ki=0.0, kd=100.0, integral_max=1000, output_max=50.0, alpha=0.2)
         self.pid_speed_kff = 15.0 # feed forward apart from speed PID
-        
+
         # speed controller state
         self.target_speed_ms = 0.0 # m/s (square)
         self.current_speed_ms = 0.0 # m/s (trapeze)
@@ -395,20 +395,20 @@ class main_controller():
         self.lap_distance_start = 0.0 # m
 
         # lidar steering controller settings
-        self.pid_wall_following = my_controller.pid(kp=1.0, ki=0.0, kd=10.0, integral_max=1000, output_max=1.0, alpha=0.2) 
+        self.pid_wall_following = my_controller.pid(kp=1.0, ki=0.0, kd=10.0, integral_max=1000, output_max=1.0, alpha=0.2)
         self.lidar_direction_k_speed = 0.15
 
         # lidar steering controller state
         self.lidar_distance_gauche = 0
         self.lidar_distance_droit = 0
-        self.lidar_distance_haut = 0        
-        self.actual_lidar_direction_error = 0.0  
+        self.lidar_distance_haut = 0
+        self.actual_lidar_direction_error = 0.0
         self.pid_wall = 0.0
 
         # AI steering controller settings
-        self.pid_line_following = my_controller.pid(kp=1.0, ki=0.0, kd=10.0, integral_max=1000, output_max=1.0, alpha=0.2) 
+        self.pid_line_following = my_controller.pid(kp=1.0, ki=0.0, kd=10.0, integral_max=1000, output_max=1.0, alpha=0.2)
         self.ai_direction_k_speed = 0.15
-        
+
         # AI steering controller state
         self.line_pos_unfiltered = 0.0
         self.line_pos = 0.0
@@ -419,21 +419,23 @@ class main_controller():
         self.steering_k_speed = 0.05
         self.steering_trim = 4
         self.steering_dual_rate = 0.5
-        
-        # controller state to STM32 
+
+        # controller state to STM32
         self.steering = 128
         self.throttle = 128
         self.mode = 0
-        
+
         # controller inputs data from STM32 controller board
         self.telemetry_speed = 0
         self.telemetry_manual_dir = 0
         self.telemetry_manual_thr = 0
         self.telemetry_auto_dir = 0
         self.telemetry_auto_thr = 0
-        self.telemetry_start_button = 0  
+        self.telemetry_start_button = 0
         self.telemetry_distance = 0
-        # serial port for STM32 data link 
+        self.telemetry_dps = 0
+        self.telemetry_heading = 0
+        # serial port for STM32 data link
         self.port = serial.Serial("/dev/ttyUSB0",baudrate=115200,timeout=3.0)
 
         # global state
@@ -451,7 +453,7 @@ class main_controller():
 
         # camera settings
         self.rec_width = 1280
-        self.rec_height = 720   
+        self.rec_height = 720
         self.new_width = 160
         self.new_height = 90
 
@@ -459,18 +461,18 @@ class main_controller():
         self.image = 0
         self.gray = 0
         self.init_video()
-        
+
         # AI handler
         self.model = 0
-        
+
         # Data logger
         self.datalogger = my_datalogger.datalogger("datalogger")
-        
+
         # Dataset
         self.dataset_directory = "dataset"
         self.dataset_counter = 0
         self.dataset_file = None
-        
+
     def init_ai(self):
 
         from keras.models import load_model
@@ -489,12 +491,12 @@ class main_controller():
     # create gstreamer capture pipeline
         self.video_capture = cv2.VideoCapture(
             gstreamer_pipeline(
-                capture_width = self.rec_width, 
-                capture_height = self.rec_height, 
-                display_width = self.new_width, 
-                display_height = self.new_height, 
-                framerate = 60, 
-                flip_method = 2 ), 
+                capture_width = self.rec_width,
+                capture_height = self.rec_height,
+                display_width = self.new_width,
+                display_height = self.new_height,
+                framerate = 60,
+                flip_method = 2 ),
             cv2.CAP_GSTREAMER
         )
         return_value, self.image = self.video_capture.read()
@@ -520,7 +522,7 @@ class main_controller():
         #print(str(self.line_pos))
 
     def process(self):
-        
+
         # capture camera (blocking call : process period <= framerate 60Hz)
         return_value, self.image = self.video_capture.read()
 
@@ -538,12 +540,12 @@ class main_controller():
             self.target_speed_ms = 0.0 # enforce 0 speed when halted
 
         # steering control...
-  
+
         if self.ia: # steering computed from AI (line position estimation)
-            
+
             # process current picture and predict line position
             self.ai_processing()
-            
+
         # line following PID controller (with or without data from AI)
         self.line_pos = self.line_pos * (1.0-self.ai_direction_alpha) + self.ai_direction_alpha * self.line_pos_unfiltered
         self.pid_line = self.pid_line_following.compute(self.line_pos)
@@ -568,11 +570,11 @@ class main_controller():
             self.ratio_ai = ( abs(self.actual_lidar_direction_error) - ration_ai_x1 ) / (ration_ai_x2-ration_ai_x1)
         self.steering = self.ratio_ai * self.pid_wall + (1.0-self.ratio_ai) * self.pid_line
         self.steering = constraint(self.steering, -1.0, 1.0)
-        
+
         ###print('+'  * int(self.ratio_ai*10.0))
 
         # reduce current speed according lidar positional error
-        self.target_speed_ms -= ( self.ratio_ai * self.lidar_direction_k_speed * abs(self.actual_lidar_direction_error) + (1.0 - self.ratio_ai) *self.ai_direction_k_speed*abs(self.line_pos_unfiltered) )*self.maximum_speed_ms 
+        self.target_speed_ms -= ( self.ratio_ai * self.lidar_direction_k_speed * abs(self.actual_lidar_direction_error) + (1.0 - self.ratio_ai) *self.ai_direction_k_speed*abs(self.line_pos_unfiltered) )*self.maximum_speed_ms
         self.target_speed_ms -= self.steering_k_speed*abs(self.steering)*self.maximum_speed_ms
         # clamp max speed
         self.target_speed_ms = constraint(self.target_speed_ms, self.minimum_speed_ms, self.maximum_speed_ms)
@@ -590,11 +592,11 @@ class main_controller():
 
         # steering using normal rate
         self.steering = int(((self.steering+1.0)/2.0*255.0))
-        
+
          # compute throttle according actual_speed
         self.actual_speed_error_ms = self.current_speed_ms - self.actual_speed_ms
         self.throttle = int( 128.0 + self.pid_speed.compute(self.actual_speed_error_ms) + self.pid_speed_kff *self.current_speed_ms )
-            
+
         # manual / automatic control
         if self.running:
             # AI and LIDAR control throttle and direction
@@ -603,18 +605,18 @@ class main_controller():
             # AI and LIDAR control direction, but throttle is forced to neutral
             self.throttle = 128
             self.mode = 0
-        
+
         #trim & limits
         self.steering += self.steering_trim
         self.steering = constraint(self.steering,  20,  235) # hard-coded limits
         self.throttle = constraint(self.throttle,  20,  180) # hard-coded limits
-        
+
         # STM32 control link
         self.port.write("{:d};".format(self.steering).encode('ascii') + "{:d};".format(int(self.throttle)).encode('ascii') + "{:d}\r\n".format(self.mode).encode('ascii'))
         serial_line = self.port.readline()
         ####print(str(serial_line))
         fields = serial_line.decode('ascii').split(';')
-        if(len(fields)==10):
+        if(len(fields)==12):
            self.lidar_distance_gauche = int(fields[0])
            self.lidar_distance_droit = int(fields[1])
            self.lidar_distance_haut = int(fields[2])
@@ -623,15 +625,17 @@ class main_controller():
            self.telemetry_manual_thr = int(fields[5])
            self.telemetry_auto_dir = int(fields[6])
            self.telemetry_auto_thr = int(fields[7])
-           self.telemetry_start_button = int(fields[8]) 
-           self.telemetry_distance = int(fields[9])  
+           self.telemetry_start_button = int(fields[8])
+           self.telemetry_distance = int(fields[9])
+           self.telemetry_dps = int(fields[10])
+           self.telemetry_heading = int(fields[11])
         # start condition ==> release  start button ('0' > '1' from STM32)
         if self.telemetry_start_button == 1 and not self.running:
             print("Start condition detected!")
             self.reset_distance()
             self.running = True
             self.datalogger.start()
-        # stop condition ==> 
+        # stop condition ==>
         #if self.lidar_distance_haut > 0 and self.lidar_distance_haut < 110 and self.running and (self.lap_distance-self.lap_distance_start) > 20.0:
         if self.lidar_distance_haut > 0 and self.lidar_distance_haut < 110 and self.running and (self.lap_distance-self.lap_distance_start) > 1.0:
             print("Stop condition detected!")
@@ -641,25 +645,25 @@ class main_controller():
         # camera recording
         if self.recording:
             self.video_recorder.write(self.image)
-            
+
         # Speed computation
         magnet_count = 4.0
         gear_ratio = 2.64
         wheel_perimeter = 0.204
         self.actual_speed_ms = round( 100000.0/(magnet_count*float(self.telemetry_speed+1)) / gear_ratio * wheel_perimeter,  2)
         self.actual_speed_kmh = self.actual_speed_ms * 3.6
-                
-        # Distance 
+
+        # Distance
         self.lap_distance = round( ( float(self.telemetry_distance) / magnet_count ) / gear_ratio * wheel_perimeter,  2) #m
-                
+
         # Data logger
         log_list = []
         log_list.append( float(-1) )
-        
+
         log_list.append( float(self.target_speed_ms) )
         log_list.append( float(self.current_speed_ms) )
-        log_list.append( float(self.actual_speed_ms) ) 
-        log_list.append( float(self.actual_speed_error_ms) ) 
+        log_list.append( float(self.actual_speed_ms) )
+        log_list.append( float(self.actual_speed_error_ms) )
         log_list.append( float(self.throttle) )
 
         log_list.append( float(self.lidar_distance_gauche) )
@@ -677,7 +681,7 @@ class main_controller():
         log_list.append( float(self.mode) )
 
         self.datalogger.record(log_list)
-        
+
         # Dataset recording
         if self.dataset:
             # compute picture filename
@@ -686,7 +690,7 @@ class main_controller():
             self.dataset_file.write(picture_filename + ";" + str(self.telemetry_manual_dir) + ";" + str(self.telemetry_manual_thr) + "\r\n")
             self.dataset_file.flush()
             self.dataset_counter += 1
-    
+
         # camera broadcast
         overlay = self.image.copy()
         # OSD
@@ -699,24 +703,24 @@ class main_controller():
         cv2.line(overlay, (pt_x,0), (pt_x,self.new_height), color=(255, 0,0) )
         self.image = cv2.addWeighted(overlay, 0.5, self.image, 0.5, 0)
         self.video_broadcast.write(self.image)
-        
+
     def reload_settings(self):
-        
-        global param_minimum_speed    
-        global param_cornering_speed 
-        global param_maximum_speed       
+
+        global param_minimum_speed
+        global param_cornering_speed
+        global param_maximum_speed
         global param_acceleration
         global param_deceleration
         global param_speed_kp
         global param_speed_ki
-        global param_speed_kd        
-        global param_speed_kff        
+        global param_speed_kd
+        global param_speed_kff
 
         global param_lidar_direction_kp
         global param_lidar_direction_ki
-        global param_lidar_direction_kd        
-        global param_lidar_direction_k_speed      
-        global param_lidar_positional_error_threshold 
+        global param_lidar_direction_kd
+        global param_lidar_direction_k_speed
+        global param_lidar_positional_error_threshold
 
         global param_ai_direction_alpha
         global param_ai_direction_kp
@@ -757,7 +761,7 @@ class main_controller():
         if not self.running:
             self.running = True
             self.datalogger.start()
-        
+
     def stop_running(self):
         if self.running:
             self.running = False
@@ -768,7 +772,7 @@ class main_controller():
             filename =  "capture/capture_" + time.asctime().replace(' ', '_').replace(':', '-')  + ".avi"
             self.video_recorder = cv2.VideoWriter(filename, cv2.VideoWriter_fourcc('M','J','P','G'), 10, (self.new_width,self.new_height))
             self.recording = True
-        
+
     def stop_recording(self):
         if self.recording :
             self.video_recorder.release()
@@ -777,17 +781,17 @@ class main_controller():
     def start_dataset(self):
         if self.dataset:
             self.dataset_file.close()
-        filename =  self.dataset_directory + "/" + "dataset.txt" ## + time.asctime().replace(' ', '_').replace(':', '-') + "/" 
+        filename =  self.dataset_directory + "/" + "dataset.txt" ## + time.asctime().replace(' ', '_').replace(':', '-') + "/"
         print(filename)
         self.dataset_file = open(filename, 'w+')
         self.dataset_counter = 0
         self.dataset = True
-        
+
     def stop_dataset(self):
         if self.dataset:
             self.dataset_file.close()
         self.dataset = False
-        
+
     def reset_distance(self):
         self.lap_distance_start = self.lap_distance  #m
 
@@ -845,7 +849,7 @@ def main():
             print("Reset distance!")
             controller.reset_distance()
         elif remote_configuration_command_id == 10:
-            controller.reload_settings()            
+            controller.reload_settings()
         remote_configuration_command_id = 0 # reset
         # Process
         controller.process()
@@ -855,20 +859,20 @@ def main():
             msg += str( float(controller.lidar_distance_gauche) ) + ';' #cm
             msg += str( float(controller.lidar_distance_droit) ) + ';'  #cm
             msg += str( float(controller.lidar_distance_haut) ) + ';'  #cm
-            
-            msg += str( float(controller.actual_lidar_direction_error) ) + ';' 
+
+            msg += str( float(controller.actual_lidar_direction_error) ) + ';'
             msg += str( float(controller.pid_wall) ) + ';'
 
             msg += str( float(controller.target_speed_ms) ) + ';'
             msg += str( float(controller.current_speed_ms) ) + ';'
-            msg += str( float(controller.actual_speed_ms) ) + ';' 
+            msg += str( float(controller.actual_speed_ms) ) + ';'
             msg += str( float(controller.actual_speed_error_ms) ) + ';'
             msg += str( float(controller.throttle) )  + ';'
-            
-            msg += str( float(controller.line_pos) ) + ';'
-            msg += str( float(controller.pid_line) ) + ';' 
 
-            msg += str( float(controller.ratio_ai*255) ) + ';' 
+            msg += str( float(controller.line_pos) ) + ';'
+            msg += str( float(controller.pid_line) ) + ';'
+
+            msg += str( float(controller.ratio_ai*255) ) + ';'
 
             msg += str( float(controller.steering) )
 
@@ -884,26 +888,27 @@ def main():
             frame_counter = 0
         # Local trace
         if fps_counter % 6 == 0:
-            print("fps:" + str(fps) + 
-                "   DIR:" + str(controller.steering) + 
-                "   THR:" + str(controller.throttle) + 
-                "   MODE:" + str(controller.mode) + 
-                
+            print("fps:" + str(fps) +
+                "   DIR:" + str(controller.steering) +
+                "   THR:" + str(controller.throttle) +
+                "   MODE:" + str(controller.mode) +
+
                 "   LiG:" + str(controller.lidar_distance_gauche) +
                 "   LiD:" + str(controller.lidar_distance_droit) +
-                "   LiH:" + str(controller.lidar_distance_haut) + 
-                
-                "   mDIR:" + str(controller.telemetry_manual_dir) + 
-                "   mTHR:" + str(controller.telemetry_manual_thr) + 
+                "   LiH:" + str(controller.lidar_distance_haut) +
+
+                "   mDIR:" + str(controller.telemetry_manual_dir) +
+                "   mTHR:" + str(controller.telemetry_manual_thr) +
 
                 "  Speed:" + str( controller.actual_speed_ms   )  + "m/s"
                 "  Speed:" + str( controller.actual_speed_kmh  )  + "km/h"
 
-                "  Distnace:" + str( controller.lap_distance-controller.lap_distance_start  )  + "m"
+                "  Distance:" + str( controller.lap_distance-controller.lap_distance_start  )  + "m"
+                "  DPS:" + str( controller.telemetry_dps  )  + "dps"
+                "  Heading:" + str( controller.telemetry_heading )  + "deg"
             )
         fps_counter += 1
-        
+
 # Le C ca rassure !!
 if __name__ == "__main__":
     main()
-    

@@ -206,6 +206,10 @@ class MyApp(ShowBase):
 		self.lap_distance = 0.0
 		self.lap_distance_text = OnscreenText(text=str(round(self.lap_distance,1)) +"m", pos=(1.7,0.50), fg=(1, 1, 1, 1), align=TextNode.ARight, shadow=(0, 0, 0, 0.5), scale=.05)
 
+		# heading
+		self.heading = 0.0
+		self.heading_text = OnscreenText(text=str(int(self.heading)) +"deg", pos=(1.7,0.4), fg=(1, 1, 1, 1), align=TextNode.ARight, shadow=(0, 0, 0, 0.5), scale=.05)
+
 		self.slider_max_speed = DirectSlider(range=(0,10), value=max_speed, pageSize=0.1, command=self.slider_max_speed_change, scale=0.4, pos = (0.0,0.0,0.9))
 		self.text_max_speed = OnscreenText(text="Vmax " + str(max_speed)+"m/s", fg=(1, 1, 1, 1), align=TextNode.ARight, shadow=(0, 0, 0, 0.5), scale=.04, pos=(-0.55,0.9))
 		
@@ -450,7 +454,6 @@ class MyApp(ShowBase):
 		self.engineForce = 0.0
 		self.brakeForce = 0.0
 
-		
 
 	def slider_max_speed_change(self):
 		self.max_speed_ms = float(self.slider_max_speed['value'])
@@ -607,6 +610,10 @@ class MyApp(ShowBase):
 		self.actual_speed_kmh = 0.9 * self.actual_speed_kmh + 0.1 * self.actual_speed_ms*60*60/1000
 		self.speed_o_meter.setText(str(int(self.actual_speed_kmh))+ "km/h")
 		self.lap_distance_text.setText(str(int(self.lap_distance))+ "m")
+
+		# heading
+		self.heading = self.chassisNP.getH()
+		self.heading_text.setText(str(int(self.heading))+ "deg")
 
 		# chose controller
 		if not self.autopilot: # manual controller
@@ -1014,7 +1021,8 @@ while not app.quit:
 		dataset_file.flush()
 		record_counter += 1
 	# Telemetry
-	if counter % 2 == 0:
+	if True:
+	#if counter % 2 == 0:
 		msg = str(int(counter/2)) + ';'
 		msg += str( float(app.lidar_distance_gauche) ) + ';' #cm
 		msg += str( float(app.lidar_distance_droit) ) + ';'  #cm
@@ -1035,8 +1043,9 @@ while not app.quit:
 		msg += str( float(app.ratio_ai*10) ) + ';' 
 
 
-		msg += str( float(app.steering) ) #+ ';' 
-		#msg += str( float(app.autopilot) ) 
+		msg += str( float(app.steering) ) + ';' 
+		
+		msg += str( float(app.heading) )
 
 		msg_length = str(len(msg)).ljust(4)
 		tserver.sendTelemetry(msg_length)
