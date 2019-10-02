@@ -22,6 +22,7 @@ CMD_DATASET_START= 'DATASET_START'
 CMD_DATASET_STOP = 'DATASET_STOP'
 CMD_RUN_START= 'RUN_START'
 CMD_RUN_STOP = 'RUN_STOP'
+CMD_RESET_DISTANCE = 'RESET_DISTANCE'
 CMD_SPLIT    = ';'
 FILE_NAME    = './buggy_file_results.txt'
 
@@ -157,6 +158,16 @@ def RUN_STOP():
     if (n != len(msg)):
         print('Unable to send command.')
         return
+
+    
+def RESET_DISTANCE():
+    print('RESET_DISTANCE')
+    msg = CMD_RESET_DISTANCE
+    print('# Sending:' + msg)
+    n = client.send(msg.encode('utf-8'))
+    if (n != len(msg)):
+        print('Unable to send command.')
+        return
     
 # Check parameters
 parser = ArgumentParser()
@@ -267,6 +278,7 @@ Button(frame, text="DATASET stop  ", command=DATASET_STOP).grid(row=(nbParameter
 Button(frame, text="KILL      ", command=KILL).grid(row=(nbParameters),      column=11)
 Button(frame, text="RUN START ", command=RUN_START).grid(row=(nbParameters),      column=12)
 Button(frame, text="RUN STOP  ", command=RUN_STOP).grid(row=(nbParameters),      column=13)
+Button(frame, text="RESET DISTANCE  ", command=RESET_DISTANCE).grid(row=(nbParameters),      column=14)
 
 # Request the values
 frame.update_idletasks()

@@ -2,8 +2,8 @@
 
 # inputs/outputs
 base_dataset_directory = "c:/GitHub/datasets/" # change to your local directory where datasets are decompressed
-train_and_valid_dataset_list = [  "dataset_005", "dataset_009", "dataset_011", "dataset_012" ]
-test_dataset_list = [  "dataset_006" ]
+train_and_valid_dataset_list = [  "dataset_011", "dataset_012", "dataset_013", "dataset_002", "dataset_003", "dataset_004", "dataset_007", "dataset_008", "dataset_010" ]
+test_dataset_list = [  "dataset_013" ]
 
 # CNN parameters
 layers = [
