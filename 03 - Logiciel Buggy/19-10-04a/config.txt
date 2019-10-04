@@ -1,0 +1,13 @@
+##SPEED  MIN(M/S)  CORNERING  MAX(M/S)  ACC(M/S au 1/60eme) DEC(M/S au 1/60eme)  KP     KI    KD    KFF
+SPEED    0.3       1.0        2.0       0.02                0.1                  10.0   0.0   0.0   15.0
+
+##WALL_FOLLOWING KP      KI      KD     KSPEEDDIR(CM>M/S) 
+WALL_FOLLOWING   1.0     0.0     10.0   0.15               
+
+##LINE_FOLLOWING ALPHA   KP      KI      KD     KSPEEDDIR(1>M/S) 
+LINE_FOLLOWING   0.3     1.0     0.0     10.0   0.15              
+
+##STEERING KSPEEDSTEERING (1>M/S) TRIM(+/- 0..128)   D/R(%)
+STEERING   0.05                   4                  0.5
+
+
