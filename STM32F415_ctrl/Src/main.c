@@ -556,13 +556,14 @@ int main(void)
 		break;
 	case MAIN_STATE_AUTO:
 		{
-			// AI control servo
-			if(ai_mode==0)
-				__HAL_TIM_SET_COMPARE(&htim8,TIM_CHANNEL_1,pwm_manual_thr); // RC control THR when AUTO mode and IA halted
-			else if(ai_mode==1)
-				__HAL_TIM_SET_COMPARE(&htim8,TIM_CHANNEL_1,pwm_auto_thr); // AI control THR in AUTO mode and IA running
-			else // default manual
-				__HAL_TIM_SET_COMPARE(&htim8,TIM_CHANNEL_1,pwm_manual_thr);
+//			// AI control servo
+//			if(ai_mode==0)
+//				__HAL_TIM_SET_COMPARE(&htim8,TIM_CHANNEL_1,pwm_manual_thr); // RC control THR when AUTO mode and IA halted
+//			else if(ai_mode==1)
+//				__HAL_TIM_SET_COMPARE(&htim8,TIM_CHANNEL_1,pwm_auto_thr); // AI control THR in AUTO mode and IA running
+//			else // default manual
+//				__HAL_TIM_SET_COMPARE(&htim8,TIM_CHANNEL_1,pwm_manual_thr);
+			__HAL_TIM_SET_COMPARE(&htim8,TIM_CHANNEL_1,pwm_auto_thr);
 			__HAL_TIM_SET_COMPARE(&htim8,TIM_CHANNEL_2,pwm_auto_dir); // AI control DIR
 			__HAL_TIM_SET_COMPARE(&htim8,TIM_CHANNEL_3,pwm_auto_dir); // AI control DIR
 			__HAL_TIM_SET_COMPARE(&htim8,TIM_CHANNEL_4,1500);// default servo position
