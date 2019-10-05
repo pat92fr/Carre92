@@ -1,6 +1,6 @@
-min_speed=3.0
-cornering_speed=3.8
-max_speed=12.0
+min_speed=2.5
+cornering_speed=3.0
+max_speed=4.0
 acceleration=0.04
 deceleration=0.25
 speed_kp=35.0
