@@ -166,12 +166,12 @@ static float lap_distance_start;
 static float steering;
 static int32_t throttle;
 
-static float minimum_speed_ms = 1.0;
-static float cornering_speed_ms = 1.5;
-static float maximum_speed_ms = 2.0;
+static float minimum_speed_ms = 2.6;
+static float cornering_speed_ms = 3.2;
+static float maximum_speed_ms = 6.5;
 static float speed_kp = 35.0;
 static float speed_kd = 5.0;
-static float steering_trim = 4.0;
+static float steering_trim = -1.0;
 static float pid_speed_kff = 5.0;
 static float acceleration = 0.04;
 static float deceleration = 0.25;
