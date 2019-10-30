@@ -25,7 +25,7 @@ def main():
     ##################
     parser = ArgumentParser()
     parser.add_argument("-p", "--port", dest="port",
-                        help="port number", type=int, default=7001)
+                        help="port number", type=int, default=8001)
     parser.add_argument("-d", "--duration", dest="duration",
                         help="max sampling duration in seconds", type=int, default=5)
     parser.add_argument("-i", "--ip", dest="host",
@@ -48,22 +48,22 @@ def main():
     # Telemetry graph definition        
     sampleCtx     = {}
     sampleCtx[0]  = { "title": "time",          "unit": "",   "color": "w",    "factor": 1.0, "plot": 0, "obj": None }
-    sampleCtx[1]  = { "title": "LiG",           "unit": "cm", "color": "-g",   "factor": 1.0, "plot": 0, "obj": None }
-    sampleCtx[2]  = { "title": "LiD",           "unit": "cm", "color": "-r",   "factor": 1.0, "plot": 0, "obj": None }
-    sampleCtx[3]  = { "title": "LiH",           "unit": "cm", "color": "-b",   "factor": 1.0, "plot": 0, "obj": None }
+    sampleCtx[1]  = { "title": "LiG",           "unit": "cm", "color": "-g",   "factor": 1.0, "plot": 2, "obj": None }
+    sampleCtx[2]  = { "title": "LiD",           "unit": "cm", "color": "-r",   "factor": 1.0, "plot": 2, "obj": None }
+    sampleCtx[3]  = { "title": "LiH",           "unit": "cm", "color": "-b",   "factor": 1.0, "plot": 2, "obj": None }
     
-    sampleCtx[4]  = { "title": "LiError",       "unit": "cm", "color": "g",  "factor": 1.0, "plot": 0, "obj": None }
-    sampleCtx[5]  = { "title": "LiErrorInt",    "unit": "cm", "color": "-g",  "factor": 1.0, "plot": 0, "obj": None }
-    sampleCtx[6]  = { "title": "WallPID",       "unit": "",   "color": "k",  "factor": 1.0, "plot": 1, "obj": None }
+    sampleCtx[4]  = { "title": "LiError",       "unit": "", "color": "g",  "factor": 1.0, "plot": 3, "obj": None }
+    sampleCtx[5]  = { "title": "WallPID",       "unit": "",   "color": "k",  "factor": 1.0, "plot": 3, "obj": None }
 
-    sampleCtx[7]  = { "title": "TrgtSpeed",     "unit": "ms",   "color": "--k",  "factor": 1.0, "plot": 2, "obj": None }
-    sampleCtx[8]  = { "title": "CurrSpeed",     "unit": "ms",   "color": "-b",  "factor": 1.0, "plot": 2, "obj": None }
-    sampleCtx[9]  = { "title": "ActlSpeed",     "unit": "ms",   "color": "-r",  "factor": 1.0, "plot": 2, "obj": None }
-    sampleCtx[10]  = { "title": "SpeedError",   "unit": "ms",   "color": "g",  "factor": 1.0, "plot": 2, "obj": None }
-    sampleCtx[11]  = { "title": "Throttle",     "unit": "",   "color": "k",  "factor": 1.0, "plot": 3, "obj": None }
+    sampleCtx[6]  = { "title": "TrgtSpeed",     "unit": "ms",   "color": "--k",  "factor": 1.0, "plot": 0, "obj": None }
+    sampleCtx[7]  = { "title": "CurrSpeed",     "unit": "ms",   "color": "-b",  "factor": 1.0, "plot": 0, "obj": None }
+    sampleCtx[8]  = { "title": "ActlSpeed",     "unit": "ms",   "color": "-r",  "factor": 1.0, "plot": 0, "obj": None }
+    sampleCtx[9]  = { "title": "SpeedError",   "unit": "ms",   "color": "g",  "factor": 1.0, "plot": 0, "obj": None }
+    sampleCtx[10]  = { "title": "Throttle",     "unit": "",   "color": "k",  "factor": 1.0, "plot": 1, "obj": None }
 
-    sampleCtx[12]  = { "title": "LinePos",      "unit": "",   "color": "r",  "factor": 1.0, "plot": 4, "obj": None }
-    sampleCtx[13]  = { "title": "LinePID",      "unit": "",   "color": "k",  "factor": 1.0, "plot": 4, "obj": None }
+    sampleCtx[11]  = { "title": "LinePos",      "unit": "",   "color": "r",  "factor": 1.0, "plot": 4, "obj": None }
+    sampleCtx[12]  = { "title": "LinePID",      "unit": "",   "color": "k",  "factor": 1.0, "plot": 4, "obj": None }
+    sampleCtx[13]  = { "title": "Steering",     "unit": "x10",   "color": "--r",   "factor": 1.0, "plot": 5, "obj": None }
     sampleCtx[14]  = { "title": "Steering",     "unit": "deg",   "color": "k",   "factor": 1.0, "plot": 5, "obj": None }
     #sampleCtx[15]  = { "title": "Autopilot",    "unit": "",   "color": "-b",   "factor": 1.0, "plot": 6, "obj": None }
     

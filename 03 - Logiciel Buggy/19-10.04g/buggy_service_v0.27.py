@@ -14,7 +14,8 @@ import my_datalogger
 
 # global (for client-server communication)
 global telemetry_client_connected
-global remote_configuration_command_id # received command from client 
+global telemetry_carto_client_connected
+global remote_configuration_command_id # received command from client
     # CID =  0 : default/idle
     # CID =  1 : kill buggy server
     # CID =  2 : start Line Following with CNN
@@ -151,9 +152,9 @@ def load_configuration_file():
 
     file.close()
 
-'''''''''''''''''''''''''''''
-    Telemetry handler
-'''''''''''''''''''''''''''
+###################
+# Telemetry handler
+###################
 class telemetry_handler(asyncore.dispatcher_with_send):
   
     def handle_read(self):
@@ -165,9 +166,9 @@ class telemetry_handler(asyncore.dispatcher_with_send):
         telemetry_client_connected = False
         self.close()
 
-'''''''''''''''''''''''
-    Telemetry server
-'''''''''''''''''''''
+##################
+# Telemetry server
+##################
 class telemetry_server(asyncore.dispatcher):
     
     def __init__(self, host, port):
@@ -192,11 +193,52 @@ class telemetry_server(asyncore.dispatcher):
         global telemetry_client_connected
         if telemetry_client_connected:
             self.handler.send(data.encode("utf-8"))
-            #self.flush()
 
-'''''''''''''''''''''''''''''
+#########################
+# Telemetry carto handler
+#########################
+class telemetry_carto_handler(asyncore.dispatcher_with_send):
+    
+    def handle_read(self):
+        pass
+    
+    def handle_close(self):
+        global telemetry_carto_client_connected
+        print('Telemetry carto > connection closed.')
+        telemetry_carto_client_connected = False
+        self.close()
+
+########################
+# Telemetry carto server
+########################
+class telemetry_carto_server(asyncore.dispatcher):
+    
+    def __init__(self, host, port):
+        global telemetry_carto_client_connected
+        telemetry_carto_client_connected = False
+        asyncore.dispatcher.__init__(self)
+        self.create_socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.set_reuse_addr()
+        self.bind((host, port))
+        self.listen(5)
+    
+    def handle_accept(self):
+        global telemetry_carto_client_connected
+        pair = self.accept()
+        if pair is not None:
+            sock, addr = pair
+            print('Telemetry carto > incoming connection from ', repr(addr))
+            self.handler = telemetry_handler(sock)
+            telemetry_carto_client_connected = True
+
+def sendTelemetryCarto(self, data):
+    global telemetry_carto_client_connected
+        if telemetry_carto_client_connected:
+            self.handler.send(data.encode("utf-8"))
+
+'''''''''''''''''''''''''''''''''
     Remote configuration handler
-'''''''''''''''''''''''''''
+'''''''''''''''''''''''''''''''''
 
 # constants (for client-server communication)
 CMD_GET_API  = 'GET_API'
@@ -843,9 +885,10 @@ def main():
     # Controller start
     controller = main_controller()
     controller.reload_settings()
-    # Servers start
-    remote_configuration_server("10.42.0.1", 6000)
-    tserver = telemetry_server("10.42.0.1", 7001)
+    # Telemetry servers start
+    remote_configuration_server("10.42.0.1",      6000)
+    tserver = telemetry_server("10.42.0.1",       7001)
+    cserver = telemetry_carto_server("10.42.0.1", 8001)
     # Game loop
     counter = 0
     while True:
@@ -909,6 +952,11 @@ def main():
             msg_length = str(len(msg)).ljust(4)
             tserver.sendTelemetry(msg_length)
             tserver.sendTelemetry(msg)
+
+            # Just for test purpose, waiting for carto specification
+            cserver.sendTelemetryCarto(msg_length)
+            cserver.sendTelemetryCarto(msg)
+
         counter += 1
         # FPS debug
         frame_counter += 1
@@ -942,4 +990,5 @@ def main():
 # Le C ca rassure !!
 if __name__ == "__main__":
     main()
-    
+
+# End of file
