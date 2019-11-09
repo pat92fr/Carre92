@@ -1,3 +1,5 @@
+# encoding: utf-8
+
 # Import
 import sys
 import zmq
@@ -11,6 +13,7 @@ def cleanup():
     socket_lidar.close()
     socket_speed.close()
     socket_serial.close()
+    socket_control.close()
     context.term()
     sys.exit(0)
 
@@ -31,9 +34,27 @@ def recv_array(socket, flags=0, copy=True, track=False):
 # Debug
 print('Current libzmq version is %s' % zmq.zmq_version())
 print('Current  pyzmq version is %s' % zmq.__version__)
+verbose = False
+if len(sys.argv) > 1:
+    verbose = True
+    print("Verbose is on")
+else:
+    print("Verbose is off")
 
 #  ZMQ context
 context = zmq.Context()
+
+####################
+### Publish part ###
+####################
+
+# Socket in PUBlish mode to control the telemetry producers
+socket_control = context.socket(zmq.PUB)
+socket_control.bind('tcp://*:5555')
+
+######################
+### Subscribe part ###
+######################
 
 # Socket in SUBscribe mode for lidar telemetry reception
 socket_lidar = context.socket(zmq.SUB)
@@ -60,10 +81,10 @@ socket_serial.setsockopt(zmq.SUBSCRIBE, b'')
 nbMsgSerial = 0
 
 # Create poller context
-poll = zmq.Poller()
-poll.register(socket_lidar,  zmq.POLLIN)
-poll.register(socket_speed,  zmq.POLLIN)
-poll.register(socket_serial, zmq.POLLIN)
+poller = zmq.Poller()
+poller.register(socket_lidar,  zmq.POLLIN)
+poller.register(socket_speed,  zmq.POLLIN)
+poller.register(socket_serial, zmq.POLLIN)
 
 # Debug
 print('Main sink started at: %s' % datetime.now().strftime('%M:%S.%f'))
@@ -74,35 +95,43 @@ while True:
     # Try/catch : zmq polling error or user CTRL-C
     try:
         # Non-blocking wait for message from client
-        sockets = dict(poll.poll(0))
+        socks = dict(poller.poll(0))
     except zmq.ZMQError as e:
         print('ZMQ error (%s), stopping...' % e.strerror)
         print(e)
         cleanup()
     except KeyboardInterrupt:
-        print('Server stopped by user, stopping...')
+        print('%s# Server stopped by user, stopping...' % datetime.now().strftime('%M:%S.%f'))
+        if verbose == False:
+            print('%s# Sending KILL message' % datetime.now().strftime('%M:%S.%f'))
+            socket_control.send(b'STOP')
         cleanup()
 
     # Process serial telemetry
-    if socket_serial in sockets:
+    if socks.get(socket_serial) == zmq.POLLIN:
         serialString = recv_zipped_pickle(socket_serial)
         nbMsgSerial += 1
-        print('%s# Receive SERIAL telemetry (%d): %s' % (datetime.now().strftime('%M:%S.%f'), \
-                                                         nbMsgSerial, \
-                                                         serialString))
+        if verbose == True:
+            print('%s# Receive SERIAL telemetry (%d): %s' % (datetime.now().strftime('%M:%S.%f'), \
+                                                             nbMsgSerial, \
+                                                             serialString))
+
     # Process speed telemetry
-    if socket_speed in sockets:
+    if socks.get(socket_speed) == zmq.POLLIN:
         speedValue = recv_zipped_pickle(socket_speed)
         nbMsgSpeed += 1
-        print('%s# Receive SPEED telemetry (%d): %s' % (datetime.now().strftime('%M:%S.%f'), \
-                                                        nbMsgSpeed, \
-                                                        speedValue))
+        if verbose == True:
+            print('%s# Receive SPEED telemetry (%d): %s' % (datetime.now().strftime('%M:%S.%f'), \
+                                                            nbMsgSpeed, \
+                                                            speedValue))
+
     # Process lidar telemetry
-    if socket_lidar in sockets:
+    if socks.get(socket_lidar) == zmq.POLLIN:
         lidarArray = recv_array(socket_lidar)
         nbMsgLidar += 1
-        print('%s# Receive LIDAR telemetry (%d):' % (datetime.now().strftime('%M:%S.%f'), \
-                                                     nbMsgLidar))
-        print(lidarArray)
+        if verbose == True:
+            print('%s# Receive LIDAR telemetry (%d):' % (datetime.now().strftime('%M:%S.%f'), \
+                                                         nbMsgLidar))
+            print(lidarArray)
 
 # Eof

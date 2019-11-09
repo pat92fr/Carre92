@@ -1,3 +1,5 @@
+# encoding: utf-8
+
 # Import
 import zmq
 import zlib
@@ -11,6 +13,7 @@ from random   import randrange
 def cleanup():
     """Cleanup function"""
     socket.close()
+    socket_control.close()
     context.term()
     sys.exit(0)
 
@@ -22,12 +25,29 @@ def send_array(socket, A, flags=0, copy=True, track=False):
 
 # ZMQ context
 context = zmq.Context()
+
+####################
+### Publish part ###
+####################
+
 # Socket in PUBlisher mode for lidar telemetry transmission
 socket = context.socket(zmq.PUB)
 socket.bind("tcp://*:5556")
 
 # Debug
 nbMsgSent = 0
+
+######################
+### Subscribe part ###
+######################
+socket_control = context.socket(zmq.SUB)
+socket_control.connect('tcp://localhost:5555')
+# SUBscribe to all topics i.e. the subscriber want to process all the message from the publisher
+socket_control.setsockopt(zmq.SUBSCRIBE, b'')
+
+# Create poller context
+poller = zmq.Poller()
+poller.register(socket_control, zmq.POLLIN)
 
 # Main loop
 while True:
@@ -52,5 +72,11 @@ while True:
 
     # Send message every 10ms: 100Hz
     time.sleep(0.01)
+
+    # Check for KILL message
+    socks = dict(poller.poll(0))
+    if socks.get(socket_control) == zmq.POLLIN:
+        print('%s# Receive KILL message, stopping...' % (datetime.now().strftime('%M:%S.%f')))
+        cleanup()
 
 # Eof
