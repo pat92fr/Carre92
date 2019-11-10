@@ -37,9 +37,9 @@ print('Current  pyzmq version is %s' % zmq.__version__)
 verbose = False
 if len(sys.argv) > 1:
     verbose = True
-    print("Verbose is on")
+    print("Verbose is *on*")
 else:
-    print("Verbose is off")
+    print("Verbose is *off*")
 
 #  ZMQ context
 context = zmq.Context()
@@ -88,10 +88,13 @@ poller.register(socket_serial, zmq.POLLIN)
 
 # Debug
 print('Main sink started at: %s' % datetime.now().strftime('%M:%S.%f'))
+nbLoop = 0
 
 # Main loop
 while True:
 
+    nbLoop +=1
+    
     # Try/catch : zmq polling error or user CTRL-C
     try:
         # Non-blocking wait for message from client
@@ -102,9 +105,8 @@ while True:
         cleanup()
     except KeyboardInterrupt:
         print('%s# Server stopped by user, stopping...' % datetime.now().strftime('%M:%S.%f'))
-        if verbose == False:
-            print('%s# Sending KILL message' % datetime.now().strftime('%M:%S.%f'))
-            socket_control.send(b'STOP')
+        print('%s# Sending KILL message' % datetime.now().strftime('%M:%S.%f'))
+        socket_control.send(b'STOP')
         cleanup()
 
     # Process serial telemetry
@@ -133,5 +135,8 @@ while True:
             print('%s# Receive LIDAR telemetry (%d):' % (datetime.now().strftime('%M:%S.%f'), \
                                                          nbMsgLidar))
             print(lidarArray)
+
+    if (nbLoop%50000) == 0 :
+        print('NbMsg: LIDAR:%06i - SPEED:%06i - SERIAL:%06i' % (nbMsgLidar, nbMsgSpeed, nbMsgSerial))
 
 # Eof

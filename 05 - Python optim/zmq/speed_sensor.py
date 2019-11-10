@@ -1,3 +1,5 @@
+# encoding: utf-8
+
 # Import
 import zmq
 import zlib
@@ -10,6 +12,7 @@ from random   import randrange
 def cleanup():
     """Cleanup function"""
     socket.close()
+    socket_control.close()
     context.term()
     sys.exit(0)
 
@@ -66,8 +69,8 @@ while True:
         print('Server stopped by user, stopping...')
         cleanup()
 
-    # Send message every 1 seconds: 1Hz
-    time.sleep(1)
+    # Send message every 100ms: 10Hz
+    time.sleep(0.1)
 
     # Check for KILL message
     socks = dict(poller.poll(0))

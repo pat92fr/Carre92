@@ -24,10 +24,10 @@
 # ou
 # sudo apt-get python-zmq
 #
-###########################################################################################
+##########################################################################################
 
 lidar_sensor.py 	: génère et publie une matrice numpy sur le port 5556, fréquence 100Hz
-speed_sensor.py 	: génère et publie un entier sur le port 5557, fréqunce 1Hz
+speed_sensor.py 	: génère et publie un entier sur le port 5557, fréqunce 10Hz
 serial_sensor.py        : génère et publie une chaine de caractère sur le port 5558, fréquence 0,2Hz
 main_sink.py		: réception les flux en écoutant sur les 3 ports (5556, 5557 et 5558)
 
