@@ -975,7 +975,7 @@ class MyApp(ShowBase):
 
 ## MAIN ########################################################################
 
-tserver = telemetry_server("192.168.1.34", 7001)
+###tserver = telemetry_server("192.168.1.34", 7001)
 #tserver = telemetry_server("192.168.43.5", 7001)
 # open model
 print("Load model from disk ...")
@@ -1048,8 +1048,8 @@ while not app.quit:
 		msg += str( float(app.heading) )
 
 		msg_length = str(len(msg)).ljust(4)
-		tserver.sendTelemetry(msg_length)
-		tserver.sendTelemetry(msg)
+		###tserver.sendTelemetry(msg_length)
+		###tserver.sendTelemetry(msg)
 	counter += 1
 	#print(telemetry_client_connected)
 
